@@ -1,0 +1,156 @@
+package com.cognite.beam.io;
+
+import com.cognite.beam.io.config.ProjectConfig;
+import com.google.common.base.Strings;
+import okhttp3.MediaType;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import org.apache.beam.sdk.io.FileBasedSink;
+import org.apache.beam.sdk.io.FileSystems;
+import org.apache.beam.sdk.io.fs.ResourceId;
+import org.apache.beam.sdk.transforms.windowing.BoundedWindow;
+import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
+import org.apache.beam.sdk.transforms.windowing.IntervalWindow;
+import org.apache.beam.sdk.transforms.windowing.PaneInfo;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
+public class TestConfigProviderV1 {
+    private final static String apiVersion = "v1";
+    protected static ProjectConfig projectConfig;
+    protected static String appIdentifier = "Beam SDK unit test";
+    protected static String rawDbName = "the_best_tests";
+    protected static String rawTableName = "best_table";
+    protected static String deltaIdentifier = "unitTest";
+    protected static String deltaTable = "timestamp.test";
+
+    public static void init() {
+        projectConfig = ProjectConfig.create()
+                .withHost(getHost())
+                .withApiKey(getApiKey());
+    }
+
+    protected static String getProject() {
+        String project = System.getenv("TEST_PROJECT");
+
+        if (Strings.isNullOrEmpty(project)) {
+            project = "test";
+        }
+
+        return project;
+    }
+
+    protected static String getApiKey() {
+        String apiKey = System.getenv("TEST_KEY");
+
+        if (Strings.isNullOrEmpty(apiKey)) {
+            apiKey = "test";
+        }
+
+        return apiKey;
+    }
+
+    protected static String getHost() {
+        String host = System.getenv("TEST_HOST");
+
+        if (Strings.isNullOrEmpty(host)) {
+            host = "http://localhost:4567";
+        }
+        return host;
+    }
+
+    protected static String getProjectConfigFileName() {
+        String fileName = System.getenv("TEST_CONFIG_FILE");
+        if (Strings.isNullOrEmpty(fileName)) {
+            fileName = "";
+        }
+        return fileName;
+    }
+
+    protected static Request buildRequest(String jsonString, String resource) {
+        return new Request.Builder()
+                //.header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .header("api-key", projectConfig.getApiKey().get())
+                .url(projectConfig.getHost() + "/api/" + apiVersion + "/projects/" + projectConfig
+                        .getProject() + "/" + resource)
+                .post(RequestBody.create(jsonString, MediaType.get("application/json; charset=utf-8")))
+                .build();
+    }
+
+    protected static class TestFilenamePolicy extends FileBasedSink.FilenamePolicy {
+        private final String baseFileName;
+        private final String suffix;
+
+        public TestFilenamePolicy(String baseFileName, String suffix) {
+            this.baseFileName = baseFileName;
+            this.suffix = suffix;
+        }
+
+        public ResourceId unwindowedFilename(int shardNumber,
+                                             int numShards,
+                                             FileBasedSink.OutputFileHints outputFileHints) {
+            return FileSystems.matchNewResource(String.format(
+                    baseFileName + "%03d-of-%03d-" + suffix,
+                    shardNumber,
+                    numShards
+                    ),
+                    false);
+
+        }
+
+        public ResourceId windowedFilename(int shardNumber,
+                                           int numShards,
+                                           BoundedWindow window,
+                                           PaneInfo paneInfo,
+                                           FileBasedSink.OutputFileHints outputFileHints) {
+            String windowString = "", paneString = "";
+            if (null != window) {
+                windowString = windowToString(window);
+            }
+            if (null != paneInfo) {
+                paneString = paneInfoToString(paneInfo);
+            }
+
+            return FileSystems.matchNewResource(String.format(
+                    baseFileName + "-%03d-of-%03d-" + windowString + paneString + suffix,
+                    shardNumber,
+                    numShards
+                    ),
+                    false);
+
+        }
+
+        private String windowToString(BoundedWindow window) {
+            if (window instanceof GlobalWindow) {
+                return "GlobalWindow";
+            }
+            if (window instanceof IntervalWindow) {
+                IntervalWindow iw = (IntervalWindow) window;
+                return String.format("%s-%s",
+                        DateTimeFormatter
+                                .ofPattern("yyyy-MM-dd-HH-mm-ss")
+                                .withZone(ZoneId.of("UTC"))
+                                .format(Instant.ofEpochMilli(iw.start().getMillis())),
+                        DateTimeFormatter
+                                .ofPattern("yyyy-MM-dd-HH-mm-ss")
+                                .withZone(ZoneId.of("UTC"))
+                                .format(Instant.ofEpochMilli(iw.end().getMillis())));
+            }
+            return window.toString();
+        }
+
+        private String paneInfoToString(PaneInfo paneInfo) {
+            String paneString = String.format("pane-%d", paneInfo.getIndex());
+            if (paneInfo.getTiming() == PaneInfo.Timing.LATE) {
+                paneString = String.format("%s-late", paneString);
+            }
+            if (paneInfo.isLast()) {
+                paneString = String.format("%s-last", paneString);
+            }
+            return paneString;
+        }
+    }
+}

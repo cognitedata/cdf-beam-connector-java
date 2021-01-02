@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package com.cognite.beam.proto;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/wrappers.proto";
+
+option java_package = "com.cognite.beam.io.dto";
+option java_multiple_files = true;
+
+message EntityMatch {
+    google.protobuf.DoubleValue score = 1;
+    google.protobuf.Struct matchTo = 2;
+}

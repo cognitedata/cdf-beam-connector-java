@@ -3,7 +3,7 @@
 </a>
 
 # Beam sdk for CDF
-[![build](https://webhooks.dev.cognite.ai/build/buildStatus/icon?job=github-builds/cdp-beam-connector-java/master)](https://jenkins.cognite.ai/job/github-builds/job/cdp-beam-connector-java/job/master/)
+
 
 Beam I/O connector for reading and writing from/to CDF resources.
 
