@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package com.cognite.beam.proto;
+
+option java_package = "com.cognite.beam.io.dto";
+option java_multiple_files = true;
+
+message Item {
+    oneof idType {
+        int64 id = 1;
+        string external_id = 2;
+        string legacy_name = 3;
+    }
+}
+

@@ -1,0 +1,148 @@
+package com.cognite.client.config;
+
+import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
+
+import java.io.Serializable;
+
+/**
+ * This class captures the client configuration parameters.
+ */
+@AutoValue
+public abstract class ClientConfig implements Serializable {
+    final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
+    final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
+    final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
+    final static int DEFAULT_LIST_PARTITIONS = 8;
+
+    // Thread pool capacity
+    final static int DEFAULT_CPU_MULTIPLIER = 8;
+
+    // Connection retries
+    private static final int DEFAULT_RETRIES = 5;
+    private static final int MAX_RETRIES = 20;
+    private static final int MIN_RETRIES = 1;
+
+    private static Builder builder() {
+        return new AutoValue_ClientConfig.Builder()
+                .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
+                .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
+                .setMaxRetries(DEFAULT_RETRIES)
+                .setNoWorkers(Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER)
+                .setNoListPartitions(DEFAULT_LIST_PARTITIONS)
+                .setUpsertMode(DEFAULT_UPSERT_MODE);
+    }
+
+    /**
+     * Returns a {@link ClientConfig} object with default settings.
+     *
+     * @return the {@link ClientConfig} object.
+     */
+    public static ClientConfig create() {
+        return ClientConfig.builder().build();
+    }
+
+    abstract Builder toBuilder();
+
+    public abstract String getAppIdentifier();
+    public abstract String getSessionIdentifier();
+    public abstract int getMaxRetries();
+    public abstract int getNoWorkers();
+    public abstract int getNoListPartitions();
+    public abstract UpsertMode getUpsertMode();
+
+    /**
+     * Set the app identifier. The identifier is encoded in the api calls to the Cognite instance and can be
+     * used for tracing and statistics.
+     *
+     * @param identifier the application identifier
+     * @return the {@link ClientConfig} with the setting applied
+     */
+    public ClientConfig withAppIdentifier(String identifier) {
+        Preconditions.checkNotNull(identifier, "Identifier cannot be null");
+        Preconditions.checkArgument(!identifier.isEmpty(), "Identifier cannot be an empty string.");
+        return toBuilder().setAppIdentifier(identifier).build();
+    }
+
+    /**
+     * Set the session identifier. The identifier is encoded in the api calls to the Cognite instance and can be
+     * used for tracing and statistics.
+     *
+     * @param identifier the session identifier
+     * @return the {@link ClientConfig} with the setting applied
+     */
+    public ClientConfig withSessionIdentifier(String identifier) {
+        Preconditions.checkNotNull(identifier, "Identifier cannot be null");
+        Preconditions.checkArgument(!identifier.isEmpty(), "Identifier cannot be an empty string.");
+        return toBuilder().setSessionIdentifier(identifier).build();
+    }
+
+    /**
+     * Sets the maximum number of retries when sending requests to the Cognite API.
+     *
+     * The default setting is 5. This should be sufficient for most scenarios.
+     *
+     * @param retries the {@link ClientConfig} with the setting applied
+     * @return the {@link ClientConfig} with the setting applied
+     */
+    public ClientConfig withMaxRetries(int retries) {
+        Preconditions.checkArgument(retries <= MAX_RETRIES && retries >= MIN_RETRIES,
+                String.format("The max number of retries must be between %d and %d", MIN_RETRIES, MAX_RETRIES));
+        return toBuilder().setMaxRetries(retries).build();
+    }
+
+    /**
+     * Specifies the maximum number of workers to use for the Cognite API requests. The default setting is
+     * eight workers per (virtual) CPU core.
+     *
+     * @param noWorkers max number of workers
+     * @return the {@link ClientConfig} with the setting applied
+     */
+    public ClientConfig withNoWorkers(int noWorkers) {
+        return toBuilder().setNoWorkers(noWorkers).build();
+    }
+
+    /**
+     * Specifies the number of partitions to use for (read) list requests. This represents the number
+     * of parallel streams to use for reading the results of list requests.
+     *
+     * The default setting is eight partitions.
+     *
+     * @param noPartitions the number of partitions for list requests
+     * @return the {@link ClientConfig} with the setting applied
+     */
+    public ClientConfig withNoListPartitions(int noPartitions) {
+        return toBuilder().setNoListPartitions(noPartitions).build();
+    }
+
+    /**
+     * Sets the upsert mode.
+     *
+     * When the data object to write does not exist, the writer will always create it. But, if the
+     * object already exist, the writer can update the the existing object in one of two ways: update or replace.
+     *
+     * <code>UpsertMode.UPDATE</code> will update the provided fields in the target object--all other fields will remain
+     * unchanged.
+     *
+     * <code>UpsertMode.REPLACE</code> will replace the entire target object with the provided fields
+     * (<code>id</code> and <code>externalId</code> will remain unchanged).
+     *
+     * @param mode the upsert mode
+     * @return the {@link ClientConfig} with the setting applied
+     */
+    public ClientConfig withUpsertMode(UpsertMode mode) {
+        return toBuilder().setUpsertMode(mode).build();
+    }
+
+    @AutoValue.Builder
+    static abstract class Builder {
+        abstract Builder setAppIdentifier(String value);
+        abstract Builder setSessionIdentifier(String value);
+        abstract Builder setMaxRetries(int value);
+        abstract Builder setNoWorkers(int value);
+        abstract Builder setNoListPartitions(int value);
+        abstract Builder setUpsertMode(UpsertMode value);
+
+        abstract ClientConfig build();
+    }
+}
