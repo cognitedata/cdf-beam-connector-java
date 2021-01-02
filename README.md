@@ -1,3 +1,5 @@
+[![java-ci Actions Status](https://github.com/cognitedata/cdf-beam-connector-java/workflows/java-ci/badge.svg)](https://github.com/cognitedata/cdf-beam-connector-java/actions
+
 <a href="https://cognite.com/">
     <img src="https://raw.githubusercontent.com/cognitedata/cognite-python-docs/master/img/cognite_logo.png" alt="Cognite logo" title="Cognite" align="right" height="80" />
 </a>
