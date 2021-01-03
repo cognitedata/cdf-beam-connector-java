@@ -32,6 +32,7 @@ import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertEventFn;
+import com.cognite.beam.io.fn.write.UpsertEventFnNew;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.common.base.Preconditions;
@@ -482,7 +483,7 @@ public abstract class Events {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<Event>, PCollection<Event>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 1000;
+        private static final int MAX_WRITE_BATCH_SIZE = 4000;
 
         public static Write.Builder builder() {
             return new com.cognite.beam.io.AutoValue_Events_Write.Builder()
@@ -559,9 +560,15 @@ public abstract class Events {
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Event>>create())
                     .apply("Upsert items", ParDo.of(
+                            new UpsertEventFnNew(getHints(), getWriterConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
+                    /*
+                    .apply("Upsert items", ParDo.of(
                             new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView))
                     .apply("Parse results items", ParDo.of(new ParseEventFn()));
+
+                     */
 
             return outputCollection;
         }

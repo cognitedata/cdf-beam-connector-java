@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn.write;
+package com.cognite.beam.io.fn;
 
+import com.cognite.beam.io.config.ConfigBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
@@ -29,37 +30,32 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Base class for writing items to CDF.Clean. Specific resource types (Event, Asset, etc.) extend this class with
- * custom parsing logic.
+ * Base class for DoFns interacting with Cognite Data Fusion.
+ *
+ * This class will handle the instantiation of the {@link CogniteClient}.
  */
-public abstract class UpsertItemBaseNewFn<T> extends DoFn<Iterable<T>, T> {
+public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
-    final Distribution apiLatency = Metrics.distribution("cognite", "apiLatency");
-    final Distribution apiBatchSize = Metrics.distribution("cognite", "apiBatchSize");
+    protected final Distribution apiLatency = Metrics.distribution("cognite", "apiLatency");
+    protected final Distribution apiBatchSize = Metrics.distribution("cognite", "apiBatchSize");
 
+    protected final Hints hints;
     private transient CogniteClient client = null; // Mark transient to prevent serialization
-    final Hints hints;
-    final WriterConfig writerConfig;
-    final ProjectConfig projectConfig;
 
-    public UpsertItemBaseNewFn(Hints hints, WriterConfig writerConfig,
-                               ProjectConfig projectConfig) {
-        Preconditions.checkNotNull(writerConfig, "Writer config cannot be null.");
+    public IOBaseFn(Hints hints) {
         Preconditions.checkNotNull(hints, "Hints cannot be null");
-        Preconditions.checkNotNull(projectConfig, "Project config cannot be null");
-
         this.hints = hints;
-        this.projectConfig = projectConfig;
-        this.writerConfig = writerConfig;
     }
 
     /**
      * Returns the {@link CogniteClient}. Will instantiate a new client and cache it for further access.
+     * @param projectConfig The {@link ProjectConfig} to configure auth credentials.
+     * @param configBase Carries the app and session identifiers.
      * @return The {@link CogniteClient}.
      * @throws Exception
      */
-    protected CogniteClient getClient(ProjectConfig projectConfig) throws Exception {
+    protected CogniteClient getClient(ProjectConfig projectConfig, ConfigBase configBase) throws Exception {
         if (null == client) {
             // Client is not configured. Either because this class has been serialized or it is the first method call
             Preconditions.checkState(null != projectConfig.getApiKey() && projectConfig.getApiKey().isAccessible(),
@@ -68,8 +64,8 @@ public abstract class UpsertItemBaseNewFn<T> extends DoFn<Iterable<T>, T> {
                     .withBaseUrl(projectConfig.getHost().get())
                     .withClientConfig(ClientConfig.create()
                             .withMaxRetries(hints.getMaxRetries().get())
-                            .withAppIdentifier(writerConfig.getAppIdentifier())
-                            .withSessionIdentifier(writerConfig.getSessionIdentifier()));
+                            .withAppIdentifier(configBase.getAppIdentifier())
+                            .withSessionIdentifier(configBase.getSessionIdentifier()));
 
             if (null != projectConfig.getProject() && projectConfig.getProject().isAccessible()) {
                 client = client.withProject(projectConfig.getProject().get());

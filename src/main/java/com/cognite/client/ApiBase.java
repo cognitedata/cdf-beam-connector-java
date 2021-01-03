@@ -51,8 +51,6 @@ import java.util.stream.Collectors;
 abstract class ApiBase {
     private static final ImmutableList<ResourceType> resourcesSupportingPartitions =
             ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT, ResourceType.FILE, ResourceType.TIMESERIES_HEADER);
-    @Nullable
-    private static String cdfProject = null; // Cache attribute for the CDF project
 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
@@ -147,34 +145,7 @@ abstract class ApiBase {
             return requestParameters;
         }
 
-        return requestParameters.withProjectConfig(buildProjectConfig());
-    }
-
-    protected ProjectConfig buildProjectConfig() throws Exception {
-        String cdfProject = null;
-        if (null != getClient().getProject()) {
-            // The project is explicitly defined
-            cdfProject = getClient().getProject();
-        } else if (null != ApiBase.cdfProject) {
-            // The project info is cached
-            cdfProject = ApiBase.cdfProject;
-        } else {
-            // Have to get the project via the api key
-            LoginStatus loginStatus = getConnectorService()
-                    .readLoginStatusByApiKey(getClient().getBaseUrl(), getClient().getApiKey());
-
-            if (loginStatus.getProject().isEmpty()) {
-                throw new Exception("Could not find the project for the api key.");
-            }
-            LOG.debug("Project identified for the api key. Project: {}", loginStatus.getProject());
-            ApiBase.cdfProject = loginStatus.getProject(); // Cache the result
-            cdfProject = loginStatus.getProject();
-        }
-
-        return ProjectConfig.create()
-                .withHost(getClient().getBaseUrl())
-                .withApiKey(getClient().getApiKey())
-                .withProject(cdfProject);
+        return requestParameters.withProjectConfig(getClient().buildProjectConfig());
     }
 
     /*
@@ -182,7 +153,7 @@ abstract class ApiBase {
      */
     private Iterator<CompletableFuture<ResponseItems<String>>>
             getListResponseIterator(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
-        ConnectorServiceV1 connector = getConnectorService();
+        ConnectorServiceV1 connector = getClient().getConnectorService();
 
         Iterator<CompletableFuture<ResponseItems<String>>> results;
         switch (resourceType) {
@@ -224,14 +195,6 @@ abstract class ApiBase {
         }
 
         return results;
-    }
-
-    /*
-    Builds the connector service object.
-     */
-    protected ConnectorServiceV1 getConnectorService() {
-        return ConnectorServiceV1.create(getClient().getClientConfig().getMaxRetries());
-        // todo add executor and client spec here. Must refactor the Beam DoFns too (SDK must be added as a non-serialized variable).
     }
 
     /**
