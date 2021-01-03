@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +47,14 @@ import java.util.stream.Collectors;
  * Base class for the various apis (asset, event, ts, raw, etc.).
  *
  * This class collects the set of common attributes across all apis. The individual api
- * implementations will automatically pick these up via the autovalue generator.
+ * implementations will automatically pick these up via the AutoValue generator.
  */
 abstract class ApiBase {
     private static final ImmutableList<ResourceType> resourcesSupportingPartitions =
             ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT, ResourceType.FILE, ResourceType.TIMESERIES_HEADER);
+    @Nullable
+    private static String cdfProject = null; // Cache attribute for the CDF project
+
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     public abstract CogniteClient getClient();
@@ -148,18 +152,30 @@ abstract class ApiBase {
     }
 
     protected ProjectConfig buildProjectConfig() throws Exception {
-        LoginStatus loginStatus = getConnectorService()
-                .readLoginStatusByApiKey(getClient().getBaseUrl(), getClient().getApiKey());
+        String cdfProject = null;
+        if (null != getClient().getProject()) {
+            // The project is explicitly defined
+            cdfProject = getClient().getProject();
+        } else if (null != ApiBase.cdfProject) {
+            // The project info is cached
+            cdfProject = ApiBase.cdfProject;
+        } else {
+            // Have to get the project via the api key
+            LoginStatus loginStatus = getConnectorService()
+                    .readLoginStatusByApiKey(getClient().getBaseUrl(), getClient().getApiKey());
 
-        if (loginStatus.getProject().isEmpty()) {
-            throw new Exception("Could not find the project for the api key.");
+            if (loginStatus.getProject().isEmpty()) {
+                throw new Exception("Could not find the project for the api key.");
+            }
+            LOG.debug("Project identified for the api key. Project: {}", loginStatus.getProject());
+            ApiBase.cdfProject = loginStatus.getProject(); // Cache the result
+            cdfProject = loginStatus.getProject();
         }
 
-        LOG.debug("Project identified for the api key. Project: {}", loginStatus.getProject());
         return ProjectConfig.create()
                 .withHost(getClient().getBaseUrl())
                 .withApiKey(getClient().getApiKey())
-                .withProject(loginStatus.getProject());
+                .withProject(cdfProject);
     }
 
     /*

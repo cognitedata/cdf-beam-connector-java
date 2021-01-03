@@ -37,7 +37,7 @@ class EventsTest {
 
         try {
             LOG.info(loggingPrefix + "Start upserting events.");
-            List<Event> upsertEventsList = TestUtils.generateEvents(26800);
+            List<Event> upsertEventsList = TestUtils.generateEvents(16800);
             client.events().upsert(upsertEventsList);
             LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
@@ -62,6 +62,8 @@ class EventsTest {
                     .forEach(item -> deleteItemsInput.add(item));
 
             List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
 
             assertEquals(upsertEventsList.size(), listEventsResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());

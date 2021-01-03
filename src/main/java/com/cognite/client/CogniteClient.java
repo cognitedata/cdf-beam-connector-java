@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -66,6 +67,8 @@ public abstract class CogniteClient implements Serializable {
 
     protected abstract Builder toBuilder();
     protected abstract String getApiKey();
+    @Nullable
+    protected abstract String getProject();
     protected abstract String getBaseUrl();
     protected abstract ClientConfig getClientConfig();
 
@@ -86,6 +89,16 @@ public abstract class CogniteClient implements Serializable {
         Preconditions.checkArgument(null != key && !key.isEmpty(),
                 "The api key cannot be empty.");
         return toBuilder().setApiKey(key).build();
+    }
+
+    /**
+     * Returns a {@link CogniteClient} using the specified Cognite Data Fusion project / tenant.
+     *
+     * @param project The project / tenant to use for interacting with Cognite Data Fusion.
+     * @return the client object with the project / tenant key set.
+     */
+    public CogniteClient withProject(String project) {
+        return toBuilder().setProject(project).build();
     }
 
     /**
@@ -140,6 +153,7 @@ public abstract class CogniteClient implements Serializable {
     @AutoValue.Builder
     abstract static class Builder {
         abstract Builder setApiKey(String value);
+        abstract Builder setProject(String value);
         abstract Builder setBaseUrl(String value);
         abstract Builder setClientConfig(ClientConfig value);
 
