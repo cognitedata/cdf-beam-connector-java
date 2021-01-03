@@ -31,8 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
-import static com.cognite.beam.io.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH;
-import static com.cognite.beam.io.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH;
+import static com.cognite.client.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH;
+import static com.cognite.client.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH;
 import static org.apache.commons.lang3.ObjectUtils.firstNonNull;
 
 /**

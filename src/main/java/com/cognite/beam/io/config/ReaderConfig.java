@@ -16,6 +16,7 @@
 
 package com.cognite.beam.io.config;
 
+import com.cognite.beam.io.RequestParameters;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.DefaultCoder;
@@ -226,7 +227,7 @@ public abstract class ReaderConfig extends ConfigBase {
 
     /**
      * Enables streaming mode. The reader will poll CDF regularly for updates until the end time of the
-     * {@link com.cognite.beam.io.servicesV1.RequestParameters} are reached ("end", "maxLastUpdatedTime", etc.).
+     * {@link RequestParameters} are reached ("end", "maxLastUpdatedTime", etc.).
      * If no end time is specified, the reader will keep polling indefinitely (until the job is stopped).
      *
      * The polling interval and offset can be specified

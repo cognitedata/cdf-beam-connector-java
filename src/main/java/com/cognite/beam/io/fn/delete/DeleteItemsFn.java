@@ -17,9 +17,9 @@
 package com.cognite.beam.io.fn.delete;
 
 import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.ResponseItems;
-import com.cognite.beam.io.servicesV1.parser.ItemParser;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.ItemParser;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,7 +29,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.fn.ResourceType;

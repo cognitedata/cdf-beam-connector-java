@@ -19,9 +19,9 @@ package com.cognite.client;
 import com.cognite.beam.io.dto.Event;
 import com.cognite.beam.io.dto.Item;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.parser.EventParser;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.config.UpsertMode;
 import com.google.auto.value.AutoValue;
 

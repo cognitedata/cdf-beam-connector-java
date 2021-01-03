@@ -16,6 +16,8 @@
 
 package com.cognite.client.servicesV1;
 
+import com.cognite.beam.io.RequestParameters;
+
 import java.util.concurrent.CompletableFuture;
 
 /**

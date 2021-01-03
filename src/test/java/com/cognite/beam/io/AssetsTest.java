@@ -4,9 +4,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.UpsertMode;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.dto.Asset;
-import com.cognite.beam.io.dto.Event;
 import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
@@ -23,8 +21,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class AssetsTest extends TestConfigProviderV1 {
     @BeforeAll

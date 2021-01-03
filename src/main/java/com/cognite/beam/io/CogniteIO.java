@@ -17,7 +17,6 @@
 package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.Hints;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

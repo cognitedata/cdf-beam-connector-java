@@ -26,7 +26,6 @@ import com.cognite.beam.io.fn.delete.DeleteSequenceRowsFn;
 import com.cognite.beam.io.fn.parse.ParseSequenceBodyFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.write.UpsertSeqBodyFn;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;

@@ -16,8 +16,8 @@
 
 package com.cognite.beam.io.util.internal;
 
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.ResponseItems;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.v1.timeseries.proto.DataPointInsertionRequest;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;

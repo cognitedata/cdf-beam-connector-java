@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.response;
 
 import com.cognite.beam.io.dto.FileBinary;
-import com.cognite.client.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;

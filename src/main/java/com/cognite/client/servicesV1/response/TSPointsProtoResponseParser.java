@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.response;
 
-import com.cognite.client.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.util.TSIterationUtilities;
 import com.cognite.v1.timeseries.proto.*;
 import com.fasterxml.jackson.databind.ObjectMapper;

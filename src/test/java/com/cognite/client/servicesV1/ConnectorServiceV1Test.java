@@ -1,5 +1,6 @@
 package com.cognite.client.servicesV1;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.TestConfigProviderV1;
 import com.cognite.beam.io.TestUtilsV1;
 import com.cognite.beam.io.dto.FileBinary;

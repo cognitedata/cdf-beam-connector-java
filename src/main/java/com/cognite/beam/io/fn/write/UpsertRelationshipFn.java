@@ -18,36 +18,16 @@ package com.cognite.beam.io.fn.write;
 
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.UpsertMode;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Event;
-import com.cognite.beam.io.dto.Item;
 import com.cognite.beam.io.dto.Relationship;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.ResponseItems;
-import com.cognite.beam.io.servicesV1.parser.EventParser;
-import com.cognite.beam.io.servicesV1.parser.ItemParser;
-import com.cognite.beam.io.servicesV1.parser.RelationshipParser;
-import com.cognite.beam.io.util.internal.MetricsUtil;
-import com.google.common.base.Preconditions;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.parser.RelationshipParser;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.beam.sdk.metrics.Counter;
-import org.apache.beam.sdk.metrics.Distribution;
-import org.apache.beam.sdk.metrics.Metrics;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Function for upserting {@link Relationship} to CDF. {@link Relationship} requires special handling for upserts

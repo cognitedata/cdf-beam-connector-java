@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn.request;
 
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.beam.sdk.transforms.DoFn;

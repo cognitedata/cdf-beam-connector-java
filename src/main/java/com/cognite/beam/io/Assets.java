@@ -31,7 +31,6 @@ import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertAssetFn;
 import com.cognite.beam.io.transform.BreakFusion;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.KvCoder;

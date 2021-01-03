@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.util;
 
-import com.cognite.client.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 
 import java.time.Duration;
 import java.util.Optional;

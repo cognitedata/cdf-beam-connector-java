@@ -2,7 +2,7 @@ package com.cognite.client;
 
 import com.cognite.beam.io.dto.Event;
 import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

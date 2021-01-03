@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.request;
 
-import com.cognite.client.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
 import okhttp3.Request;

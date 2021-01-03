@@ -27,7 +27,6 @@ import com.cognite.beam.io.fn.parse.ParseAggregateFn;
 import com.cognite.beam.io.fn.parse.ParseFileMetaFn;
 import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.write.UpsertFileFn;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;

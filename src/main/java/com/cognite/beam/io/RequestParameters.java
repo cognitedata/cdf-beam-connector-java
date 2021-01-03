@@ -48,7 +48,7 @@ public abstract class RequestParameters implements Serializable {
     private final ObjectWriter objectWriter = JsonUtil.getObjectMapperInstance().writer();
 
     private static Builder builder() {
-        return new com.cognite.client.servicesV1.AutoValue_RequestParameters.Builder()
+        return new AutoValue_RequestParameters.Builder()
                 .setProtoRequestBody(Struct.newBuilder().build())
                 .setProjectConfig(ProjectConfig.create());
     }

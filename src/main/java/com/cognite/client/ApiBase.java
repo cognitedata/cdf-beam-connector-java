@@ -20,17 +20,16 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.dto.Item;
 import com.cognite.beam.io.dto.LoginStatus;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.ResponseItems;
-import com.cognite.beam.io.servicesV1.parser.ItemParser;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -460,7 +459,7 @@ abstract class ApiBase {
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
 
         /**
-         * Sets the {@link com.cognite.beam.io.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
+         * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
          *
          * @param updateWriter The item writer for update requests
          * @return The {@link UpsertItems} object with the configuration applied.

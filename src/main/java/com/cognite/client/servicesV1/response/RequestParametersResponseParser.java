@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.response;
 
-import com.cognite.client.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auto.value.AutoValue;

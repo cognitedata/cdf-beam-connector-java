@@ -4,7 +4,6 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.dto.FileMetadata;
 import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
@@ -23,8 +22,6 @@ import org.joda.time.Duration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class FilesMetadataTest extends TestConfigProviderV1 {
     static final String fileType = "text/plain";

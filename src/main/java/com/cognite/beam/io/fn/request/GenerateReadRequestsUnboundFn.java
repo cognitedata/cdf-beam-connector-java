@@ -18,8 +18,8 @@ package com.cognite.beam.io.fn.request;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.util.TSIterationUtilities;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.util.TSIterationUtilities;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
