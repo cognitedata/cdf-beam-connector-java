@@ -16,6 +16,7 @@
 
 package com.cognite.beam.io.config;
 
+import com.cognite.client.config.UpsertMode;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.DefaultCoder;
@@ -37,7 +38,7 @@ public abstract class WriterConfig extends ConfigBase {
     }
 
     public abstract WriterConfig.Builder toBuilder();
-    public abstract UpsertMode getUpsertMode();
+    public abstract com.cognite.client.config.UpsertMode getUpsertMode();
 
     /**
      * Set the app identifier. The identifier is encoded in the api calls to the Cognite instance and can be
@@ -92,14 +93,14 @@ public abstract class WriterConfig extends ConfigBase {
      * @param mode
      * @return
      */
-    public WriterConfig withUpsertMode(UpsertMode mode) {
+    public WriterConfig withUpsertMode(com.cognite.client.config.UpsertMode mode) {
         Preconditions.checkNotNull(mode, "Upsert mode cannot be null");
         return toBuilder().setUpsertMode(mode).build();
     }
 
     @AutoValue.Builder
     public abstract static class Builder extends ConfigBase.Builder<Builder> {
-        abstract WriterConfig.Builder setUpsertMode(UpsertMode value);
+        abstract WriterConfig.Builder setUpsertMode(com.cognite.client.config.UpsertMode value);
         abstract WriterConfig build();
     }
 }
