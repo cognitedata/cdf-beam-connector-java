@@ -2,8 +2,8 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.Label;
+import com.cognite.client.dto.Item;
+import com.cognite.client.dto.Label;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;

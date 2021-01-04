@@ -16,8 +16,8 @@
 
 package com.cognite.beam.io.transform;
 
-import com.cognite.beam.io.dto.Asset;
-import com.cognite.beam.io.dto.AssetLookup;
+import com.cognite.client.dto.Asset;
+import com.cognite.client.dto.AssetLookup;
 import com.google.auto.value.AutoValue;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.coders.BigEndianLongCoder;

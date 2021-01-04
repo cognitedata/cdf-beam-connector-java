@@ -2,8 +2,8 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Asset;
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Asset;
+import com.cognite.client.dto.Item;
 import com.cognite.client.config.UpsertMode;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.StringValue;

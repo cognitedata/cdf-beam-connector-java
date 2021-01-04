@@ -16,7 +16,7 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.dto.Asset;
+import com.cognite.client.dto.Asset;
 import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.parser.AssetParser;
@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * This class represents the Cognite assets api endpoint.
  *
- * It provides methods for reading and writing {@link com.cognite.beam.io.dto.Asset}.
+ * It provides methods for reading and writing {@link com.cognite.client.dto.Asset}.
  */
 @AutoValue
 public abstract class Assets extends ApiBase {

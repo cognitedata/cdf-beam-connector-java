@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.executor;
 
-import com.cognite.beam.io.dto.FileBinary;
+import com.cognite.client.dto.FileBinary;
 import com.cognite.client.servicesV1.ConnectorConstants;
 import com.cognite.client.servicesV1.ResponseBinary;
 import com.google.auto.value.AutoValue;

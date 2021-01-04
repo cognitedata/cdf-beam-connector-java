@@ -20,8 +20,8 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Aggregate;
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
 import com.cognite.beam.io.fn.read.AddPartitionsFn;
 import com.cognite.beam.io.fn.ResourceType;
@@ -45,7 +45,7 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
-import com.cognite.beam.io.dto.Event;
+import com.cognite.client.dto.Event;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.google.auto.value.AutoValue;
 

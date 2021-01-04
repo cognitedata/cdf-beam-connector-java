@@ -20,7 +20,7 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.DataSet;
+import com.cognite.client.dto.DataSet;
 import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.beam.io.fn.parse.ParseDataSetFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;

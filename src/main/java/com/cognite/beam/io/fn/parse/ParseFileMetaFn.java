@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn.parse;
 
-import com.cognite.beam.io.dto.FileMetadata;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.servicesV1.parser.FileParser;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;

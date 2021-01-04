@@ -19,7 +19,7 @@ package com.cognite.beam.io.transform.internal;
 import com.cognite.beam.io.config.GcpSecretConfig;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.LoginStatus;
+import com.cognite.client.dto.LoginStatus;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionRequest;

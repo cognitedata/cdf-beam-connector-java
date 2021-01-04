@@ -28,11 +28,18 @@ Changes are grouped as follows:
 
 ### Changed
 
+- Refactored data transfer objects from `com.cognite.beam.io.dto` to `com.cognite.client.dto`. 
+  All other signatures are the same as before, so you may run a search & replace to update your client.
+
 - Refactored `com.cognite.beam.io.servicesV1` to `com.cognite.client.servicesV1`. 
   All other signatures are the same as before, so you may run a search & replace to update your client.
   
 - Refactored `com.cognite.beam.io.config.UpsertMode` to `com.cognite.client.config.UpsertMode`.
   All other signatures are the same as before, so you may run a search & replace to update your client.
+  
+### Fixed
+
+- Fixed a bug causing the number of write shards to be double of the configured value.
 
 ## 0.9.14
 

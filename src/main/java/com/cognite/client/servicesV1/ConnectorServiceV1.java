@@ -30,7 +30,7 @@ import com.cognite.client.servicesV1.executor.FileBinaryRequestExecutor;
 import com.cognite.client.servicesV1.parser.ItemParser;
 
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.dto.*;
+import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.executor.RequestExecutor;
 import com.cognite.client.servicesV1.parser.FileParser;
 import com.cognite.client.servicesV1.parser.LoginStatusParser;

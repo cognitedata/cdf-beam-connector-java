@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn.parse;
 
-import com.cognite.beam.io.dto.DataSet;
+import com.cognite.client.dto.DataSet;
 import com.cognite.client.servicesV1.parser.DataSetParser;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;

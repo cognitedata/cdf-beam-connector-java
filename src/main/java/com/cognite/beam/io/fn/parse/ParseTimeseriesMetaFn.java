@@ -21,7 +21,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.dto.TimeseriesMetadata;
+import com.cognite.client.dto.TimeseriesMetadata;
 
 public class ParseTimeseriesMetaFn extends DoFn<String, TimeseriesMetadata> {
     private final Logger LOG = LoggerFactory.getLogger(ParseTimeseriesMetaFn.class);

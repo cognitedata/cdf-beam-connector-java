@@ -21,7 +21,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.dto.SequenceMetadata;
+import com.cognite.client.dto.SequenceMetadata;
 
 public class ParseSequenceMetaFn extends DoFn<String, SequenceMetadata> {
     private final Logger LOG = LoggerFactory.getLogger(ParseSequenceMetaFn.class);

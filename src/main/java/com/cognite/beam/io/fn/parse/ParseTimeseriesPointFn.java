@@ -26,7 +26,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.dto.TimeseriesPoint;
+import com.cognite.client.dto.TimeseriesPoint;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

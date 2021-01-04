@@ -17,8 +17,8 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.LoginStatus;
+import com.cognite.client.dto.Item;
+import com.cognite.client.dto.LoginStatus;
 import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;

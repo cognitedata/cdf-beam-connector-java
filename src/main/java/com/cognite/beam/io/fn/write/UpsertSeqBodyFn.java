@@ -19,7 +19,7 @@ package com.cognite.beam.io.fn.write;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.*;
+import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ResponseItems;

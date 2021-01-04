@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn.parse;
 
-import com.cognite.beam.io.dto.Label;
+import com.cognite.client.dto.Label;
 import com.cognite.client.servicesV1.parser.LabelParser;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;

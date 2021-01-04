@@ -2,7 +2,7 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.*;
+import com.cognite.client.dto.*;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;

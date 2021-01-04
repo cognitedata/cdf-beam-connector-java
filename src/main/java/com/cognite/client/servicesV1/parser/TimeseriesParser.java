@@ -17,8 +17,8 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.TimeseriesMetadata;
-import com.cognite.beam.io.dto.TimeseriesPoint;
+import com.cognite.client.dto.TimeseriesMetadata;
+import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.v1.timeseries.proto.AggregateDatapoint;
 import com.cognite.v1.timeseries.proto.DataPointListItem;
 import com.cognite.v1.timeseries.proto.NumericDatapoint;

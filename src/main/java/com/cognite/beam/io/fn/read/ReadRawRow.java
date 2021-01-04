@@ -21,7 +21,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.RawRow;
+import com.cognite.client.dto.RawRow;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.RawParser;
 import com.cognite.beam.io.util.internal.MetricsUtil;

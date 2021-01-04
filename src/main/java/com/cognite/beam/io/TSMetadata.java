@@ -20,8 +20,8 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Aggregate;
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
@@ -43,7 +43,7 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
-import com.cognite.beam.io.dto.TimeseriesMetadata;
+import com.cognite.client.dto.TimeseriesMetadata;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.fn.parse.ParseTimeseriesMetaFn;
 import com.google.auto.value.AutoValue;
@@ -568,7 +568,7 @@ public abstract class TSMetadata {
 
     /**
      * Transform that will delete {@link TimeseriesMetadata} objects (and also the corresponding
-     * {@link com.cognite.beam.io.dto.TimeseriesPoint}) from Cognite Data Fusion.
+     * {@link com.cognite.client.dto.TimeseriesPoint}) from Cognite Data Fusion.
      * <p>
      * The input to this transform is a collection of {@link Item} objects that identifies (via
      * id or externalId) which {@link TimeseriesMetadata} objects to delete.

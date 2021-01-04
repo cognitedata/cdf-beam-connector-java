@@ -19,9 +19,9 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.EntityMatch;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.PnIDResponse;
+import com.cognite.client.dto.EntityMatch;
+import com.cognite.client.dto.Item;
+import com.cognite.client.dto.PnIDResponse;
 import com.cognite.beam.io.fn.context.CreateInteractivePnIDFn;
 import com.cognite.beam.io.fn.context.MatchEntitiesFn;
 import com.cognite.beam.io.fn.context.MatchEntitiesWithContextFn;
@@ -91,7 +91,7 @@ public abstract class Context {
      * This transform will match the inbound entities with a configured matcher model. You have to configure
      * this transform with 1) a function to translate from {@code T} to {@link Struct}, and 2) a matching model id.
      *
-     * Example using {@link com.cognite.beam.io.dto.Event} as the inbound entity type:
+     * Example using {@link com.cognite.client.dto.Event} as the inbound entity type:
      * <pre>{@code
      * PCollection<KV<Event, List<EntityMatch>>> results = myInputPCollectionOfEvents
      *                 .apply("match events", CogniteIO.<Event>matchEntities()

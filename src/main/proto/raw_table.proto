@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package com.cognite.beam.proto;
 
-option java_package = "com.cognite.beam.io.dto";
+option java_package = "com.cognite.client.dto";
 option java_multiple_files = true;
 
 message RawTable {

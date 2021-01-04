@@ -1,7 +1,7 @@
 package com.cognite.beam.io.transform;
 
 import com.cognite.beam.io.TestConfigProviderV1;
-import com.cognite.beam.io.dto.Asset;
+import com.cognite.client.dto.Asset;
 import com.google.protobuf.Int64Value;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;

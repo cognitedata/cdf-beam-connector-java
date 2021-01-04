@@ -20,7 +20,7 @@ import com.cognite.beam.io.ConnectorBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.RawRow;
+import com.cognite.client.dto.RawRow;
 import com.cognite.beam.io.fn.read.ReadRawRow;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.transform.internal.ApplyProjectConfig;

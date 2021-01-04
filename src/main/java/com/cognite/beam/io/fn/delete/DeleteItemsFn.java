@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn.delete;
 
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Item;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.ItemParser;

@@ -21,7 +21,7 @@ import com.cognite.beam.io.ConnectorBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.RawRow;
+import com.cognite.client.dto.RawRow;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.Struct;

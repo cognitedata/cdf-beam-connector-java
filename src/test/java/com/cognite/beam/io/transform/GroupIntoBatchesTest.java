@@ -1,6 +1,6 @@
 package com.cognite.beam.io.transform;
 
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Item;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.KvCoder;

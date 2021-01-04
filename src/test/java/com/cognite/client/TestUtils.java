@@ -1,6 +1,6 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.dto.*;
+import com.cognite.client.dto.*;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.StringValue;
 import com.google.protobuf.Value;

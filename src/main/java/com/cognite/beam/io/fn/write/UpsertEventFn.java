@@ -19,7 +19,7 @@ package com.cognite.beam.io.fn.write;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Event;
+import com.cognite.client.dto.Event;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.EventParser;
 import com.google.common.collect.ImmutableList;

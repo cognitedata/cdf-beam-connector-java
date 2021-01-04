@@ -21,7 +21,7 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.dto.Event;
+import com.cognite.client.dto.Event;
 
 /**
  * Parse Cognite result json items to {@link Event}.

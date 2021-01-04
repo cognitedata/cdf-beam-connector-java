@@ -17,8 +17,8 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.Asset;
-import com.cognite.beam.io.dto.Label;
+import com.cognite.client.dto.Asset;
+import com.cognite.client.dto.Label;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
