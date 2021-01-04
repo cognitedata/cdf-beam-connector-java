@@ -4,6 +4,7 @@ import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
+import com.cognite.client.util.DataGenerator;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -37,7 +38,7 @@ class EventsTest {
 
         try {
             LOG.info(loggingPrefix + "Start upserting events.");
-            List<Event> upsertEventsList = TestUtils.generateEvents(16800);
+            List<Event> upsertEventsList = DataGenerator.generateEvents(16800);
             client.events().upsert(upsertEventsList);
             LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
@@ -48,7 +49,7 @@ class EventsTest {
             List<Event> listEventsResults = new ArrayList<>();
             client.events()
                     .list(RequestParameters.create()
-                            .withFilterParameter("source", TestUtils.sourceValue))
+                            .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));

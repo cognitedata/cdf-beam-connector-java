@@ -94,7 +94,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
 
     @Override
     public PCollection<ProjectConfig> expand(PBegin input) {
-        LOG.info("Starting build project config transform.");
         LOG.debug("Reading project config file from: {}", getProjectConfigFile());
 
         // project config side input. Sourced from file
@@ -181,6 +180,7 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                         LOG.info(loggingPrefix + "Project identified for the api key. Project: {}", loginStatus.getProject());
                         return input.withProject(loginStatus.getProject());
                     }
+                    // todo: Remove the project lookup. The Java SDK will handle this.
 
                 }).withSideInputs(projectConfigFileView))
                 ;

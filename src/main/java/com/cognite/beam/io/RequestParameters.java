@@ -20,10 +20,12 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.Request;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Message;
 import com.google.protobuf.Struct;
+import org.apache.beam.sdk.annotations.Internal;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 
@@ -69,6 +71,17 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public abstract ProjectConfig getProjectConfig();
+
+    /**
+     * Returns the set of partitions to use for read / list operations. This is an advanced configuration
+     * for splitting large read operations across multiple workers.
+     *
+     * An empty partitions list is the same as "all partitions".
+     *
+     * @return The valid partitions for read/list operations.
+     */
+    @Internal
+    public abstract ImmutableList<String> getPartitions();
 
     abstract Builder toBuilder();
 
@@ -131,6 +144,27 @@ public abstract class RequestParameters implements Serializable {
     }
 
     /**
+     * Specify which partitions this (list / read) request should include.
+     *
+     * This setting will override any previous partitions setting.
+     * @param partitions The partitions for this request
+     * @return The request parameters with the configuration applied.
+     */
+    public RequestParameters withPartitions(List<String> partitions) {
+        return toBuilder().setPartitions(partitions).build();
+    }
+
+    /**
+     * Add a partition to this request. The partition will be added to any existing partitions.
+     *
+     * @param partition The partition to add.
+     * @return The request parameters with the configuration applied.
+     */
+    public RequestParameters addPartition(String partition) {
+        return toBuilder().addPartition(partition).build();
+    }
+
+    /**
      * Adds the complete request parameter structure based on Java objects. Calling this method will overwrite
      * any previously added parameters.
      *
@@ -140,7 +174,7 @@ public abstract class RequestParameters implements Serializable {
      * - Valid containers are Map (Json Object) and List (Json array).
      *
      * @param requestParameters
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withRequestParameters(Map<String, Object> requestParameters) {
         return toBuilder()
@@ -152,7 +186,7 @@ public abstract class RequestParameters implements Serializable {
      * Adds the complete request body as a protobuf object.
      *
      * @param requestBody
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withProtoRequestBody(Message requestBody) {
         return toBuilder()
@@ -165,7 +199,7 @@ public abstract class RequestParameters implements Serializable {
      * any previously added parameters.
      *
      * @param json
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withRequestJson(String json) throws Exception {
         return toBuilder()
@@ -178,7 +212,7 @@ public abstract class RequestParameters implements Serializable {
      *
      * @param key
      * @param value
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withRootParameter(String key, Object value) {
         return toBuilder()
@@ -191,7 +225,7 @@ public abstract class RequestParameters implements Serializable {
      *
      * @param key
      * @param value
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withFilterParameter(String key, Object value) {
         return toBuilder()
@@ -204,7 +238,7 @@ public abstract class RequestParameters implements Serializable {
      *
      * @param key
      * @param value
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withFilterMetadataParameter(String key, String value) {
         return toBuilder()
@@ -220,7 +254,7 @@ public abstract class RequestParameters implements Serializable {
      * the maximum number of items is 10k, with a maximum of 100k data points.
      *
      * @param items
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withItems(List<? extends Map<String, Object>> items) {
         return toBuilder()
@@ -235,7 +269,7 @@ public abstract class RequestParameters implements Serializable {
      * from a time series.
      *
      * @param externalId
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withItemExternalId(String externalId) {
         return toBuilder()
@@ -250,7 +284,7 @@ public abstract class RequestParameters implements Serializable {
      * from a time series.
      *
      * @param internalId
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withItemInternalId(long internalId) {
         return toBuilder()
@@ -262,7 +296,7 @@ public abstract class RequestParameters implements Serializable {
      * Convenience method for adding the database name when reading from Cognite.Raw.
      *
      * @param dbName The name of the database to read from.
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withDbName(String dbName) {
         return toBuilder()
@@ -274,7 +308,7 @@ public abstract class RequestParameters implements Serializable {
      * Convenience method for adding the table name when reading from Cognite.Raw.
      *
      * @param tableName The name of the database to read from.
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withTableName(String tableName) {
         return toBuilder()
@@ -290,7 +324,7 @@ public abstract class RequestParameters implements Serializable {
      * you can set this once on the reader / writer via parameters or a config file.
      *
      * @param config
-     * @return
+     * @return The request parameters with the configuration applied.
      */
     public RequestParameters withProjectConfig(ProjectConfig config) {
         return toBuilder().setProjectConfig(config).build();
@@ -302,9 +336,18 @@ public abstract class RequestParameters implements Serializable {
 
     @AutoValue.Builder
     public abstract static class Builder {
+        abstract ImmutableList.Builder<String> partitionsBuilder();
         abstract Builder setProjectConfig(ProjectConfig value);
         abstract Builder setRequest(Request value);
+        abstract Builder setPartitions(List<String> value);
 
         public abstract RequestParameters build();
+
+        public Builder addPartition(String value) {
+            checkArgument(value != null && !value.isEmpty(),
+                    "Partition cannot be null or empty");
+            partitionsBuilder().add(value);
+            return this;
+        }
     }
 }

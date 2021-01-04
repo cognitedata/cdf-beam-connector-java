@@ -107,9 +107,11 @@ public abstract class Hints implements Serializable {
      * @param value
      * @return
      */
+    @Deprecated
     public Hints withReadShards(int value) {
         return toBuilder().setReadShards(value).build();
     }
+    // todo: remove when new partitions Fn is implemented
 
     /**
      * Sets the number of batches/shards to chunk the results data set into. In general, the higher the number of shards
@@ -122,9 +124,11 @@ public abstract class Hints implements Serializable {
      * @param value
      * @return
      */
+    @Deprecated
     public Hints withReadShards(ValueProvider<Integer> value) {
         return toBuilder().setReadShards(value).build();
     }
+    // todo: remove when new partitions Fn is implemented
 
     /**
      * Sets the number of shards for the write stream. In general, the higher the number of shards

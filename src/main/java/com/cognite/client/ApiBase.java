@@ -17,12 +17,14 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
-import com.cognite.client.dto.LoginStatus;
 import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.AggregateParser;
 import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
@@ -122,6 +124,57 @@ abstract class ApiBase {
         }
 
         return FanOutIterator.of(iterators);
+    }
+
+    /**
+     * Performs an item aggregation request to Cognite Data Fusion.
+     *
+     * The default aggregation is a total item count based on the (optional) filters in the request. Some
+     * resource types, for example {@link com.cognite.client.dto.Event}, supports multiple types of aggregation.
+     *
+     * @param resourceType The resource type to perform aggregation of.
+     * @param requestParameters The request containing filters.
+     * @return The aggregation result.
+     * @throws Exception
+     */
+    protected Aggregate aggregate(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ItemReader<String> itemReader;
+
+        // Add auth info
+        RequestParameters requestParams = addAuthInfo(requestParameters);
+
+        switch (resourceType) {
+            case ASSETS_AGGREGATES:
+                itemReader = connector.readAssetsAggregates();
+                break;
+            case EVENT_AGGREGATES:
+                itemReader = connector.readEventsAggregates();
+                break;
+            case SEQUENCE_AGGREGATES:
+                itemReader = connector.readSequencesAggregates();
+                break;
+            case FILE_AGGREGATES:
+                itemReader = connector.readFilesAggregates();
+                break;
+            case TIMESERIES_AGGREGATES:
+                itemReader = connector.readTsAggregates();
+                break;
+            default:
+                LOG.error("Aggregate() - Not a supported resource type: " + resourceType);
+                throw new Exception("Aggregate() - Not a supported resource type: " + resourceType);
+        }
+        ResponseItems<String> responseItems = itemReader.getItems(requestParams);
+
+        if (!responseItems.isSuccessful()) {
+            // something went wrong with the request
+            String message = "Aggregate() - Error when sending request to Cognite Data Fusion: "
+                    + responseItems.getResponseBodyAsString();
+            LOG.error(message);
+            throw new Exception(message);
+        }
+
+        return AggregateParser.parseAggregate(responseItems.getResultsItems().get(0));
     }
 
     /**

@@ -4,6 +4,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
+import com.cognite.client.util.DataGenerator;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
@@ -45,13 +46,9 @@ class EventsTest extends TestConfigProviderV1 {
                 Event.newBuilder()
                         .setExternalId(StringValue.of("extId_A"))
                         .setDescription(StringValue.of("Test_event"))
-                        .setType(StringValue.of(TestUtilsV1.sourceValue))
+                        .setType(StringValue.of(DataGenerator.sourceValue))
                         .build(),
-                Event.newBuilder()
-                        .setExternalId(StringValue.of("extId_B"))
-                        .setDescription(StringValue.of("Test_event"))
-                        .setType(StringValue.of(TestUtilsV1.sourceValue))
-                        .build()
+                DataGenerator.generateEvents(9567).toArray(new Event[9567])
         )
                 .advanceWatermarkToInfinity();
 
@@ -63,14 +60,6 @@ class EventsTest extends TestConfigProviderV1 {
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
                         );
-
-        results.apply("Event to string", MapElements
-                .into(TypeDescriptors.strings())
-                .via(Event::toString))
-                .apply("Write insert output", TextIO.write().to("./UnitTest_event_writeBatch_output")
-                        .withSuffix(".txt")
-                        .withoutSharding()
-                        .withWindowedWrites());
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
         PipelineResult pipelineResult = p.run();
@@ -103,7 +92,7 @@ class EventsTest extends TestConfigProviderV1 {
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
                         .withRequestParameters(RequestParameters.create()
-                                .withFilterParameter("type", TestUtilsV1.sourceValue)))
+                                .withFilterParameter("source", DataGenerator.sourceValue)))
                // .apply("Filter events", Filter
                //         .by(event -> event.getExternalId().getValue().equalsIgnoreCase("1_2017-12-14 13:49:36vdUr2")))
                  ;

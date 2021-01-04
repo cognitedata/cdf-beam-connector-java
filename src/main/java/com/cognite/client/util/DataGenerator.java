@@ -1,4 +1,4 @@
-package com.cognite.client;
+package com.cognite.client.util;
 
 import com.cognite.client.dto.*;
 import com.google.protobuf.Int64Value;
@@ -11,10 +11,12 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class TestUtils {
+/**
+ * Utility class for generating random data objects.
+ */
+public class DataGenerator {
     public static final String sourceKey = "source";
-    public static final String sourceValue = "unitTest";
-    public static final String updatedSourceValue = "unitTestModified";
+    public static final String sourceValue = "sdk-data-generator";
 
     private static final long SECOND_MS = 1000L;
     private static final long MINUTE_MS = 60L * SECOND_MS;
@@ -31,8 +33,8 @@ public class TestUtils {
                     .setIsStep(false)
                     .setDescription(StringValue.of(RandomStringUtils.randomAlphanumeric(50)))
                     .setUnit(StringValue.of("TestUnits"))
-                    .putMetadata("type", TestUtils.sourceValue)
-                    .putMetadata(sourceKey, TestUtils.sourceValue)
+                    .putMetadata("type", DataGenerator.sourceValue)
+                    .putMetadata(sourceKey, DataGenerator.sourceValue)
                     .build());
         }
         return objects;
@@ -80,8 +82,8 @@ public class TestUtils {
                     .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
                     .setName(StringValue.of("test_sequence_" + RandomStringUtils.randomAlphanumeric(5)))
                     .setDescription(StringValue.of(RandomStringUtils.randomAlphanumeric(50)))
-                    .putMetadata("type", TestUtils.sourceValue)
-                    .putMetadata(sourceKey, TestUtils.sourceValue)
+                    .putMetadata("type", DataGenerator.sourceValue)
+                    .putMetadata(sourceKey, DataGenerator.sourceValue)
                     .addAllColumns(columns)
                     .build());
         }
@@ -134,10 +136,10 @@ public class TestUtils {
                     .setDescription(StringValue.of("test_event_" + RandomStringUtils.randomAlphanumeric(50)))
                     .setType(StringValue.of("test_event"))
                     .setSubtype(StringValue.of(
-                            ThreadLocalRandom.current().nextInt(0,2) == 0 ? "test_event_sub_type" : "test_event_sub_type_2"))
+                            ThreadLocalRandom.current().nextInt(0,2) == 0 ? "event_sub_type" : "event_sub_type_2"))
                     .setSource(StringValue.of(sourceValue))
-                    .putMetadata("type", TestUtils.sourceValue)
-                    .putMetadata(sourceKey, TestUtils.sourceValue)
+                    .putMetadata("type", DataGenerator.sourceValue)
+                    .putMetadata(sourceKey, DataGenerator.sourceValue)
                     .build());
         }
         return objects;
