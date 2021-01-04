@@ -293,9 +293,11 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withProjectConfig(ProjectConfig config) {
-        checkNotNull(config, "Project configuration cannot be null.");
-
         return toBuilder().setProjectConfig(config).build();
+    }
+
+    public RequestParameters withRequest(Request request) {
+        return toBuilder().setRequest(request).build();
     }
 
     @AutoValue.Builder

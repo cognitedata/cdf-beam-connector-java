@@ -1,6 +1,7 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.client.config.AuthConfig;
 import com.cognite.client.dto.LoginStatus;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
@@ -192,6 +193,38 @@ public abstract class CogniteClient implements Serializable {
         }
 
         return ProjectConfig.create()
+                .withHost(getBaseUrl())
+                .withApiKey(getApiKey())
+                .withProject(cdfProject);
+    }
+
+    /**
+     * Returns a auth info for api requests
+     * @return project config with auth info populated
+     * @throws Exception
+     */
+    protected AuthConfig buildAuthConfig() throws Exception {
+        String cdfProject = null;
+        if (null != getProject()) {
+            // The project is explicitly defined
+            cdfProject = getProject();
+        } else if (null != cdfProjectCache) {
+            // The project info is cached
+            cdfProject = cdfProjectCache;
+        } else {
+            // Have to get the project via the api key
+            LoginStatus loginStatus = getConnectorService()
+                    .readLoginStatusByApiKey(getBaseUrl(), getApiKey());
+
+            if (loginStatus.getProject().isEmpty()) {
+                throw new Exception("Could not find the CDF project for the api key.");
+            }
+            LOG.debug("CDF project identified for the api key. Project: {}", loginStatus.getProject());
+            cdfProjectCache = loginStatus.getProject(); // Cache the result
+            cdfProject = loginStatus.getProject();
+        }
+
+        return AuthConfig.create()
                 .withHost(getBaseUrl())
                 .withApiKey(getApiKey())
                 .withProject(cdfProject);
