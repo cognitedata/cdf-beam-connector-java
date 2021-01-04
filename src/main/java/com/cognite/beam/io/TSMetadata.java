@@ -31,7 +31,6 @@ import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertTsHeaderFn;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.common.base.Preconditions;

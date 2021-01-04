@@ -20,10 +20,10 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.dto.Item;
 import com.cognite.beam.io.dto.LoginStatus;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.ResponseItems;
-import com.cognite.beam.io.servicesV1.parser.ItemParser;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
@@ -46,11 +46,12 @@ import java.util.stream.Collectors;
  * Base class for the various apis (asset, event, ts, raw, etc.).
  *
  * This class collects the set of common attributes across all apis. The individual api
- * implementations will automatically pick these up via the autovalue generator.
+ * implementations will automatically pick these up via the AutoValue generator.
  */
 abstract class ApiBase {
     private static final ImmutableList<ResourceType> resourcesSupportingPartitions =
             ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT, ResourceType.FILE, ResourceType.TIMESERIES_HEADER);
+
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     public abstract CogniteClient getClient();
@@ -144,22 +145,7 @@ abstract class ApiBase {
             return requestParameters;
         }
 
-        return requestParameters.withProjectConfig(buildProjectConfig());
-    }
-
-    protected ProjectConfig buildProjectConfig() throws Exception {
-        LoginStatus loginStatus = getConnectorService()
-                .readLoginStatusByApiKey(getClient().getBaseUrl(), getClient().getApiKey());
-
-        if (loginStatus.getProject().isEmpty()) {
-            throw new Exception("Could not find the project for the api key.");
-        }
-
-        LOG.debug("Project identified for the api key. Project: {}", loginStatus.getProject());
-        return ProjectConfig.create()
-                .withHost(getClient().getBaseUrl())
-                .withApiKey(getClient().getApiKey())
-                .withProject(loginStatus.getProject());
+        return requestParameters.withProjectConfig(getClient().buildProjectConfig());
     }
 
     /*
@@ -167,7 +153,7 @@ abstract class ApiBase {
      */
     private Iterator<CompletableFuture<ResponseItems<String>>>
             getListResponseIterator(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
-        ConnectorServiceV1 connector = getConnectorService();
+        ConnectorServiceV1 connector = getClient().getConnectorService();
 
         Iterator<CompletableFuture<ResponseItems<String>>> results;
         switch (resourceType) {
@@ -209,14 +195,6 @@ abstract class ApiBase {
         }
 
         return results;
-    }
-
-    /*
-    Builds the connector service object.
-     */
-    protected ConnectorServiceV1 getConnectorService() {
-        return ConnectorServiceV1.create(getClient().getClientConfig().getMaxRetries());
-        // todo add executor and client spec here. Must refactor the Beam DoFns too (SDK must be added as a non-serialized variable).
     }
 
     /**
@@ -444,7 +422,7 @@ abstract class ApiBase {
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
 
         /**
-         * Sets the {@link com.cognite.beam.io.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
+         * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
          *
          * @param updateWriter The item writer for update requests
          * @return The {@link UpsertItems} object with the configuration applied.

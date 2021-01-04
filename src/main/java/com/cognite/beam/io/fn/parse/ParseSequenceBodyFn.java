@@ -17,7 +17,7 @@
 package com.cognite.beam.io.fn.parse;
 
 import com.cognite.beam.io.dto.SequenceBody;
-import com.cognite.beam.io.servicesV1.parser.SequenceParser;
+import com.cognite.client.servicesV1.parser.SequenceParser;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

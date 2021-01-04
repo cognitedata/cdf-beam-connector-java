@@ -18,8 +18,8 @@ package com.cognite.client;
 
 import com.cognite.beam.io.dto.Asset;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.parser.AssetParser;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.parser.AssetParser;
 import com.google.auto.value.AutoValue;
 
 import java.util.Iterator;

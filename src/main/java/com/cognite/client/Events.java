@@ -19,9 +19,9 @@ package com.cognite.client;
 import com.cognite.beam.io.dto.Event;
 import com.cognite.beam.io.dto.Item;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.parser.EventParser;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.config.UpsertMode;
 import com.google.auto.value.AutoValue;
 
@@ -106,7 +106,7 @@ public abstract class Events extends ApiBase {
      * @throws Exception
      */
     public List<Event> upsert(List<Event> events) throws Exception {
-        ConnectorServiceV1 connector = getConnectorService();
+        ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ItemWriter createItemWriter = connector.writeEvents()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
@@ -114,7 +114,7 @@ public abstract class Events extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<Event> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, buildProjectConfig())
+        UpsertItems<Event> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
                 .withUpdateItemWriter(updateItemWriter)
                 .withUpdateMappingFunction(this::toRequestUpdateItem)
                 .withIdFunction(this::getEventId);
@@ -139,12 +139,12 @@ public abstract class Events extends ApiBase {
      * @throws Exception
      */
     public List<Item> delete(List<Item> events) throws Exception {
-        ConnectorServiceV1 connector = getConnectorService();
+        ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEvents()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, buildProjectConfig())
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
                 .withParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(events);

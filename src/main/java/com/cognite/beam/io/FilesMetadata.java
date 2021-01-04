@@ -43,7 +43,6 @@ import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 

@@ -16,10 +16,11 @@
 
 package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.servicesV1.*;
+import com.cognite.client.servicesV1.*;
 import com.cognite.beam.io.util.internal.MetricsUtil;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Distribution;

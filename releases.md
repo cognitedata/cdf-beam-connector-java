@@ -26,6 +26,14 @@ Changes are grouped as follows:
 
 ## [0.9.15-SNAPSHOT]
 
+### Changed
+
+- Refactored `com.cognite.beam.io.servicesV1` to `com.cognite.client.servicesV1`. 
+  All other signatures are the same as before, so you may run a search & replace to update your client.
+  
+- Refactored `com.cognite.beam.io.config.UpsertMode` to `com.cognite.client.config.UpsertMode`.
+  All other signatures are the same as before, so you may run a search & replace to update your client.
+
 ## 0.9.14
 
 ### Fixed

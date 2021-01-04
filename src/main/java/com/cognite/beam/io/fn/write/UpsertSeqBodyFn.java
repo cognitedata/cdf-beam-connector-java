@@ -20,11 +20,11 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.dto.*;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
-import com.cognite.beam.io.servicesV1.ResponseItems;
-import com.cognite.beam.io.servicesV1.parser.ItemParser;
-import com.cognite.beam.io.servicesV1.parser.SequenceParser;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.ItemParser;
+import com.cognite.client.servicesV1.parser.SequenceParser;
 import com.cognite.beam.io.util.internal.MetricsUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -45,7 +45,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.cognite.beam.io.servicesV1.ConnectorConstants.*;
+import static com.cognite.client.servicesV1.ConnectorConstants.*;
 
 /**
  * Writes sequences body (rows and columns) to CDF.Clean.

@@ -25,7 +25,6 @@ import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.beam.io.fn.parse.ParseDataSetFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.write.UpsertDataSetFn;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.auto.value.AutoValue;

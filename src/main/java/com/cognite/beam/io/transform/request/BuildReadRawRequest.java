@@ -17,7 +17,7 @@
 package com.cognite.beam.io.transform.request;
 
 import com.cognite.beam.io.fn.request.BuildReadRawRequestFn;
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;

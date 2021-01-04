@@ -22,9 +22,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.servicesV1.ResponseItems;
-import com.cognite.beam.io.servicesV1.parser.ItemParser;
+import com.cognite.client.servicesV1.ConnectorConstants;
+import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.beam.io.util.internal.MetricsUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -36,8 +36,8 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.fn.ResourceType;
 

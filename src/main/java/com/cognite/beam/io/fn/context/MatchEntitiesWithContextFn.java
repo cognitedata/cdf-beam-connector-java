@@ -19,7 +19,7 @@ package com.cognite.beam.io.fn.context;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;

@@ -6,7 +6,6 @@ import com.cognite.beam.io.dto.Item;
 import com.cognite.beam.io.dto.SequenceBody;
 import com.cognite.beam.io.dto.SequenceMetadata;
 import com.cognite.beam.io.dto.SequenceRow;
-import com.cognite.beam.io.servicesV1.RequestParameters;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;

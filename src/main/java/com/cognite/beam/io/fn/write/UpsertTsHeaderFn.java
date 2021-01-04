@@ -20,8 +20,8 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.dto.TimeseriesMetadata;
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.parser.TimeseriesParser;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.google.common.collect.ImmutableList;
 import org.apache.beam.sdk.values.PCollectionView;
 

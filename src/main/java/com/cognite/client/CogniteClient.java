@@ -1,12 +1,16 @@
 package com.cognite.client;
 
+import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.beam.io.dto.LoginStatus;
 import com.cognite.client.config.ClientConfig;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +36,9 @@ public abstract class CogniteClient implements Serializable {
             * DEFAULT_CPU_MULTIPLIER);
 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+
+    @Nullable
+    private String cdfProjectCache = null; // Cache attribute for the CDF project
 
     private static Builder builder() {
         return new AutoValue_CogniteClient.Builder()
@@ -66,8 +73,10 @@ public abstract class CogniteClient implements Serializable {
 
     protected abstract Builder toBuilder();
     protected abstract String getApiKey();
+    @Nullable
+    protected abstract String getProject();
     protected abstract String getBaseUrl();
-    protected abstract ClientConfig getClientConfig();
+    public abstract ClientConfig getClientConfig();
 
     protected OkHttpClient getHttpClient() {
         return httpClient;
@@ -86,6 +95,16 @@ public abstract class CogniteClient implements Serializable {
         Preconditions.checkArgument(null != key && !key.isEmpty(),
                 "The api key cannot be empty.");
         return toBuilder().setApiKey(key).build();
+    }
+
+    /**
+     * Returns a {@link CogniteClient} using the specified Cognite Data Fusion project / tenant.
+     *
+     * @param project The project / tenant to use for interacting with Cognite Data Fusion.
+     * @return the client object with the project / tenant key set.
+     */
+    public CogniteClient withProject(String project) {
+        return toBuilder().setProject(project).build();
     }
 
     /**
@@ -137,9 +156,51 @@ public abstract class CogniteClient implements Serializable {
         return Events.of(this);
     }
 
+    /**
+     * Returns the services layer mirroring the Cognite Data Fusion API.
+     * @return
+     */
+    protected ConnectorServiceV1 getConnectorService() {
+        return ConnectorServiceV1.create(getClientConfig().getMaxRetries());
+        // todo add executor and client spec here. Must refactor the Beam DoFns too (SDK must be added as a non-serialized variable).
+    }
+
+    /**
+     * Returns a auth info for api requests
+     * @return project config with auth info populated
+     * @throws Exception
+     */
+    protected ProjectConfig buildProjectConfig() throws Exception {
+        String cdfProject = null;
+        if (null != getProject()) {
+            // The project is explicitly defined
+            cdfProject = getProject();
+        } else if (null != cdfProjectCache) {
+            // The project info is cached
+            cdfProject = cdfProjectCache;
+        } else {
+            // Have to get the project via the api key
+            LoginStatus loginStatus = getConnectorService()
+                    .readLoginStatusByApiKey(getBaseUrl(), getApiKey());
+
+            if (loginStatus.getProject().isEmpty()) {
+                throw new Exception("Could not find the project for the api key.");
+            }
+            LOG.debug("Project identified for the api key. Project: {}", loginStatus.getProject());
+            cdfProjectCache = loginStatus.getProject(); // Cache the result
+            cdfProject = loginStatus.getProject();
+        }
+
+        return ProjectConfig.create()
+                .withHost(getBaseUrl())
+                .withApiKey(getApiKey())
+                .withProject(cdfProject);
+    }
+
     @AutoValue.Builder
     abstract static class Builder {
         abstract Builder setApiKey(String value);
+        abstract Builder setProject(String value);
         abstract Builder setBaseUrl(String value);
         abstract Builder setClientConfig(ClientConfig value);
 

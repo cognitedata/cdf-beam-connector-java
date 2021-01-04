@@ -20,15 +20,14 @@ import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.servicesV1.ItemReader;
-import com.cognite.beam.io.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.ResponseItems;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cognite.beam.io.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.fn.ResourceType;
 

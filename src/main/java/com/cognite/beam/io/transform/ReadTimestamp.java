@@ -22,7 +22,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.dto.RawRow;
 import com.cognite.beam.io.fn.read.ReadRawRow;
-import com.cognite.beam.io.servicesV1.RequestParameters;
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.transform.internal.ApplyProjectConfig;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
