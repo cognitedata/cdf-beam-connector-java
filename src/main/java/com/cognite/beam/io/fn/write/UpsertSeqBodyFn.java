@@ -181,7 +181,7 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
                             + "Response body: %s",
                             responseItems.getDuplicateItems().size(),
                             responseItems.getResponseBodyAsString()
-                                    .substring(0, Math.max(1000, responseItems.getResponseBodyAsString().length())));
+                                    .substring(0, Math.min(1000, responseItems.getResponseBodyAsString().length())));
                     LOG.error(message);
                     throw new Exception(message);
                 }
