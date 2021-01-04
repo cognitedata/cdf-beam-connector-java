@@ -69,7 +69,7 @@ public abstract class ItemsShardAndBatch extends PTransform<PCollection<Item>, P
 
         PCollection<Iterable<Item>> outputCollection = input
                 .apply("Shard items", WithKeys.of((Item inputItem) ->
-                        (inputItem.hashCode() % getWriteShards()) + ""
+                        (Math.floorMod(inputItem.hashCode(), getWriteShards())) + ""
                 )).setCoder(keyValueCoder)
                 .apply("Batch items", GroupIntoBatches.<String, Item>of(keyValueCoder)
                         .withMaxBatchSize(getMaxBatchSize())
