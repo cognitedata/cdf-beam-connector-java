@@ -18,11 +18,7 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.Request;
-import com.cognite.client.servicesV1.util.JsonUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,6 +27,7 @@ import com.google.protobuf.Struct;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 
+import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 
@@ -45,14 +42,11 @@ import static com.google.common.base.Preconditions.*;
 @AutoValue
 @DefaultCoder(SerializableCoder.class)
 public abstract class RequestParameters implements Serializable {
-    private final ObjectReader objectReader = JsonUtil.getObjectMapperInstance().reader();
-    private final ObjectWriter objectWriter = JsonUtil.getObjectMapperInstance().writer();
 
     private static Builder builder() {
         return new AutoValue_RequestParameters.Builder()
                 .setRequest(Request.create()
                         .withProtoRequestBody(Struct.newBuilder().build()))
-                .setProtoRequestBody(Struct.newBuilder().build())
                 .setProjectConfig(ProjectConfig.create());
     }
 
@@ -67,6 +61,16 @@ public abstract class RequestParameters implements Serializable {
      * @return The core request parameters and body.
      */
     public abstract Request getRequest();
+
+    /**
+     * Returns the project configuration for a request. The configuration includes host (optional),
+     * project/tenant and key.
+     *
+     * @return
+     */
+    public abstract ProjectConfig getProjectConfig();
+
+    abstract Builder toBuilder();
 
     /**
      * Returns the object representation of the composite request body. It is similar to the Cognite API Json
@@ -85,19 +89,10 @@ public abstract class RequestParameters implements Serializable {
      * Returns the protobuf request body.
      * @return
      */
+    @Nullable
     public Message getProtoRequestBody() {
         return getRequest().getProtoRequestBody();
     }
-
-    /**
-     * Returns the project configuration for a request. The configuration includes host (optional),
-     * project/tenant and key.
-     *
-     * @return
-     */
-    public abstract ProjectConfig getProjectConfig();
-
-    abstract Builder toBuilder();
 
     public String getRequestParametersAsJson() throws JsonProcessingException {
         return getRequest().getRequestParametersAsJson();
@@ -123,18 +118,7 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public ImmutableMap<String, String> getMetadataFilterParameters() {
-        ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
-
-        // metadata filter parameters exists and must be a map.
-        if (getFilterParameters().containsKey("metadata") && getFilterParameters().get("metadata") instanceof Map) {
-            ((Set<Map.Entry>) ((Map) getFilterParameters().get("metadata")).entrySet()).stream()
-                    .filter(entry -> entry.getKey() instanceof String && entry.getValue() instanceof String)
-                    .forEach(entry -> mapBuilder.put((String) entry.getKey(), (String) entry.getValue()));
-
-            return mapBuilder.build();
-        } else {
-            return ImmutableMap.<String, String>of();
-        }
+        return getRequest().getMetadataFilterParameters();
     }
 
     /**
@@ -143,16 +127,7 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public ImmutableList<ImmutableMap<String, Object>> getItems() {
-        if (getRequestParameters().get("items") == null) return ImmutableList.<ImmutableMap<String, Object>>of();
-
-        checkState(getRequestParameters().get("items") instanceof List, "Items are not of the type List");
-
-        List<ImmutableMap<String, Object>> tempList = new ArrayList<>();
-        for (Map<String, Object> item : ((List<Map<String, Object>>) getRequestParameters().get("items"))) {
-            tempList.add(ImmutableMap.copyOf(item));
-        }
-
-        return ImmutableList.copyOf(tempList);
+        return getRequest().getItems();
     }
 
     /**
@@ -168,8 +143,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withRequestParameters(Map<String, Object> requestParameters) {
-        checkArgument(requestParameters != null, "Input cannot be null or empty.");
-        return toBuilder().setRequestParameters(requestParameters).build();
+        return toBuilder()
+                .setRequest(getRequest().withRequestParameters(requestParameters))
+                .build();
     }
 
     /**
@@ -179,23 +155,22 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withProtoRequestBody(Message requestBody) {
-        checkArgument(requestBody != null, "Input cannot be null or empty.");
-        return toBuilder().setProtoRequestBody(requestBody).build();
+        return toBuilder()
+                .setRequest(getRequest().withProtoRequestBody(requestBody))
+                .build();
     }
 
     /**
      * Adds the complete request parameter structure based on Json. Calling this method will overwrite
      * any previously added parameters.
      *
-     * @param value
+     * @param json
      * @return
      */
-    public RequestParameters withRequestJson(String value) throws Exception {
-        checkArgument(value != null && !value.isEmpty(), "Request Json cannot be null or empty.");
-
-        ImmutableMap<String, Object> fromJson = ImmutableMap.copyOf(
-                objectReader.forType(new TypeReference<Map<String,Object>>(){}).<Map<String, Object>>readValue(value));
-        return toBuilder().setRequestParameters(fromJson).build();
+    public RequestParameters withRequestJson(String json) throws Exception {
+        return toBuilder()
+                .setRequest(getRequest().withRequestJson(json))
+                .build();
     }
 
     /**
@@ -206,14 +181,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withRootParameter(String key, Object value) {
-        checkArgument(key != null && !key.isEmpty(), "Key cannot be null or empty.");
-        checkArgument(value != null, "Value cannot be null.");
-
-        HashMap<String, Object> tempMap = new HashMap<>();
-        tempMap.putAll(getRequestParameters());
-        tempMap.put(key, value);
-
-        return toBuilder().setRequestParameters(tempMap).build();
+        return toBuilder()
+                .setRequest(getRequest().withRootParameter(key, value))
+                .build();
     }
 
     /**
@@ -224,21 +194,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withFilterParameter(String key, Object value) {
-        checkArgument(key != null && !key.isEmpty(), "Key cannot be null or empty.");
-        checkArgument(value != null, "Value cannot be null.");
-
-        Map<String, Object> tempMapRoot = new HashMap<>(getRequestParameters());
-
-        // Check the existence of the filter node.
-        if (!tempMapRoot.containsKey("filter") || !(tempMapRoot.get("filter") instanceof Map)) {
-            tempMapRoot.put("filter", ImmutableMap.<String, Object>of());
-        }
-
-        Map<String, Object> tempMapFilter = new HashMap<>((Map<String, Object>)tempMapRoot.get("filter"));
-        tempMapFilter.put(key, value);
-
-        tempMapRoot.put("filter", ImmutableMap.copyOf(tempMapFilter));
-        return toBuilder().setRequestParameters(tempMapRoot).build();
+        return toBuilder()
+                .setRequest(getRequest().withFilterParameter(key, value))
+                .build();
     }
 
     /**
@@ -249,28 +207,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withFilterMetadataParameter(String key, String value) {
-        checkArgument(key != null && !key.isEmpty(), "Key cannot be null or empty.");
-        checkArgument(value != null, "Value cannot be null.");
-
-        HashMap<String, Object> tempMapRoot = new HashMap<>(getRequestParameters());
-
-        // Check the existence of the filter node.
-        if (!tempMapRoot.containsKey("filter") || !(tempMapRoot.get("filter") instanceof Map)) {
-            tempMapRoot.put("filter", ImmutableMap.<String, Object>of());
-        }
-        HashMap<String, Object> tempMapFilter = new HashMap<>((Map)tempMapRoot.get("filter"));
-
-        // Check the existence of the the filter.metadata node.
-        if (!tempMapFilter.containsKey("metadata") || !(tempMapFilter.get("metadata") instanceof Map)) {
-            tempMapFilter.put("metadata", ImmutableMap.<String, Object>of());
-        }
-
-        HashMap<String, String> tempMapFilterMetadata = new HashMap<>((Map) tempMapFilter.get("metadata"));
-        tempMapFilterMetadata.put(key, value);
-
-        tempMapFilter.put("metadata", ImmutableMap.copyOf(tempMapFilterMetadata));
-        tempMapRoot.put("filter", ImmutableMap.copyOf(tempMapFilter));
-        return toBuilder().setRequestParameters(tempMapRoot).build();
+        return toBuilder()
+                .setRequest(getRequest().withFilterMetadataParameter(key, value))
+                .build();
     }
 
     /**
@@ -284,13 +223,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withItems(List<? extends Map<String, Object>> items) {
-        checkNotNull(items, "Items cannot be null.");
-        checkArgument(items.size() <= 10000, "Number of items cannot exceed 10k.");
-
-        HashMap<String, Object> tempMapRoot = new HashMap<>();
-        tempMapRoot.putAll(getRequestParameters());
-        tempMapRoot.put("items", items);
-        return toBuilder().setRequestParameters(tempMapRoot).build();
+        return toBuilder()
+                .setRequest(getRequest().withItems(items))
+                .build();
     }
 
     /**
@@ -303,13 +238,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withItemExternalId(String externalId) {
-        checkNotNull(externalId, "ExternalId cannot be null.");
-
-        List<Map<String, Object>> items = ImmutableList.of(
-                ImmutableMap.of("externalId", externalId)
-        );
-
-        return withItems(items);
+        return toBuilder()
+                .setRequest(getRequest().withItemExternalId(externalId))
+                .build();
     }
 
     /**
@@ -318,15 +249,13 @@ public abstract class RequestParameters implements Serializable {
      * You can use this method when requesting a data item by id, for example when requesting the data points
      * from a time series.
      *
-     * @param internallId
+     * @param internalId
      * @return
      */
-    public RequestParameters withItemInternalId(long internallId) {
-        List<Map<String, Object>> items = ImmutableList.of(
-                ImmutableMap.of("id", internallId)
-        );
-
-        return withItems(items);
+    public RequestParameters withItemInternalId(long internalId) {
+        return toBuilder()
+                .setRequest(getRequest().withItemInternalId(internalId))
+                .build();
     }
 
     /**
@@ -336,9 +265,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withDbName(String dbName) {
-        checkArgument(dbName != null && !dbName.isEmpty(), "Database name cannot be null or empty.");
-
-        return this.withRootParameter("dbName", dbName);
+        return toBuilder()
+                .setRequest(getRequest().withDbName(dbName))
+                .build();
     }
 
     /**
@@ -348,9 +277,9 @@ public abstract class RequestParameters implements Serializable {
      * @return
      */
     public RequestParameters withTableName(String tableName) {
-        checkArgument(tableName != null && !tableName.isEmpty(), "Database name cannot be null or empty.");
-
-        return this.withRootParameter("tableName", tableName);
+        return toBuilder()
+                .setRequest(getRequest().withTableName(tableName))
+                .build();
     }
 
     /**
@@ -371,20 +300,9 @@ public abstract class RequestParameters implements Serializable {
 
     @AutoValue.Builder
     public abstract static class Builder {
-        abstract ImmutableMap.Builder<String, Object> requestParametersBuilder();
-        abstract Builder setRequestParameters(Map<String, Object> value);
-        abstract Builder setProtoRequestBody(Message value);
         abstract Builder setProjectConfig(ProjectConfig value);
         abstract Builder setRequest(Request value);
 
         public abstract RequestParameters build();
-
-        public Builder addParameter(String key, Object value) {
-            checkArgument(key != null && !key.isEmpty(), "Key cannot be null or empty");
-            checkArgument(value != null, "Value cannot be null");
-            requestParametersBuilder().put(key, value);
-            return this;
-        }
-
     }
 }

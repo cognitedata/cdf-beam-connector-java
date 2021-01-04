@@ -79,6 +79,7 @@ public abstract class Request implements Serializable {
      *
      * @return
      */
+    @Nullable
     public abstract AuthConfig getAuthConfig();
 
     abstract Builder toBuilder();
