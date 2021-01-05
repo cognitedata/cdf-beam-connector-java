@@ -101,8 +101,8 @@ public abstract class Events extends ApiBase {
      * Multiple aggregation types are supported. Please refer to the Cognite API specification for more information
      * on the possible settings.
      *
-     * @param requestParameters
-     * @return
+     * @param requestParameters The filtering and aggregates specification
+     * @return The aggregation results.
      * @throws Exception
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */

@@ -20,16 +20,13 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.read.*;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.read.AddPartitionsFn;
 import com.cognite.beam.io.fn.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseEventFn;
-import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
-import com.cognite.beam.io.fn.read.ReadItemsFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertEventFn;
 import com.cognite.beam.io.fn.write.UpsertEventFnNew;
@@ -191,6 +188,15 @@ public abstract class Events {
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
 
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
             // conditional streaming
             PCollection<RequestParameters> requestParametersPCollection;
 
@@ -215,12 +221,24 @@ public abstract class Events {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(), ResourceType.EVENT,
-                            getReaderConfig().enableMetrics(false))))
+                    //.apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(), ResourceType.EVENT,
+                    //        getReaderConfig().enableMetrics(false))))
+                    .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
+                            getReaderConfig().enableMetrics(false), ResourceType.EVENT,
+                            projectConfigView))
+                            .withSideInputs(projectConfigView))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
+                    .apply("Read results", ParDo.of(new ListEventsFn(getHints(), getReaderConfig(),projectConfigView))
+                            .withSideInputs(projectConfigView))
+
+                    ;
+
+                    /*
                     .apply("Read results", ParDo.of(
                             new ReadItemsIteratorFn(getHints(), ResourceType.EVENT, getReaderConfig())))
                     .apply("Parse results", ParDo.of(new ParseEventFn()));
+
+                     */
 
             // Record delta timestamp
             outputCollection

@@ -22,15 +22,14 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
 import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.Aggregate;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,9 +38,9 @@ import java.util.List;
  * This function will first query Cognite Data Fusion for a total count of items via
  * the aggregates endpoints. Based on the total count, it will partition the request.
  */
-public abstract class AddPartitionsNewFn extends IOBaseFn<RequestParameters, RequestParameters> {
-    private final List<ResourceType> supportedResourceTypes = ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT,
-            ResourceType.TIMESERIES_HEADER);
+public class AddPartitionsNewFn extends IOBaseFn<RequestParameters, RequestParameters> {
+    private static final long ITEMS_PER_PARTITION = 10000;
+    private static final long MAX_PARTITIONS = 100;
 
     private final ReaderConfig readerConfig;
     private final PCollectionView<List<ProjectConfig>> projectConfigView;
@@ -55,8 +54,6 @@ public abstract class AddPartitionsNewFn extends IOBaseFn<RequestParameters, Req
         Preconditions.checkNotNull(readerConfig, "Reader config cannot be null.");
         Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
         Preconditions.checkNotNull(resourceType, "Resource type cannot be null");
-        Preconditions.checkArgument(supportedResourceTypes.contains(resourceType),
-                "Resource type is not supported: " + resourceType);
 
         this.projectConfigView = projectConfigView;
         this.readerConfig = readerConfig;
@@ -84,34 +81,64 @@ public abstract class AddPartitionsNewFn extends IOBaseFn<RequestParameters, Req
             throw new Exception(message);
         }
 
-        // Read the items
-        /*
+        // Count the expected number of results.
         try {
-            Iterator<List<T>> resultsIterator = listItems(getClient(projectConfig, readerConfig),
-                    requestParameters,
-                    requestParameters.getPartitions().toArray(new String[requestParameters.getPartitions().size()]));
-            Instant pageStartInstant = Instant.now();
-            int totalNoItems = 0;
-            while (resultsIterator.hasNext()) {
-                List<T> results = resultsIterator.next();
-                if (readerConfig.isMetricsEnabled()) {
-                    apiBatchSize.update(results.size());
-                    apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
-                }
-                results.forEach(item -> outputReceiver.output(item));
-                totalNoItems += results.size();
-                pageStartInstant = Instant.now();
+            Aggregate aggregateResult;
+            switch (resourceType) {
+                case ASSET:
+                    aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
+                    break;
+                case EVENT:
+                    aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
+                    break;
+                case TIMESERIES_HEADER:
+                    aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
+                    break;
+                default:
+                    LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
+                    throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
             }
 
-            LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
-                    totalNoItems,
+            // Check the aggregate result
+            if (aggregateResult.getAggregatesCount() != 1
+                    || aggregateResult.getAggregates(0).hasValue()) {
+                String message = String.format(batchLogPrefix + "Could not find item count in aggregate: %s",
+                        aggregateResult.toString());
+                LOG.error(message);
+                throw new Exception(message);
+            }
+
+            long itemCount = aggregateResult.getAggregates(0).getCount();
+            long totalNoPartitions = Math.min(
+                    Math.max(Math.floorDiv(itemCount, ITEMS_PER_PARTITION), 1), // Must have min 1 partition
+                    MAX_PARTITIONS);
+
+
+            LOG.info(batchLogPrefix + "Counted {} items in total. Will split into {} total partitions "
+                    + "with {} (parallel) partitions per worker. Duration: {}",
+                    itemCount,
+                    totalNoPartitions,
+                    hints.getReadShardsPerWorker(),
                     Duration.between(batchStartInstant, Instant.now()).toString());
+
+            List<String> partitions = new ArrayList<>(hints.getReadShardsPerWorker());
+            for (int i = 1; i <= totalNoPartitions; i++) {
+                // Build the partitions list in the format "m/n" where m = partition no and n = total no partitions
+                partitions.add(String.format("%1$d/%2$d", i, totalNoPartitions));
+                if (partitions.size() >= hints.getReadShardsPerWorker()) {
+                    outputReceiver.output(requestParameters.withPartitions(partitions));
+                    partitions = new ArrayList<>(hints.getReadShardsPerWorker());
+                }
+            }
+            if (partitions.size() > 0) {
+                outputReceiver.output(requestParameters.withPartitions(partitions));
+            }
+
         } catch (Exception e) {
             LOG.error(batchLogPrefix + "Error when reading from Cognite Data Fusion: {}",
                     e.toString());
             throw new Exception(batchLogPrefix + "Error when reading from Cognite Data Fusion.", e);
         }
 
-         */
     }
 }
