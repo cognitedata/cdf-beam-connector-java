@@ -1,5 +1,6 @@
 package com.cognite.client;
 
+import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.RequestParameters;
@@ -27,7 +28,7 @@ class EventsTest {
         ClientConfig config = ClientConfig.create()
                 .withNoWorkers(1)
                 .withNoListPartitions(1);
-        String loggingPrefix = "UnitTest - writeAndReadEvents() -";
+        String loggingPrefix = "UnitTest - writeReadAndDeleteEvents() -";
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
         CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
                 .withBaseUrl(TestConfigProvider.getHost())
@@ -44,6 +45,66 @@ class EventsTest {
                     Duration.between(startInstant, Instant.now()));
 
             Thread.sleep(15000); // wait for eventual consistency
+
+            LOG.info(loggingPrefix + "Start reading events.");
+            List<Event> listEventsResults = new ArrayList<>();
+            client.events()
+                    .list(RequestParameters.create()
+                            .withFilterParameter("source", DataGenerator.sourceValue))
+                    .forEachRemaining(events -> listEventsResults.addAll(events));
+            LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            LOG.info(loggingPrefix + "Start deleting events.");
+            List<Item> deleteItemsInput = new ArrayList<>();
+            listEventsResults.stream()
+                    .map(event -> Item.newBuilder()
+                            .setExternalId(event.getExternalId().getValue())
+                            .build())
+                    .forEach(item -> deleteItemsInput.add(item));
+
+            List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            assertEquals(upsertEventsList.size(), listEventsResults.size());
+            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+        } catch (Exception e) {
+            LOG.error(e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    @Tag("remoteCDP")
+    void writeAggregateAndDeleteEvents() {
+        int noItems = 745;
+        Instant startInstant = Instant.now();
+
+        String loggingPrefix = "UnitTest - writeAggregateAndDeleteEvents() -";
+        LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
+        CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
+                .withBaseUrl(TestConfigProvider.getHost())
+                ;
+        LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
+                Duration.between(startInstant, Instant.now()));
+
+        try {
+            LOG.info(loggingPrefix + "Start upserting events.");
+            List<Event> upsertEventsList = DataGenerator.generateEvents(noItems);
+            client.events().upsert(upsertEventsList);
+            LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            Thread.sleep(10000); // wait for eventual consistency
+
+            LOG.info(loggingPrefix + "Start aggregating events.");
+            Aggregate aggregateResult = client.events()
+                    .aggregate(RequestParameters.create()
+                            .withFilterParameter("source", DataGenerator.sourceValue));
+            LOG.info(loggingPrefix + "Aggregate results: {}", aggregateResult);
+            LOG.info(loggingPrefix + "Finished aggregating events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
 
             LOG.info(loggingPrefix + "Start reading events.");
             List<Event> listEventsResults = new ArrayList<>();

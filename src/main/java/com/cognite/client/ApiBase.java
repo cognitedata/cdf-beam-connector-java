@@ -49,6 +49,8 @@ import java.util.stream.Collectors;
  *
  * This class collects the set of common attributes across all apis. The individual api
  * implementations will automatically pick these up via the AutoValue generator.
+ *
+ * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
  */
 abstract class ApiBase {
     private static final ImmutableList<ResourceType> resourcesSupportingPartitions =
@@ -136,6 +138,7 @@ abstract class ApiBase {
      * @param requestParameters The request containing filters.
      * @return The aggregation result.
      * @throws Exception
+     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
     protected Aggregate aggregate(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();

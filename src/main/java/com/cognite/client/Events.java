@@ -16,6 +16,7 @@
 
 package com.cognite.client;
 
+import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.ResourceType;
@@ -91,6 +92,22 @@ public abstract class Events extends ApiBase {
      */
     public Iterator<List<Event>> list(RequestParameters requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.EVENT, requestParameters, partitions), this::parseEvent);
+    }
+
+    /**
+     * Performs an item aggregation request to Cognite Data Fusion.
+     *
+     * The default aggregation is a total item count based on the (optional) filters in the request.
+     * Multiple aggregation types are supported. Please refer to the Cognite API specification for more information
+     * on the possible settings.
+     *
+     * @param requestParameters
+     * @return
+     * @throws Exception
+     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
+     */
+    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+        return aggregate(ResourceType.EVENT_AGGREGATES, requestParameters);
     }
 
     /**

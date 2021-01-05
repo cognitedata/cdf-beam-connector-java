@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit;
  * This class represents the main entry point for interacting with this SDK (and Cognite Data Fusion).
  *
  * All services are exposed via this object.
+ *
+ * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
  */
 @AutoValue
 public abstract class CogniteClient implements Serializable {
