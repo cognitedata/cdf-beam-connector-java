@@ -181,7 +181,7 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
                             + "Response body: %s",
                             responseItems.getDuplicateItems().size(),
                             responseItems.getResponseBodyAsString()
-                                    .substring(0, Math.min(1000, responseItems.getResponseBodyAsString().length() - 1)));
+                                    .substring(0, Math.min(1000, responseItems.getResponseBodyAsString().length())));
                     LOG.error(message);
                     throw new Exception(message);
                 }
@@ -312,6 +312,7 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
 
         Map<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> responseMap = new HashMap<>();
         List<SequenceBody> batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+        List<String> sequenceIds = new ArrayList<>(); // To check for existing / duplicate item ids
         int itemCounter = 0;
         int batchRowCounter = 0;
         int totalRowCounter = 0;
@@ -327,6 +328,18 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
                 totalRowCounter++;
                 if ((rowList.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ROWS_PER_ITEM)
                         || ((batchRowCounter * batchColumnsCounter) >= DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH))  {
+                    // Check for duplicate items in the same batch
+                    if (getId(sequence).isPresent()) {
+                        if (sequenceIds.contains(getId(sequence).get())) {
+                            // The externalId / id already exists in the batch, submit it
+                            responseMap.put(upsertSeqBody(batch, projectConfig, batchLogPrefix), batch);
+                            batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                            batchRowCounter = 0;
+                            batchColumnsCounter = 0;
+                            sequenceIds.clear();
+                        }
+                        sequenceIds.add(getId(sequence).get());
+                    }
                     batch.add(sequence.toBuilder()
                             .clearRows()
                             .addAllRows(rowList)
@@ -339,10 +352,23 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
                         batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
                         batchRowCounter = 0;
                         batchColumnsCounter = 0;
+                        sequenceIds.clear();
                     }
                 }
             }
             if (rowList.size() > 0) {
+                // Check for duplicate items in the same batch
+                if (getId(sequence).isPresent()) {
+                    if (sequenceIds.contains(getId(sequence).get())) {
+                        // The externalId / id already exists in the batch, submit it
+                        responseMap.put(upsertSeqBody(batch, projectConfig, batchLogPrefix), batch);
+                        batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                        batchRowCounter = 0;
+                        batchColumnsCounter = 0;
+                        sequenceIds.clear();
+                    }
+                    sequenceIds.add(getId(sequence).get());
+                }
                 batch.add(sequence.toBuilder()
                         .clearRows()
                         .addAllRows(rowList)
@@ -355,6 +381,7 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
                 batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
                 batchRowCounter = 0;
                 batchColumnsCounter = 0;
+                sequenceIds.clear();
             }
         }
         if (batch.size() > 0) {
@@ -386,17 +413,25 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
     private CompletableFuture<ResponseItems<String>> upsertSeqBody(List<SequenceBody> itemList,
                                                                     ProjectConfig projectConfig,
                                                                     String batchLogPrefix) throws Exception {
-        // Check that all sequences carry an id/externalId + build items list
+        // Check that all sequences carry an id/externalId + no duplicates + build items list
         ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
         int rowCounter = 0;
         int maxColumnCounter = 0;
         int cellCounter = 0;
+        List<String> sequenceIds = new ArrayList<>();
         for (SequenceBody item : itemList) {
             rowCounter += item.getRowsCount();
             maxColumnCounter = Math.max(maxColumnCounter, item.getColumnsCount());
             cellCounter += (item.getColumnsCount() * item.getRowsCount());
             if (!(item.hasExternalId() || item.hasId())) {
                 throw new Exception(batchLogPrefix + "Sequence body does not contain externalId nor id");
+            }
+            if (getId(item).isPresent()) {
+                if (sequenceIds.contains(getId(item).get())) {
+                    throw new Exception(String.format(batchLogPrefix + "Duplicate sequence body items detected. ExternalId: %s",
+                            getId(item).get()));
+                }
+                sequenceIds.add(getId(item).get());
             }
             insertItemsBuilder.add(SequenceParser.toRequestInsertItem(item));
         }
@@ -517,5 +552,18 @@ public class UpsertSeqBodyFn extends DoFn<Iterable<SequenceBody>, SequenceBody> 
                 .put("description", DEFAULT_SEQ_METADATA.getDescription().getValue())
                 .put("columns", columnList)
                 .build();
+    }
+
+    /*
+    Get the externalId / id of the sequence
+     */
+    private Optional<String> getId(SequenceBody sequenceBody) {
+        Optional<String> result = Optional.empty();
+        if (sequenceBody.hasExternalId()) {
+            result = Optional.of(sequenceBody.getExternalId().getValue());
+        } else if (sequenceBody.hasId()) {
+            result = Optional.of(String.valueOf(sequenceBody.getId().getValue()));
+        }
+        return result;
     }
 }

@@ -262,7 +262,6 @@ public abstract class SequenceRows {
 
         @Override
         public PCollection<SequenceBody> expand(PCollection<SequenceBody> input) {
-            LOG.info("Starting Cognite writer.");
             LOG.debug("Building upsert sequences rows composite transform.");
 
             Coder<String> utf8Coder = StringUtf8Coder.of();
