@@ -35,8 +35,10 @@ public abstract class CogniteClient implements Serializable {
             .build();
 
     private static final int DEFAULT_CPU_MULTIPLIER = 8;
-    private static ForkJoinPool executorService = new ForkJoinPool(Runtime.getRuntime().availableProcessors()
-            * DEFAULT_CPU_MULTIPLIER);
+    private final static int DEFAULT_MAX_WORKER_THREADS = 24;
+    private static ForkJoinPool executorService = new ForkJoinPool(Math.min(
+            Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
+            DEFAULT_MAX_WORKER_THREADS));
 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
@@ -136,7 +138,9 @@ public abstract class CogniteClient implements Serializable {
         LOG.info("Setting up client with {} worker threads and {} list partitions",
                 config.getNoWorkers(),
                 config.getNoListPartitions());
-        executorService = new ForkJoinPool(config.getNoWorkers());
+        if (config.getNoWorkers() != executorService.getParallelism()) {
+            executorService = new ForkJoinPool(config.getNoWorkers());
+        }
 
         return toBuilder().setClientConfig(config).build();
     }

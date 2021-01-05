@@ -17,6 +17,7 @@ public abstract class ClientConfig implements Serializable {
 
     // Thread pool capacity
     final static int DEFAULT_CPU_MULTIPLIER = 8;
+    final static int DEFAULT_MAX_WORKER_THREADS = 24;
 
     // Connection retries
     private static final int DEFAULT_RETRIES = 5;
@@ -28,7 +29,9 @@ public abstract class ClientConfig implements Serializable {
                 .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
                 .setMaxRetries(DEFAULT_RETRIES)
-                .setNoWorkers(Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER)
+                .setNoWorkers(Math.min(
+                        Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
+                        DEFAULT_MAX_WORKER_THREADS))
                 .setNoListPartitions(DEFAULT_LIST_PARTITIONS)
                 .setUpsertMode(DEFAULT_UPSERT_MODE);
     }
