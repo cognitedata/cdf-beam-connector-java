@@ -107,7 +107,7 @@ public abstract class Events extends ApiBase {
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
     public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
-        return aggregate(ResourceType.EVENT_AGGREGATES, requestParameters);
+        return aggregate(ResourceType.EVENT, requestParameters);
     }
 
     /**

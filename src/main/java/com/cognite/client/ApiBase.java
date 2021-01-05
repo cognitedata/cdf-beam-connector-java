@@ -129,6 +129,118 @@ abstract class ApiBase {
     }
 
     /**
+     * Retrieve items by id.
+     *
+     * @param resourceType The item resource type ({@link com.cognite.client.dto.Event},
+     * {@link com.cognite.client.dto.Asset}, etc.) to retrieve.
+     * @param items The item(s) {@code externalId / id} to retrieve.
+     * @return The items in Json representation.
+     * @throws Exception
+     */
+    protected List<String> retrieveJson(ResourceType resourceType, List<Item> items) throws Exception {
+        String batchLogPrefix =
+                "retrieveJson() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+        Instant startInstant = Instant.now();
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ItemReader<String> itemReader;
+
+        // Check that ids are provided + remove duplicate ids
+        Map<Long, Item> internalIdMap = new HashMap<>(items.size());
+        Map<String, Item> externalIdMap = new HashMap<>(items.size());
+        for (Item value : items) {
+            if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                externalIdMap.put(value.getExternalId(), value);
+            } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                internalIdMap.put(value.getId(), value);
+            } else {
+                String message = batchLogPrefix + "Item does not contain id nor externalId: " + value.toString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+        }
+        LOG.debug(batchLogPrefix + "Received {} items to read.", internalIdMap.size() + externalIdMap.size());
+        if (internalIdMap.isEmpty() && externalIdMap.isEmpty()) {
+            // Should not happen, but need to safeguard against it
+            LOG.info(batchLogPrefix + "Empty input. Will skip the read process.");
+            return Collections.emptyList();
+        }
+
+        // Select the appropriate item reader
+        switch (resourceType) {
+            case ASSET:
+                itemReader = connector.readAssetsById();
+                break;
+            case EVENT:
+                itemReader = connector.readEventsById();
+                break;
+            case SEQUENCE_HEADER:
+                itemReader = connector.readSequencesById();
+                break;
+            case FILE_HEADER:
+                itemReader = connector.readFilesById();
+                break;
+            case TIMESERIES_HEADER:
+                itemReader = connector.readTsById();
+                break;
+            case RELATIONSHIP:
+                itemReader = connector.readRelationshipsById();
+                break;
+            default:
+                LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
+                throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
+        }
+
+        List<Item> deduplicatedItems = new ArrayList<>(items.size());
+        deduplicatedItems.addAll(externalIdMap.values());
+        deduplicatedItems.addAll(internalIdMap.values());
+        List<List<Item>> itemBatches = Partition.ofSize(deduplicatedItems, 1000);
+
+        // Submit all batches
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        for (List<Item> batch : itemBatches) {
+            // build initial request object
+            List<Map<String, Object>> requestItems = new ArrayList<>();
+            for (Item item : batch) {
+                if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                    requestItems.add(ImmutableMap.of("externalId", item.getExternalId()));
+                } else {
+                    requestItems.add(ImmutableMap.of("id", item.getId()));
+                }
+            }
+
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withItems(requestItems)
+                    .withRootParameter("ignoreUnknownIds", true));
+
+            futureList.add(itemReader.getItemsAsync(request));
+        }
+
+        // Wait for all requests futures to complete
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the response items
+        List<String> responseItems = new ArrayList<>(deduplicatedItems.size());
+        for (CompletableFuture<ResponseItems<String>> responseItemsFuture : futureList) {
+            if (!responseItemsFuture.join().isSuccessful()) {
+                // something went wrong with the request
+                String message = batchLogPrefix + "Error while reading the results from Cognite Data Fusion: "
+                        + responseItemsFuture.join().getResponseBodyAsString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+            responseItemsFuture.join().getResultsItems().forEach(result -> responseItems.add(result));
+        }
+
+        LOG.info(batchLogPrefix + "Successfully retrieved {} items across {} requests within a duration of {}.",
+                responseItems.size(),
+                futureList.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+        return responseItems;
+    }
+
+    /**
      * Performs an item aggregation request to Cognite Data Fusion.
      *
      * The default aggregation is a total item count based on the (optional) filters in the request. Some
@@ -141,42 +253,46 @@ abstract class ApiBase {
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
     protected Aggregate aggregate(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
+        String batchLogPrefix =
+                "aggregate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ItemReader<String> itemReader;
+        Instant startInstant = Instant.now();
 
         // Add auth info
         RequestParameters requestParams = addAuthInfo(requestParameters);
 
         switch (resourceType) {
-            case ASSETS_AGGREGATES:
+            case ASSET:
                 itemReader = connector.readAssetsAggregates();
                 break;
-            case EVENT_AGGREGATES:
+            case EVENT:
                 itemReader = connector.readEventsAggregates();
                 break;
-            case SEQUENCE_AGGREGATES:
+            case SEQUENCE_HEADER:
                 itemReader = connector.readSequencesAggregates();
                 break;
-            case FILE_AGGREGATES:
+            case FILE_HEADER:
                 itemReader = connector.readFilesAggregates();
                 break;
-            case TIMESERIES_AGGREGATES:
+            case TIMESERIES_HEADER:
                 itemReader = connector.readTsAggregates();
                 break;
             default:
-                LOG.error("Aggregate() - Not a supported resource type: " + resourceType);
-                throw new Exception("Aggregate() - Not a supported resource type: " + resourceType);
+                LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
+                throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
         }
         ResponseItems<String> responseItems = itemReader.getItems(requestParams);
 
         if (!responseItems.isSuccessful()) {
             // something went wrong with the request
-            String message = "Aggregate() - Error when sending request to Cognite Data Fusion: "
+            String message = batchLogPrefix + "Error when sending request to Cognite Data Fusion: "
                     + responseItems.getResponseBodyAsString();
             LOG.error(message);
             throw new Exception(message);
         }
-
+        LOG.info(batchLogPrefix + "Successfully retrieved aggregate within a duration of {}.",
+                Duration.between(startInstant, Instant.now()).toString());
         return AggregateParser.parseAggregate(responseItems.getResultsItems().get(0));
     }
 
