@@ -20,13 +20,17 @@ import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.AssetParser;
+import com.cognite.client.servicesV1.parser.EventParser;
 import com.google.auto.value.AutoValue;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -156,6 +160,45 @@ public abstract class Assets extends ApiBase {
             return AssetParser.parseAsset(json);
         } catch (Exception e)  {
             throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
+    private Map<String, Object> toRequestUpdateItem(Asset item) {
+        try {
+            return AssetParser.toRequestUpdateItem(item);
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
+    private Map<String, Object> toRequestReplaceItem(Asset item) {
+        try {
+            return AssetParser.toRequestReplaceItem(item);
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Returns the id of an event. It will first check for an externalId, second it will check for id.
+
+    If no id is found, it returns an empty Optional.
+     */
+    private Optional<String> getAssetId(Asset item) {
+        if (item.hasExternalId()) {
+            return Optional.of(item.getExternalId().getValue());
+        } else if (item.hasId()) {
+            return Optional.of(String.valueOf(item.getId().getValue()));
+        } else {
+            return Optional.<String>empty();
         }
     }
 
