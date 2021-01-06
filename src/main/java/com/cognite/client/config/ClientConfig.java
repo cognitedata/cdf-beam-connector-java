@@ -24,6 +24,16 @@ public abstract class ClientConfig implements Serializable {
     private static final int MAX_RETRIES = 20;
     private static final int MIN_RETRIES = 1;
 
+    // Max batch size when writing to Raw
+    private static final int DEFAULT_WRITE_RAW_MAX_BATCH_SIZE = 2000;
+    private static final int MIN_WRITE_RAW_MAX_BATCH_SIZE = 1;
+    private static final int MAX_WRITE_RAW_MAX_BATCH_SIZE = 10000;
+
+    // Max batch size for context operations
+    private static final int DEFAULT_CONTEXT_MAX_BATCH_SIZE = 1000;
+    private static final int MIN_CONTEXT_MAX_BATCH_SIZE = 1;
+    private static final int MAX_CONTEXT_MAX_BATCH_SIZE = 20000;
+
     private static Builder builder() {
         return new AutoValue_ClientConfig.Builder()
                 .setAppIdentifier(DEFAULT_APP_IDENTIFIER)

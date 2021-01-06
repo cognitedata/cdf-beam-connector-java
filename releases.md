@@ -28,6 +28,9 @@ Changes are grouped as follows:
 
 ### Changed
 
+- Refactored request parameters from `com.cognite.beam.servicesV1.RequestParameters` to `com.cognite.beam.RequestParameters`.
+  All other signatures are the same as before, so you may run a search & replace to update your client.
+
 - Refactored data transfer objects from `com.cognite.beam.io.dto` to `com.cognite.client.dto`. 
   All other signatures are the same as before, so you may run a search & replace to update your client.
 
