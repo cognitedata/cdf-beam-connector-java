@@ -133,8 +133,8 @@ public class DataGenerator {
                     .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
                     .setStartTime(Int64Value.of(1552566113 + ThreadLocalRandom.current().nextInt(10000)))
                     .setEndTime(Int64Value.of(1553566113 + ThreadLocalRandom.current().nextInt(10000)))
-                    .setDescription(StringValue.of("test_event_" + RandomStringUtils.randomAlphanumeric(50)))
-                    .setType(StringValue.of("test_event"))
+                    .setDescription(StringValue.of("generated_event_" + RandomStringUtils.randomAlphanumeric(50)))
+                    .setType(StringValue.of("generated_event"))
                     .setSubtype(StringValue.of(
                             ThreadLocalRandom.current().nextInt(0,2) == 0 ? "event_sub_type" : "event_sub_type_2"))
                     .setSource(StringValue.of(sourceValue))
@@ -143,5 +143,60 @@ public class DataGenerator {
                     .build());
         }
         return objects;
+    }
+
+    /*
+    Will generate a hierarchy that is 4 levels deep.
+     */
+    public static List<Asset> generateAssetHierarchy(int noObjects) {
+        int NO_HIERARCHY_LEVELS = 5;
+        int assetsPerParent = (int) Math.ceil(customLog(NO_HIERARCHY_LEVELS, noObjects));
+        List<Asset> hierarchy = new ArrayList<>(noObjects);
+        Asset root = generateAssets(1).get(0);
+        List<Asset> currentLevel = new ArrayList<>();
+        List<Asset> children = new ArrayList<>();
+        currentLevel.add(root);
+        hierarchy.add(root);
+        for (int i = 0; i <= NO_HIERARCHY_LEVELS; i++) {
+            children.clear();
+            for (Asset asset : currentLevel) {
+                children.addAll(generateChildAssets(assetsPerParent, asset));
+            }
+            currentLevel.clear();
+            currentLevel.addAll(children);
+            hierarchy.addAll(children);
+        }
+
+        return hierarchy;
+    }
+
+    private static List<Asset> generateChildAssets(int noObjects, Asset parent) {
+        List<Asset> objects = generateAssets(noObjects);
+        List<Asset> resultObjects = new ArrayList<>();
+        for (Asset asset : objects) {
+            resultObjects.add(asset.toBuilder()
+                    .setParentExternalId(parent.getExternalId())
+                    .build());
+        }
+        return objects;
+    }
+
+    public static List<Asset> generateAssets(int noObjects) {
+        List<Asset> objects = new ArrayList<>(noObjects);
+        for (int i = 0; i < noObjects; i++) {
+            objects.add(Asset.newBuilder()
+                    .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
+                    .setName("generated_asset_" + RandomStringUtils.randomAlphanumeric(5))
+                    .setDescription(StringValue.of("generated_asset_description" + RandomStringUtils.randomAlphanumeric(50)))
+                    .setSource(StringValue.of(sourceValue))
+                    .putMetadata("type", DataGenerator.sourceValue)
+                    .putMetadata(sourceKey, DataGenerator.sourceValue)
+                    .build());
+        }
+        return objects;
+    }
+
+    private static double customLog(double base, double logNumber) {
+        return Math.log(logNumber) / Math.log(base);
     }
 }
