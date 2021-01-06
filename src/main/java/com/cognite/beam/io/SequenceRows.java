@@ -21,7 +21,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.SequenceBody;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteSequenceRowsFn;
 import com.cognite.beam.io.fn.parse.ParseSequenceBodyFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;

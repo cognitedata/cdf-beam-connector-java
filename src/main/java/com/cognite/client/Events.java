@@ -19,7 +19,7 @@ package com.cognite.client;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.parser.EventParser;
@@ -92,6 +92,19 @@ public abstract class Events extends ApiBase {
      */
     public Iterator<List<Event>> list(RequestParameters requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.EVENT, requestParameters, partitions), this::parseEvent);
+    }
+
+    /**
+     * Retrieve events by id.
+     *
+     * @param items The item(s) {@code externalId / id} to retrieve.
+     * @return The retrieved events.
+     * @throws Exception
+     */
+    public List<Event> retrieve(List<Item> items) throws Exception {
+        return retrieveJson(ResourceType.EVENT, items).stream()
+                .map(this::parseEvent)
+                .collect(Collectors.toList());
     }
 
     /**

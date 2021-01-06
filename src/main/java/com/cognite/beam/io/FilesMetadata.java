@@ -26,7 +26,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.parse.ParseFileMetaFn;
 import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;

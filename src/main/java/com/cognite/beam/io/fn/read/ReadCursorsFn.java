@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 
 import static com.google.common.base.Preconditions.checkArgument;
 

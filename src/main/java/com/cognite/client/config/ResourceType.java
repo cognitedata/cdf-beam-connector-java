@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn;
+package com.cognite.client.config;
 
 public enum ResourceType {
   ASSET,

@@ -19,7 +19,7 @@ package com.cognite.client;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ItemReader;
@@ -133,6 +133,7 @@ abstract class ApiBase {
      *
      * @param resourceType The item resource type ({@link com.cognite.client.dto.Event},
      * {@link com.cognite.client.dto.Asset}, etc.) to retrieve.
+     *
      * @param items The item(s) {@code externalId / id} to retrieve.
      * @return The items in Json representation.
      * @throws Exception

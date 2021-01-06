@@ -20,6 +20,7 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.*;

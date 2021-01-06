@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;

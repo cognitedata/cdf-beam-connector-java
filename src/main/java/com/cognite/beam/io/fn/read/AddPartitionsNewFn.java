@@ -21,7 +21,7 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.Aggregate;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.values.PCollectionView;

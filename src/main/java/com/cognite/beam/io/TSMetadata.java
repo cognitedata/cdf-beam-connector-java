@@ -22,7 +22,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
 import com.cognite.beam.io.fn.read.AddPartitionsFn;

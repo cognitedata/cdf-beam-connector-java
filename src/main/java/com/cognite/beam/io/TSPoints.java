@@ -19,7 +19,7 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.*;
 import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.client.dto.TimeseriesPointPost;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.parse.ParseTimeseriesPointFn;
 import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.read.ReadTsPointProto;

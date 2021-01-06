@@ -20,7 +20,7 @@ import com.cognite.beam.io.ConnectorBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.transform.ReadTimestamp;
 import com.google.auto.value.AutoValue;

@@ -16,14 +16,18 @@
 
 package com.cognite.client;
 
+import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.dto.Item;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.AssetParser;
 import com.google.auto.value.AutoValue;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * This class represents the Cognite assets api endpoint.
@@ -88,6 +92,59 @@ public abstract class Assets extends ApiBase {
      */
     public Iterator<List<Asset>> list(RequestParameters requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.ASSET, requestParameters, partitions), this::parseAsset);
+    }
+
+    /**
+     * Retrieve assets by id.
+     *
+     * @param items The item(s) {@code externalId / id} to retrieve.
+     * @return The retrieved events.
+     * @throws Exception
+     */
+    public List<Asset> retrieve(List<Item> items) throws Exception {
+        return retrieveJson(ResourceType.ASSET, items).stream()
+                .map(this::parseAsset)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Performs an item aggregation request to Cognite Data Fusion.
+     *
+     * The default aggregation is a total item count based on the (optional) filters in the request.
+     * Multiple aggregation types are supported. Please refer to the Cognite API specification for more information
+     * on the possible settings.
+     *
+     * @param requestParameters The filtering and aggregates specification
+     * @return The aggregation results.
+     * @throws Exception
+     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
+     */
+    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+        return aggregate(ResourceType.ASSET, requestParameters);
+    }
+
+    // todo make upsert assets + sync assets methods. Must implement sorting + integrity checking
+
+    /**
+     * Deletes a set of assets.
+     *
+     * The events to delete are identified via their {@code externalId / id} by submitting a list of
+     * {@link Item}.
+     *
+     * @param items a list of {@link Item} representing the assets (externalId / id) to be deleted
+     * @return The deleted events via {@link Item}
+     * @throws Exception
+     */
+    public List<Item> delete(List<Item> items) throws Exception {
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteAssets()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
+
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+                .withParameter("ignoreUnknownIds", true);
+
+        return deleteItems.deleteItems(items);
     }
 
     /*
