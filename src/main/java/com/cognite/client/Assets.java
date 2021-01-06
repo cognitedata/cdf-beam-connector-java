@@ -26,11 +26,12 @@ import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.AssetParser;
 import com.cognite.client.servicesV1.parser.EventParser;
 import com.google.auto.value.AutoValue;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.cycle.CycleDetector;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleDirectedGraph;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -130,6 +131,50 @@ public abstract class Assets extends ApiBase {
     // todo make upsert assets + sync assets methods. Must implement sorting + integrity checking
 
     /**
+     * Creates or updates a set of {@link Asset} objects.
+     *
+     * If it is a new {@link Asset} object (based on {@code id / externalId}, then it will be created.
+     *
+     * If an {@link Asset} object already exists in Cognite Data Fusion, it will be updated. The update behavior
+     * is specified via the update mode in the {@link com.cognite.client.config.ClientConfig} settings.
+     *
+     * The assets will be checked for integrity and topologically sorted before an ordered upsert operation
+     * is started.
+     *
+     * @param assets The assets to upsert.
+     * @return The upserted assets.
+     * @throws Exception
+     */
+    public List<Asset> upsert(List<Asset> assets) throws Exception {
+
+
+        return Collections.emptyList(); // temp return statement to make the code compile
+    }
+
+    /**
+     * Checks a collection of assets for integrity. The assets must represent a single, complete
+     * hierarchy.
+     *
+     * This verifies if the collection satisfies the
+     * constraints of the Cognite Data Fusion data model if you were to write them using the
+     * {@link Assets#upsert(List)} method.
+     *
+     * The following constraints will be evaluated:
+     * - All assets must specify an {@code externalId}.
+     * - No duplicates (based on {@code externalId}.
+     * - The collection must contain one and only one asset object with no parent reference (representing the root node)
+     * - All other assets must contain a valid {@code parentExternalId} reference (no self-references).
+     * - No circular references.
+     *
+     * @param assets A collection of {@link Asset} representing a single, complete asset hierarchy.
+     * @return
+     */
+    public boolean verifyAssetHierarchyIntegrity(List<Asset> assets) {
+
+        return false; // temp return statement to make the code compile
+    }
+
+    /**
      * Deletes a set of assets.
      *
      * The events to delete are identified via their {@code externalId / id} by submitting a list of
@@ -149,6 +194,114 @@ public abstract class Assets extends ApiBase {
                 .withParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(items);
+    }
+
+    /**
+     * This function will sort a collection of assets into the correct order for upsert to CDF.
+     *
+     * Assets need to be written in a certain order to comply with the hierarchy constraints of CDF. In short, if an asset
+     * references a parent (either via id or externalId), then that parent must exist either in CDF or in the same write
+     * batch. Hence, a collection of assets must be written to CDF in topological order.
+     *
+     * This function requires that the input collection is complete. That is, all assets required to traverse the hierarchy
+     * from the root node to the leaves must either exist in CDF and/or in the input collection.
+     *
+     * The sorting algorithm employed is a naive breadth-first O(n * depth(n)):
+     * while (items in inputCollection) {
+     *     for (items in inputCollection) {
+     *         if (item references unknown OR item references null OR item references id) : write item and remove from inputCollection
+     *     }
+     * }
+     *
+     * Other requirements for the input:
+     * - Assets must have externalId set.
+     * - If both parentExternalId and parentId are set, then parentExternalId takes precedence in the sort.
+     *
+     * @param assets A collection of {@link Asset} to be topologically sorted.
+     * @return The sorted assets collection.
+     */
+    private List<Asset> sortAssetsForUpsert(Collection<Asset> assets) {
+        // todo: Implement sort
+        return Collections.emptyList();
+    }
+
+    /**
+     * Checks the assets for {@code externalId}.
+     *
+     * @param assets The assets to check.
+     * @return true if all assets contain {@code externalId}. False if one or more assets do not have {@code externalId}.
+     */
+    private boolean checkExternalId(Collection<Asset> assets) {
+        String loggingPrefix = "checkExternalId() - ";
+        List<Asset> missingExternalIdList = new ArrayList<>(50);
+
+        for (Asset asset : assets) {
+            if (!asset.hasExternalId()) {
+                missingExternalIdList.add(asset);
+            }
+        }
+
+        // Report on missing externalId
+        if (!missingExternalIdList.isEmpty()) {
+            StringBuilder message = new StringBuilder();
+            String errorMessage = loggingPrefix + "Found " + missingExternalIdList.size() + " assets missing externalId.";
+            message.append(errorMessage).append(System.lineSeparator());
+            if (missingExternalIdList.size() > 11) {
+                missingExternalIdList = missingExternalIdList.subList(0, 10);
+            }
+            message.append("Items with missing externalId (max 10 displayed): " + System.lineSeparator());
+            for (Asset item : missingExternalIdList) {
+                message.append("---------------------------").append(System.lineSeparator())
+                        .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("--------------------------");
+            }
+            LOG.error(message.toString());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks the assets for circular references.
+     *
+     * @param assets The assets to check.
+     * @return True if circular references are detected. False if no circular references are detected.
+     */
+    private boolean checkCircularReferences(Collection<Asset> assets) {
+        String loggingPrefix = "checkCircularReferences() - ";
+        Map<String, Asset> assetMap = new HashMap<>();
+        assets.stream()
+                .forEach(asset -> assetMap.put(asset.getExternalId().getValue(), asset));
+
+        // Checking for circular references
+        Graph<Asset, DefaultEdge> graph = new SimpleDirectedGraph<>(DefaultEdge.class);
+
+        // add vertices
+        for (Asset vertex : assetMap.values()) {
+            graph.addVertex(vertex);
+        }
+        // add edges
+        for (Asset asset : assetMap.values()) {
+            if (asset.hasParentExternalId() && assetMap.containsKey(asset.getParentExternalId().getValue())) {
+                graph.addEdge(assetMap.get(asset.getParentExternalId().getValue()), asset);
+            }
+        }
+
+        CycleDetector<Asset, DefaultEdge> cycleDetector = new CycleDetector<>(graph);
+        if (cycleDetector.detectCycles()) {
+            Set<String> cycle = new HashSet<>();
+            cycleDetector.findCycles().stream().forEach((Asset item) -> cycle.add(item.getExternalId().getValue()));
+            String message = loggingPrefix + "Cycles detected. Number of asset in the cycle: " + cycle.size();
+            LOG.error(message);
+            LOG.error(loggingPrefix + "Cycle: " + cycle.toString());
+            return false;
+        }
+
+        LOG.info(loggingPrefix + "No cycles detected.");
+        return true;
     }
 
     /*
