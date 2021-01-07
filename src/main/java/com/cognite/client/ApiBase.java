@@ -835,11 +835,31 @@ abstract class ApiBase {
          * (based on externalId or Id), the items will be created. Effectively this results in an upsert.
          *
          * @param items The items to be upserted.
-         * @return he upserted items
+         * @return The upserted items.
          * @throws Exception
          */
         public List<String> upsertViaUpdateAndCreate(List<T> items) throws Exception {
             //todo: implement method
+            return Collections.emptyList();
+        }
+
+        /**
+         * Upserts a set of items via delete and create.
+         *
+         * This function will first try to delete the items (in case they already exist in CDF)
+         * before creating them. Effectively this results in an upsert.
+         *
+         * This method is used for resource types that do not support updates natively
+         * in the CDF api.
+         *
+         * @param items The items to be upserted.
+         * @return The upserted items.
+         * @throws Exception
+         */
+        public List<String> upsertViaDeleteAndCreate(List<T> items) throws Exception {
+            // todo: implement method.
+            // use the DeleteItems class to perform the actual delete operation.
+
             return Collections.emptyList();
         }
 
