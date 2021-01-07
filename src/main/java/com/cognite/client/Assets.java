@@ -16,13 +16,17 @@
 
 package com.cognite.client;
 
+import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.AssetParser;
+import com.cognite.client.servicesV1.parser.EventParser;
+import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.jgrapht.Graph;
@@ -42,6 +46,7 @@ import java.util.stream.Collectors;
  */
 @AutoValue
 public abstract class Assets extends ApiBase {
+    private final static int MAX_UPSERT_BATCH_SIZE = 200;
 
     private static Builder builder() {
         return new AutoValue_Assets.Builder();
@@ -129,7 +134,7 @@ public abstract class Assets extends ApiBase {
         return aggregate(ResourceType.ASSET, requestParameters);
     }
 
-    // todo make upsert assets + sync assets methods. Must implement sorting + integrity checking
+    // todo make sync assets methods.
 
     /**
      * Creates or updates a set of {@link Asset} objects.
@@ -142,14 +147,53 @@ public abstract class Assets extends ApiBase {
      * The assets will be checked for integrity and topologically sorted before an ordered upsert operation
      * is started.
      *
+     * The following constraints will be evaluated:
+     * - All assets must specify an {@code externalId}.
+     * - No duplicates (based on {@code externalId}.
+     * - No self-reference.
+     * - No circular references.
+     *
      * @param assets The assets to upsert.
      * @return The upserted assets.
      * @throws Exception
      */
-    public List<Asset> upsert(List<Asset> assets) throws Exception {
+    public List<Asset> upsert(Collection<Asset> assets) throws Exception {
+        Instant startInstant = Instant.now();
+        // Check integrity and sort assets topologically
+        List<Asset> sortedAssets = sortAssetsForUpsert(assets);
 
+        // Setup writers and upsert manager
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeAssets()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateAssets()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
 
-        return Collections.emptyList(); // temp return statement to make the code compile
+        UpsertItems<Asset> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+                .withUpdateItemWriter(updateItemWriter)
+                .withUpdateMappingFunction(this::toRequestUpdateItem)
+                .withIdFunction(this::getAssetId);
+
+        if (getClient().getClientConfig().getUpsertMode() == UpsertMode.REPLACE) {
+            upsertItems = upsertItems.withUpdateMappingFunction(this::toRequestReplaceItem);
+        }
+
+        // Write assets as a serial set of single-worker requests. Must do this to guarantee the order of upsert.
+        List<List<Asset>> sortedBatches = Partition.ofSize(sortedAssets, MAX_UPSERT_BATCH_SIZE);
+        List<String> assetUpsertResults = new ArrayList<>(assets.size());
+        for (List<Asset> batch : sortedBatches) {
+            assetUpsertResults.addAll(upsertItems.upsertViaCreateAndUpdate(batch));
+        }
+
+        LOG.info("upsert() - Finished upserting {} assets across {} batches within a duration of {}",
+                sortedAssets.size(),
+                sortedBatches.size(),
+                Duration.between(startInstant, Instant.now()));
+        return assetUpsertResults.stream()
+                .map(this::parseAsset)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -158,7 +202,7 @@ public abstract class Assets extends ApiBase {
      *
      * This verifies if the collection satisfies the
      * constraints of the Cognite Data Fusion data model if you were to write them using the
-     * {@link Assets#upsert(List)} method.
+     * {@link #upsert(Collection) upsert} method.
      *
      * The following constraints will be evaluated:
      * - All assets must specify an {@code externalId}.
@@ -170,9 +214,14 @@ public abstract class Assets extends ApiBase {
      * @param assets A collection of {@link Asset} representing a single, complete asset hierarchy.
      * @return
      */
-    public boolean verifyAssetHierarchyIntegrity(List<Asset> assets) {
+    public boolean verifyAssetHierarchyIntegrity(Collection<Asset> assets) {
+        if (!checkExternalId(assets)) return false;
+        if (!checkDuplicates(assets)) return false;
+        if (!checkSelfReference(assets)) return false;
+        if (!checkCircularReferences(assets)) return false;
+        if (!checkReferentialIntegrity(assets)) return false;
 
-        return false; // temp return statement to make the code compile
+        return true;
     }
 
     /**
@@ -310,6 +359,7 @@ public abstract class Assets extends ApiBase {
             LOG.warn(message.toString());
             return false;
         }
+        LOG.info(loggingPrefix + "All assets contain an externalId.");
 
         return true;
     }
@@ -352,6 +402,7 @@ public abstract class Assets extends ApiBase {
             return false;
         }
 
+        LOG.info(loggingPrefix + "No duplicates detected in the assets collection.");
         return true;
     }
 
@@ -394,6 +445,7 @@ public abstract class Assets extends ApiBase {
             LOG.warn(message.toString());
             return false;
         }
+        LOG.info(loggingPrefix + "No self-references detected in the assets collection.");
 
         return true;
     }
@@ -434,7 +486,83 @@ public abstract class Assets extends ApiBase {
             return false;
         }
 
-        LOG.info(loggingPrefix + "No cycles detected.");
+        LOG.info(loggingPrefix + "No cycles detected in the assets collection.");
+        return true;
+    }
+
+    /**
+     * Checks the assets for referential integrity.
+     *
+     * This check is relevant for a collection of assets that represents a single, complete
+     * asset hierarchy. It performs the following checks:
+     * - One and only one root node (an asset with no parent reference).
+     * - All other assets reference an asset in this collection.
+     *
+     * @param assets The assets to check.
+     * @return True if integrity is intact. False otherwise.
+     */
+    private boolean checkReferentialIntegrity(Collection<Asset> assets) {
+        String loggingPrefix = "checkReferentialIntegrity() - ";
+        Map<String, Asset> inputMap = new HashMap<>();
+        List<Asset> invalidReferenceList = new ArrayList<>(50);
+        List<Asset> rootNodeList = new ArrayList<>(2);
+
+        LOG.debug(loggingPrefix + "Checking asset input table for integrity.");
+        for (Asset element : assets) {
+            if (element.getParentExternalId().getValue().isEmpty()) {
+                rootNodeList.add(element);
+            }
+            inputMap.put(element.getExternalId().getValue(), element);
+        }
+
+        for (Asset element : assets) {
+            if (!element.getParentExternalId().getValue().isEmpty()
+                    && !inputMap.containsKey(element.getParentExternalId().getValue())) {
+                invalidReferenceList.add(element);
+            }
+        }
+
+        if (rootNodeList.size() != 1) {
+            String errorMessage = loggingPrefix + "Found " + rootNodeList.size() + " root nodes.";
+            StringBuilder message = new StringBuilder()
+                    .append(errorMessage).append(System.lineSeparator());
+            if (rootNodeList.size() > 100) {
+                rootNodeList = rootNodeList.subList(0, 99);
+            }
+            message.append("Root nodes (max 100 displayed): " + System.lineSeparator());
+            for (Asset item : rootNodeList) {
+                message.append("---------------------------").append(System.lineSeparator())
+                        .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("--------------------------");
+            }
+            LOG.warn(message.toString());
+            return false;
+        }
+
+        if (!invalidReferenceList.isEmpty()) {
+            StringBuilder message = new StringBuilder();
+            String errorMessage = loggingPrefix + "Found " + invalidReferenceList.size() + " assets with invalid parent reference.";
+            message.append(errorMessage).append(System.lineSeparator());
+            if (invalidReferenceList.size() > 100) {
+                invalidReferenceList = invalidReferenceList.subList(0, 99);
+            }
+            message.append("Items with invalid parentExternalId (max 100 displayed): " + System.lineSeparator());
+            for (Asset item : invalidReferenceList) {
+                message.append("---------------------------").append(System.lineSeparator())
+                        .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("--------------------------");
+            }
+            LOG.warn(message.toString());
+            return false;
+        }
+
+        LOG.info(loggingPrefix + "The asset collection contains a single root node and valid parent references.");
         return true;
     }
 
@@ -445,6 +573,18 @@ public abstract class Assets extends ApiBase {
     private Asset parseAsset(String json) {
         try {
             return AssetParser.parseAsset(json);
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
+    private Map<String, Object> toRequestInsertItem(Asset item) {
+        try {
+            return AssetParser.toRequestInsertItem(item);
         } catch (Exception e)  {
             throw new RuntimeException(e);
         }
