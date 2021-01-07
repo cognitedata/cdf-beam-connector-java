@@ -829,6 +829,21 @@ abstract class ApiBase {
         }
 
         /**
+         * Upserts a set of items via create and update.
+         *
+         * This function will first try to update the items. In case the items do not exist
+         * (based on externalId or Id), the items will be created. Effectively this results in an upsert.
+         *
+         * @param items The items to be upserted.
+         * @return he upserted items
+         * @throws Exception
+         */
+        public List<String> upsertViaUpdateAndCreate(List<T> items) throws Exception {
+            //todo: implement method
+            return Collections.emptyList();
+        }
+
+        /**
          * Create /insert items.
          *
          * Submits a (large) batch of items by splitting it up into multiple, parallel create / insert requests.
