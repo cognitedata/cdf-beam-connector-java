@@ -20,17 +20,18 @@ import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.AssetParser;
-import com.cognite.client.servicesV1.parser.EventParser;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.cycle.CycleDetector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -215,14 +216,63 @@ public abstract class Assets extends ApiBase {
      *
      * Other requirements for the input:
      * - Assets must have externalId set.
+     * - No duplicates.
+     * - No self-references.
+     * - No circular references.
      * - If both parentExternalId and parentId are set, then parentExternalId takes precedence in the sort.
      *
      * @param assets A collection of {@link Asset} to be topologically sorted.
      * @return The sorted assets collection.
+     * @throws Exception if one (or more) of the constraints are not fulfilled.
      */
-    private List<Asset> sortAssetsForUpsert(Collection<Asset> assets) {
-        // todo: Implement sort
-        return Collections.emptyList();
+    private List<Asset> sortAssetsForUpsert(Collection<Asset> assets) throws Exception {
+        Instant startInstant = Instant.now();
+        String loggingPrefix = "sortAssetsForUpsert - ";
+        Preconditions.checkArgument(checkExternalId(assets),
+                "Some assets do not have externalId. Please check the log for more information.");
+        Preconditions.checkArgument(checkDuplicates(assets),
+                "Found duplicates in the input assets. Please check the log for more information.");
+        Preconditions.checkArgument(checkSelfReference(assets),
+                "Some assets contain a self-reference. Please check the log for more information.");
+        Preconditions.checkArgument(checkCircularReferences(assets),
+                "Circular reference detected. Please check the log for more information.");
+
+        LOG.debug(loggingPrefix + "Constraints check passed. Starting sort.");
+        Map<String, Asset> inputMap = new HashMap<>((int) (assets.size() * 1.35));
+        List<Asset> sortedAssets = new ArrayList<>();
+        assets.stream()
+                .forEach(asset -> inputMap.put(asset.getExternalId().getValue(), asset));
+
+        while (!inputMap.isEmpty()) {
+            int startInputMapSize = inputMap.size();
+            LOG.debug(loggingPrefix + "Starting new sort iteration. Assets left to sort: {}", inputMap.size());
+            for (Iterator<Asset> iterator = inputMap.values().iterator(); iterator.hasNext();) {
+                Asset asset = iterator.next();
+                if (asset.hasParentExternalId()) {
+                    // Check if the parent asset exists in the input collection. If no, it is safe to write the asset.
+                    if (!inputMap.containsKey(asset.getParentExternalId().getValue())) {
+                        sortedAssets.add(asset);
+                        iterator.remove();
+                    }
+                } else {
+                    // Asset either has no parent reference or references an (internal) id.
+                    // Null parent is safe to write and (internal) id is assumed to already exist in cdf--safe to write.
+                    sortedAssets.add(asset);
+                    iterator.remove();
+                }
+            }
+            LOG.debug(loggingPrefix + "Finished sort iteration. Assets left to sort: {}", inputMap.size());
+            if (startInputMapSize == inputMap.size()) {
+                String message = loggingPrefix + "Possible circular reference detected when sorting assets, aborting.";
+                LOG.error(message);
+                throw new Exception(message);
+            }
+        }
+        LOG.info(loggingPrefix + "Sort assets finished. Sorted {} assets within a duration of {}.",
+                sortedAssets.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        return sortedAssets;
     }
 
     /**
@@ -257,7 +307,7 @@ public abstract class Assets extends ApiBase {
                         .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
                         .append("--------------------------");
             }
-            LOG.error(message.toString());
+            LOG.warn(message.toString());
             return false;
         }
 
@@ -271,7 +321,7 @@ public abstract class Assets extends ApiBase {
      * @return true if no duplicates are detected. False if one or more duplicates are detected.
      */
     private boolean checkDuplicates(Collection<Asset> assets) {
-        String loggingPrefix = "checkExternalId() - ";
+        String loggingPrefix = "checkDuplicates() - ";
         List<Asset> duplicatesList = new ArrayList<>(50);
         Map<String, Asset> inputMap = new HashMap<>((int) (assets.size() * 1.35));
 
@@ -290,7 +340,7 @@ public abstract class Assets extends ApiBase {
             if (duplicatesList.size() > 100) {
                 duplicatesList = duplicatesList.subList(0, 99);
             }
-            message.append("Items with missing externalId (max 100 displayed): " + System.lineSeparator());
+            message.append("Duplicate items (max 100 displayed): " + System.lineSeparator());
             for (Asset item : duplicatesList) {
                 message.append("---------------------------").append(System.lineSeparator())
                         .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
@@ -298,7 +348,50 @@ public abstract class Assets extends ApiBase {
                         .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
                         .append("--------------------------");
             }
-            LOG.error(message.toString());
+            LOG.warn(message.toString());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks the assets for self-reference. That is, the asset's {@code parentExternalId} references
+     * its own {@code externalId}.
+     *
+     * @param assets The assets to check.
+     * @return true if no self-references are detected. False if one or more self-reference are detected.
+     */
+    private boolean checkSelfReference(Collection<Asset> assets) {
+        String loggingPrefix = "checkExternalId() - ";
+        List<Asset> selfReferenceList = new ArrayList<>(50);
+
+        for (Asset asset : assets) {
+            if (asset.hasParentExternalId()
+                    && asset.getParentExternalId().getValue().equals(asset.getExternalId().getValue())) {
+                selfReferenceList.add(asset);
+            }
+        }
+
+        // Report on self-references
+        if (!selfReferenceList.isEmpty()) {
+            StringBuilder message = new StringBuilder();
+            String errorMessage = loggingPrefix + "Found " + selfReferenceList.size()
+                    + " items with self-referencing parentExternalId.";
+            message.append(errorMessage).append(System.lineSeparator());
+            if (selfReferenceList.size() > 100) {
+                selfReferenceList = selfReferenceList.subList(0, 99);
+            }
+            message.append("Items with self-reference (max 100 displayed): " + System.lineSeparator());
+            for (Asset item : selfReferenceList) {
+                message.append("---------------------------").append(System.lineSeparator())
+                        .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("--------------------------");
+            }
+            LOG.warn(message.toString());
             return false;
         }
 
