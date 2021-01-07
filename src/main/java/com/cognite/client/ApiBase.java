@@ -627,6 +627,8 @@ abstract class ApiBase {
         abstract ConnectorServiceV1.ItemWriter getCreateItemWriter();
         @Nullable
         abstract ConnectorServiceV1.ItemWriter getUpdateItemWriter();
+        @Nullable
+        abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
 
         /**
          * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
@@ -647,6 +649,16 @@ abstract class ApiBase {
          */
         public UpsertItems<T> withUpdateMappingFunction(Function<T, Map<String, Object>> function) {
             return toBuilder().setUpdateMappingFunction(function).build();
+        }
+
+        /**
+         * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for delete request.
+         *
+         * @param deleteWriter The item writer for delete requests
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> withDeleteItemWriter(ConnectorServiceV1.ItemWriter deleteWriter) {
+            return toBuilder().setDeleteItemWriter(deleteWriter).build();
         }
 
         /**
@@ -1047,6 +1059,7 @@ abstract class ApiBase {
             abstract Builder<T> setItemMappingFunction(Function<T, Item> value);
             abstract Builder<T> setCreateItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder<T> setUpdateItemWriter(ConnectorServiceV1.ItemWriter value);
+            abstract Builder<T> setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
 
             abstract UpsertItems<T> build();
         }
