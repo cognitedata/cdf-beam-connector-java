@@ -23,12 +23,13 @@ Changes are grouped as follows:
 ### Short term
 
 - OOTB incremental read support for time series.
+- Separate the generic Java SDK from the Beam specific code (the "Beam Connector").
 
 ## [0.9.15-SNAPSHOT]
 
 ### Changed
 
-- Refactored request parameters from `com.cognite.beam.servicesV1.RequestParameters` to `com.cognite.beam.RequestParameters`.
+- Refactored `RequestParameters` from `com.cognite.beam.servicesV1.RequestParameters` to `com.cognite.beam.RequestParameters`.
   All other signatures are the same as before, so you may run a search & replace to update your client.
 
 - Refactored data transfer objects from `com.cognite.beam.io.dto` to `com.cognite.client.dto`. 
@@ -43,6 +44,8 @@ Changes are grouped as follows:
 ### Fixed
 
 - Fixed a bug causing the number of write shards to be double of the configured value.
+
+- Fixed missing duplicate detection when upserting sequences rows. 
 
 ## 0.9.14
 

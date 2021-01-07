@@ -246,14 +246,55 @@ public abstract class Assets extends ApiBase {
             StringBuilder message = new StringBuilder();
             String errorMessage = loggingPrefix + "Found " + missingExternalIdList.size() + " assets missing externalId.";
             message.append(errorMessage).append(System.lineSeparator());
-            if (missingExternalIdList.size() > 11) {
-                missingExternalIdList = missingExternalIdList.subList(0, 10);
+            if (missingExternalIdList.size() > 100) {
+                missingExternalIdList = missingExternalIdList.subList(0, 99);
             }
-            message.append("Items with missing externalId (max 10 displayed): " + System.lineSeparator());
+            message.append("Items with missing externalId (max 100 displayed): " + System.lineSeparator());
             for (Asset item : missingExternalIdList) {
                 message.append("---------------------------").append(System.lineSeparator())
                         .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
                         .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("--------------------------");
+            }
+            LOG.error(message.toString());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks the assets for duplicates. The duplicates check is based on {@code externalId}.
+     *
+     * @param assets The assets to check.
+     * @return true if no duplicates are detected. False if one or more duplicates are detected.
+     */
+    private boolean checkDuplicates(Collection<Asset> assets) {
+        String loggingPrefix = "checkExternalId() - ";
+        List<Asset> duplicatesList = new ArrayList<>(50);
+        Map<String, Asset> inputMap = new HashMap<>((int) (assets.size() * 1.35));
+
+        for (Asset asset : assets) {
+            if (inputMap.containsKey(asset.getExternalId().getValue())) {
+                duplicatesList.add(asset);
+            }
+            inputMap.put(asset.getExternalId().getValue(), asset);
+        }
+
+        // Report on duplicates
+        if (!duplicatesList.isEmpty()) {
+            StringBuilder message = new StringBuilder();
+            String errorMessage = loggingPrefix + "Found " + duplicatesList.size() + " duplicates.";
+            message.append(errorMessage).append(System.lineSeparator());
+            if (duplicatesList.size() > 100) {
+                duplicatesList = duplicatesList.subList(0, 99);
+            }
+            message.append("Items with missing externalId (max 100 displayed): " + System.lineSeparator());
+            for (Asset item : duplicatesList) {
+                message.append("---------------------------").append(System.lineSeparator())
+                        .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
                         .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
                         .append("--------------------------");
             }
