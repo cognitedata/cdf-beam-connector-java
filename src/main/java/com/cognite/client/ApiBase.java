@@ -31,6 +31,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.Message;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -570,20 +571,16 @@ abstract class ApiBase {
      * @param <T> The object type of the objects to upsert.
      */
     @AutoValue
-    public abstract static class UpsertItems<T> {
+    public abstract static class UpsertItems<T extends Message> {
         private static final int DEFAULT_MAX_BATCH_SIZE = 1000;
         private static final int maxUpsertLoopIterations = 4;
 
         protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
-        private static <T> Builder<T> builder() {
+        private static <T extends Message> Builder<T> builder() {
             return new AutoValue_ApiBase_UpsertItems.Builder<T>()
                     .setMaxBatchSize(DEFAULT_MAX_BATCH_SIZE)
                     .setIdFunction(UpsertItems::getId);
-        }
-
-        private static <T> Optional<String> getId(T item) {
-            return Optional.<String>empty();
         }
 
         /**
@@ -596,7 +593,7 @@ abstract class ApiBase {
          * @param <T> The object type of the objects to upsert.
          * @return the {@link UpsertItems} for upserts.
          */
-        public static <T> UpsertItems<T> of(ConnectorServiceV1.ItemWriter createWriter,
+        public static <T extends Message> UpsertItems<T> of(ConnectorServiceV1.ItemWriter createWriter,
                                          Function<T, Map<String, Object>> createMappingFunction,
                                          ProjectConfig projectConfig)  {
             return UpsertItems.<T>builder()
@@ -604,6 +601,17 @@ abstract class ApiBase {
                     .setCreateMappingFunction(createMappingFunction)
                     .setProjectConfig(projectConfig)
                     .build();
+        }
+
+        /**
+         * Get id via the common dto methods {@code getExternalId} and {@code getId}.
+         *
+         * @param item The item to interrogate for id
+         * @param <T> The object type of the item. Must be a protobuf object.
+         * @return The (external)Id if found. An empty {@link Optional} if no id is found.
+         */
+        private static <T> Optional<String> getId(T item) {
+            return Optional.<String>empty();
         }
 
         abstract Builder<T> toBuilder();
@@ -614,11 +622,11 @@ abstract class ApiBase {
         abstract Function<T, Map<String, Object>> getCreateMappingFunction();
         @Nullable
         abstract Function<T, Map<String, Object>> getUpdateMappingFunction();
+        @Nullable
+        abstract Function<T, Item> getItemMappingFunction();
         abstract ConnectorServiceV1.ItemWriter getCreateItemWriter();
         @Nullable
         abstract ConnectorServiceV1.ItemWriter getUpdateItemWriter();
-        @Nullable
-        abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
 
         /**
          * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
@@ -639,6 +647,17 @@ abstract class ApiBase {
          */
         public UpsertItems<T> withUpdateMappingFunction(Function<T, Map<String, Object>> function) {
             return toBuilder().setUpdateMappingFunction(function).build();
+        }
+
+        /**
+         * Sets the mapping function for translating from the typed objects an {@link Item} object. This function
+         * is used when deleting objects (which is done via the Item representation).
+         *
+         * @param function The {@link Item} mapping function.
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> withItemMappingFunction(Function<T, Item> function) {
+            return toBuilder().setItemMappingFunction(function).build();
         }
 
         /**
@@ -1019,15 +1038,15 @@ abstract class ApiBase {
         }
 
         @AutoValue.Builder
-        abstract static class Builder<T> {
+        abstract static class Builder<T extends Message> {
             abstract Builder<T> setMaxBatchSize(int value);
             abstract Builder<T> setProjectConfig(ProjectConfig value);
             abstract Builder<T> setIdFunction(Function<T, Optional<String>> value);
             abstract Builder<T> setCreateMappingFunction(Function<T, Map<String, Object>> value);
             abstract Builder<T> setUpdateMappingFunction(Function<T, Map<String, Object>> value);
+            abstract Builder<T> setItemMappingFunction(Function<T, Item> value);
             abstract Builder<T> setCreateItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder<T> setUpdateItemWriter(ConnectorServiceV1.ItemWriter value);
-            abstract Builder<T> setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
 
             abstract UpsertItems<T> build();
         }
