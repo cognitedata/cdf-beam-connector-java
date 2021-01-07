@@ -870,6 +870,11 @@ abstract class ApiBase {
          * @throws Exception
          */
         public List<String> upsertViaUpdateAndCreate(List<T> items) throws Exception {
+            Preconditions.checkState(null != getUpdateItemWriter(),
+                    "The update item writer is not configured.");
+            Preconditions.checkState(null != getUpdateMappingFunction(),
+                    "The update mapping function is not configured.");
+
             //todo: implement method
             return Collections.emptyList();
         }
@@ -888,6 +893,11 @@ abstract class ApiBase {
          * @throws Exception
          */
         public List<String> upsertViaDeleteAndCreate(List<T> items) throws Exception {
+            Preconditions.checkState(null != getDeleteItemWriter(),
+                    "The delete item writer is not configured.");
+            Preconditions.checkState(null != getItemMappingFunction(),
+                    "The item mapping function is not configured.");
+
             // todo: implement method.
             // use the DeleteItems class to perform the actual delete operation.
 
