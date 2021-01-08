@@ -871,7 +871,7 @@ abstract class ApiBase {
          */
         public List<String> upsertViaUpdateAndCreate(List<T> items) throws Exception {
             String batchLogPrefix =
-                    "upsertViaCreateAndUpdate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+                    "upsertViaUpdateAndCreate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
             Preconditions.checkArgument(itemsHaveId(items),
                     batchLogPrefix + "All items must have externalId or id.");
             Preconditions.checkState(null != getUpdateItemWriter(),
@@ -1051,7 +1051,7 @@ abstract class ApiBase {
          */
         public List<String> upsertViaDeleteAndCreate(List<T> items) throws Exception {
             String batchLogPrefix =
-                    "upsertViaCreateAndUpdate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+                    "upsertViaDeleteAndCreate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
             Preconditions.checkState(null != getDeleteItemWriter(),
                     batchLogPrefix + "The delete item writer is not configured.");
             Preconditions.checkState(null != getItemMappingFunction(),

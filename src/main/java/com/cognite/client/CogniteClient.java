@@ -35,7 +35,7 @@ public abstract class CogniteClient implements Serializable {
             .build();
 
     private static final int DEFAULT_CPU_MULTIPLIER = 8;
-    private final static int DEFAULT_MAX_WORKER_THREADS = 16;
+    private final static int DEFAULT_MAX_WORKER_THREADS = 12;
     private static ForkJoinPool executorService = new ForkJoinPool(Math.min(
             Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
             DEFAULT_MAX_WORKER_THREADS));
@@ -161,6 +161,15 @@ public abstract class CogniteClient implements Serializable {
      */
     public Events events() {
         return Events.of(this);
+    }
+
+    /**
+     * Returns {@link com.cognite.client.dto.Relationship} representing the Cognite relationships api endpoint.
+     *
+     * @return The relationships api object.
+     */
+    public Relationships relationships() {
+        return Relationships.of(this);
     }
 
     /**

@@ -18,13 +18,9 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
-import com.cognite.client.config.UpsertMode;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.servicesV1.parser.RelationshipParser;
 import com.google.auto.value.AutoValue;
 
@@ -37,7 +33,7 @@ import java.util.stream.Collectors;
 /**
  * This class represents the Cognite events api endpoint.
  *
- * It provides methods for reading and writing {@link Event}.
+ * It provides methods for reading and writing {@link Relationship}.
  */
 @AutoValue
 public abstract class Relationships extends ApiBase {
@@ -62,7 +58,7 @@ public abstract class Relationships extends ApiBase {
     }
 
     /**
-     * Returns all {@link Event} objects that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link Relationship} objects that matches the filters set in the {@link RequestParameters}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
@@ -146,7 +142,7 @@ public abstract class Relationships extends ApiBase {
                 .withItemMappingFunction(this::toItem)
                 .withIdFunction(this::getRelationshipId);
 
-        return upsertItems.upsertViaCreateAndUpdate(relationships).stream()
+        return upsertItems.upsertViaDeleteAndCreate(relationships).stream()
                 .map(this::parseRelationship)
                 .collect(Collectors.toList());
     }

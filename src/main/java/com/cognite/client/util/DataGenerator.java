@@ -1,6 +1,7 @@
 package com.cognite.client.util;
 
 import com.cognite.client.dto.*;
+import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int64Value;
 import com.google.protobuf.StringValue;
 import com.google.protobuf.Value;
@@ -140,6 +141,25 @@ public class DataGenerator {
                     .setSource(StringValue.of(sourceValue))
                     .putMetadata("type", DataGenerator.sourceValue)
                     .putMetadata(sourceKey, DataGenerator.sourceValue)
+                    .build());
+        }
+        return objects;
+    }
+
+    public static List<Relationship> generateRelationships(int noObjects) {
+        List<Relationship> objects = new ArrayList<>(noObjects);
+        for (int i = 0; i < noObjects; i++) {
+            objects.add(Relationship.newBuilder()
+                    .setExternalId(RandomStringUtils.randomAlphanumeric(10))
+                    .setStartTime(Int64Value.of(1552566113 + ThreadLocalRandom.current().nextInt(10000)))
+                    .setEndTime(Int64Value.of(1553566113 + ThreadLocalRandom.current().nextInt(10000)))
+                    .setSourceExternalId("extId_A")
+                    .setSourceType(ThreadLocalRandom.current().nextInt(0,2) == 0 ?
+                            Relationship.ResourceType.ASSET : Relationship.ResourceType.EVENT)
+                    .setTargetExternalId("extId_B")
+                    .setTargetType(ThreadLocalRandom.current().nextInt(0,2) == 0 ?
+                            Relationship.ResourceType.ASSET : Relationship.ResourceType.EVENT)
+                    .setConfidence(FloatValue.of(ThreadLocalRandom.current().nextFloat()))
                     .build());
         }
         return objects;
