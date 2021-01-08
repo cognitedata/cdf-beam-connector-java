@@ -35,7 +35,7 @@ public abstract class CogniteClient implements Serializable {
             .build();
 
     private static final int DEFAULT_CPU_MULTIPLIER = 8;
-    private final static int DEFAULT_MAX_WORKER_THREADS = 24;
+    private final static int DEFAULT_MAX_WORKER_THREADS = 16;
     private static ForkJoinPool executorService = new ForkJoinPool(Math.min(
             Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
             DEFAULT_MAX_WORKER_THREADS));

@@ -10,14 +10,14 @@ import java.io.Serializable;
  */
 @AutoValue
 public abstract class ClientConfig implements Serializable {
-    final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
-    final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
-    final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
-    final static int DEFAULT_LIST_PARTITIONS = 8;
+    private final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
+    private final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
+    private final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
+    private final static int DEFAULT_LIST_PARTITIONS = 8;
 
     // Thread pool capacity
-    final static int DEFAULT_CPU_MULTIPLIER = 8;
-    final static int DEFAULT_MAX_WORKER_THREADS = 24;
+    private final static int DEFAULT_CPU_MULTIPLIER = 8;
+    private final static int DEFAULT_MAX_WORKER_THREADS = 16;
 
     // Connection retries
     private static final int DEFAULT_RETRIES = 5;
