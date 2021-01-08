@@ -1,11 +1,14 @@
 package com.cognite.client;
 
+import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Asset;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.util.DataGenerator;
+import com.google.protobuf.StringValue;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -15,6 +18,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -66,6 +71,114 @@ class EventsTest {
             List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
             LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+
+            assertEquals(upsertEventsList.size(), listEventsResults.size());
+            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+        } catch (Exception e) {
+            LOG.error(e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    @Tag("remoteCDP")
+    void writeEditAndDeleteEvents() {
+        Instant startInstant = Instant.now();
+        ClientConfig config = ClientConfig.create()
+                .withNoWorkers(1)
+                .withNoListPartitions(1);
+        String loggingPrefix = "UnitTest - writeEditAndDeleteEvents() -";
+        LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
+        CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
+                .withBaseUrl(TestConfigProvider.getHost())
+                //.withClientConfig(config)
+                ;
+        LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
+                Duration.between(startInstant, Instant.now()));
+
+        try {
+            LOG.info(loggingPrefix + "Start upserting events.");
+            List<Event> upsertEventsList = DataGenerator.generateEvents(123);
+            List<Event> upsertedEvents = client.events().upsert(upsertEventsList);
+            LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            Thread.sleep(3000); // wait for eventual consistency
+
+            LOG.info(loggingPrefix + "Start updating events.");
+            List<Event> editedEventsInput = upsertedEvents.stream()
+                    .map(event -> event.toBuilder()
+                            .setDescription(StringValue.of("new-value"))
+                            .clearSubtype()
+                            .clearMetadata()
+                            .putMetadata("new-key", "new-value")
+                            .build())
+                    .collect(Collectors.toList());
+
+            List<Event> eventUpdateResults = client.events().upsert(editedEventsInput);
+            LOG.info(loggingPrefix + "Finished events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            LOG.info(loggingPrefix + "Start update replace events.");
+            client = client
+                    .withClientConfig(ClientConfig.create()
+                            .withUpsertMode(UpsertMode.REPLACE));
+
+            List<Event> eventReplaceResults = client.events().upsert(editedEventsInput);
+            LOG.info(loggingPrefix + "Finished update replace events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            LOG.info(loggingPrefix + "Start reading events.");
+            List<Event> listEventsResults = new ArrayList<>();
+            client.events()
+                    .list(RequestParameters.create()
+                            .withFilterParameter("source", DataGenerator.sourceValue))
+                    .forEachRemaining(events -> listEventsResults.addAll(events));
+            LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            LOG.info(loggingPrefix + "Start deleting events.");
+            List<Item> deleteItemsInput = new ArrayList<>();
+            listEventsResults.stream()
+                    .map(event -> Item.newBuilder()
+                            .setExternalId(event.getExternalId().getValue())
+                            .build())
+                    .forEach(item -> deleteItemsInput.add(item));
+
+            List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            BooleanSupplier updateCondition = () -> {
+                for (Event event : eventUpdateResults)  {
+                    if (event.getDescription().getValue().equals("new-value")
+                            && event.hasSubtype()
+                            && event.containsMetadata("new-key")
+                            && event.containsMetadata(DataGenerator.sourceKey)) {
+                        // all good
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            BooleanSupplier replaceCondition = () -> {
+                for (Event event : eventReplaceResults)  {
+                    if (event.getDescription().getValue().equals("new-value")
+                            && !event.hasSubtype()
+                            && event.containsMetadata("new-key")
+                            && !event.containsMetadata(DataGenerator.sourceKey)) {
+                        // all good
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            assertTrue(updateCondition, "Event update not correct");
+            assertTrue(replaceCondition, "Event replace not correct");
 
             assertEquals(upsertEventsList.size(), listEventsResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());

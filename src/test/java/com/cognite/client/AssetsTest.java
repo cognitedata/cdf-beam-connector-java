@@ -1,10 +1,14 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.config.ClientConfig;
+import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
 import com.cognite.client.dto.Item;
 import com.cognite.client.util.DataGenerator;
+import com.google.protobuf.StringValue;
+import org.checkerframework.checker.units.qual.A;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -14,8 +18,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssetsTest {
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
@@ -62,6 +69,104 @@ class AssetsTest {
             LOG.info(loggingPrefix + "Finished deleting assets. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
+            assertEquals(upsertAssetsList.size(), listAssetsResults.size());
+            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+        } catch (Exception e) {
+            LOG.error(e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    @Tag("remoteCDP")
+    void writeEditAndDeleteAssets() {
+        Instant startInstant = Instant.now();
+        String loggingPrefix = "UnitTest - writeEditAndDeleteAssets() -";
+        LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
+        CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
+                .withBaseUrl(TestConfigProvider.getHost())
+                ;
+        LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
+                Duration.between(startInstant, Instant.now()));
+
+        try {
+            LOG.info(loggingPrefix + "Start upserting assets.");
+            List<Asset> upsertAssetsList = DataGenerator.generateAssetHierarchy(15);
+            List<Asset> upsertedAssets = client.assets().upsert(upsertAssetsList);
+            LOG.info(loggingPrefix + "Finished upserting assets. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            Thread.sleep(2000); // wait for eventual consistency
+
+            LOG.info(loggingPrefix + "Start updating assets.");
+            List<Asset> editedAssetsInput = upsertedAssets.stream()
+                    .map(asset -> asset.toBuilder()
+                            .clearDescription()
+                            .clearMetadata()
+                            .putMetadata("new-key", "new-value")
+                            .build())
+                    .collect(Collectors.toList());
+
+            List<Asset> assetUpdateResults = client.assets().upsert(editedAssetsInput);
+            LOG.info(loggingPrefix + "Finished updating assets. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            LOG.info(loggingPrefix + "Start update replace assets.");
+            client = client
+                    .withClientConfig(ClientConfig.create()
+                            .withUpsertMode(UpsertMode.REPLACE));
+
+            List<Asset> assetReplaceResults = client.assets().upsert(editedAssetsInput);
+            LOG.info(loggingPrefix + "Finished update replace assets. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            Thread.sleep(2000); // wait for eventual consistency
+
+            LOG.info(loggingPrefix + "Start deleting events.");
+            List<Asset> listAssetsResults = new ArrayList<>();
+            client.assets()
+                    .list(RequestParameters.create()
+                            .withFilterParameter("source", DataGenerator.sourceValue))
+                    .forEachRemaining(events -> listAssetsResults.addAll(events));
+            List<Item> deleteItemsInput = new ArrayList<>();
+            listAssetsResults.stream()
+                    .map(event -> Item.newBuilder()
+                            .setExternalId(event.getExternalId().getValue())
+                            .build())
+                    .forEach(item -> deleteItemsInput.add(item));
+
+            List<Item> deleteItemsResults = client.assets().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting assets. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            BooleanSupplier updateCondition = () -> {
+                for (Asset asset : assetUpdateResults)  {
+                    if (asset.hasDescription()
+                            && asset.containsMetadata("new-key")
+                            && asset.containsMetadata(DataGenerator.sourceKey)) {
+                        // all good
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            BooleanSupplier replaceCondition = () -> {
+                for (Asset asset : assetReplaceResults)  {
+                    if (!asset.hasDescription()
+                            && asset.containsMetadata("new-key")
+                            && !asset.containsMetadata(DataGenerator.sourceKey)) {
+                        // all good
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            assertTrue(updateCondition, "Asset update not correct");
+            assertTrue(replaceCondition, "Asset replace not correct");
             assertEquals(upsertAssetsList.size(), listAssetsResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
         } catch (Exception e) {
