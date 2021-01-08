@@ -17,7 +17,7 @@ public abstract class ClientConfig implements Serializable {
 
     // Thread pool capacity
     private final static int DEFAULT_CPU_MULTIPLIER = 8;
-    private final static int DEFAULT_MAX_WORKER_THREADS = 16;
+    private final static int DEFAULT_MAX_WORKER_THREADS = 12;
 
     // Connection retries
     private static final int DEFAULT_RETRIES = 5;
