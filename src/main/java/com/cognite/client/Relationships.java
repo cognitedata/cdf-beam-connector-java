@@ -16,17 +16,22 @@
 
 package com.cognite.client;
 
+import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.config.ResourceType;
+import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
-import com.cognite.client.config.ResourceType;
+import com.cognite.client.dto.Relationship;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.parser.EventParser;
-import com.cognite.client.config.UpsertMode;
+import com.cognite.client.servicesV1.parser.RelationshipParser;
 import com.google.auto.value.AutoValue;
 
-import java.util.*;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -35,14 +40,14 @@ import java.util.stream.Collectors;
  * It provides methods for reading and writing {@link Event}.
  */
 @AutoValue
-public abstract class Events extends ApiBase {
+public abstract class Relationships extends ApiBase {
 
     private static Builder builder() {
-        return new AutoValue_Events.Builder();
+        return new AutoValue_Relationships.Builder();
     }
 
     /**
-     * Constructs a new {@link Events} object using the provided client configuration.
+     * Constructs a new {@link Relationships} object using the provided client configuration.
      *
      * This method is intended for internal use--SDK clients should always use {@link CogniteClient}
      * as the entry point to this class.
@@ -50,8 +55,8 @@ public abstract class Events extends ApiBase {
      * @param client The {@link CogniteClient} to use for configuration settings.
      * @return the assets api object.
      */
-    public static Events of(CogniteClient client) {
-        return Events.builder()
+    public static Relationships of(CogniteClient client) {
+        return Relationships.builder()
                 .setClient(client)
                 .build();
     }
@@ -70,14 +75,21 @@ public abstract class Events extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<Event>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<Relationship>> list(RequestParameters requestParameters) throws Exception {
+        /*
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
+         */
+
+        // The relationships API endpoint does not support partitions (yet). Therefore no partitions are used here
+        // in the list implementation. Convert to using partitions when the relationship endpoint is updated.
+
+        return list(requestParameters, new String[0]);
     }
 
     /**
-     * Returns all {@link Event} objects that matches the filters set in the {@link RequestParameters} for the
+     * Returns all {@link Relationship} objects that matches the filters set in the {@link RequestParameters} for the
      * specified partitions. This is method is intended for advanced use cases where you need direct control over
      * the individual partitions. For example, when using the SDK in a distributed computing environment.
      *
@@ -90,103 +102,84 @@ public abstract class Events extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<Event>> list(RequestParameters requestParameters, String... partitions) throws Exception {
-        return AdapterIterator.of(listJson(ResourceType.EVENT, requestParameters, partitions), this::parseEvent);
+    public Iterator<List<Relationship>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+        return AdapterIterator.of(listJson(ResourceType.RELATIONSHIP, requestParameters, partitions), this::parseRelationship);
     }
 
     /**
-     * Retrieve events by id.
+     * Retrieve Relationships by id.
      *
      * @param items The item(s) {@code externalId / id} to retrieve.
-     * @return The retrieved events.
+     * @return The retrieved relationships.
      * @throws Exception
      */
-    public List<Event> retrieve(List<Item> items) throws Exception {
-        return retrieveJson(ResourceType.EVENT, items).stream()
-                .map(this::parseEvent)
+    public List<Relationship> retrieve(List<Item> items) throws Exception {
+        return retrieveJson(ResourceType.RELATIONSHIP, items).stream()
+                .map(this::parseRelationship)
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Performs an item aggregation request to Cognite Data Fusion.
-     *
-     * The default aggregation is a total item count based on the (optional) filters in the request.
-     * Multiple aggregation types are supported. Please refer to the Cognite API specification for more information
-     * on the possible settings.
-     *
-     * @param requestParameters The filtering and aggregates specification
-     * @return The aggregation results.
-     * @throws Exception
-     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
-     */
-    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
-        return aggregate(ResourceType.EVENT, requestParameters);
-    }
 
     /**
-     * Creates or updates a set of {@link Event} objects.
+     * Creates or updates a set of {@link Relationship} objects.
      *
-     * If it is a new {@link Event} object (based on {@code id / externalId}, then it will be created.
+     * If it is a new {@link Relationship} object (based on {@code id / externalId}, then it will be created.
      *
-     * If an {@link Event} object already exists in Cognite Data Fusion, it will be updated. The update behavior
+     * If an {@link Relationship} object already exists in Cognite Data Fusion, it will be updated. The update behavior
      * is specified via the update mode in the {@link com.cognite.client.config.ClientConfig} settings.
      *
-     * @param events The events to upsert.
-     * @return The upserted events.
+     * @param relationships The relationships to upsert.
+     * @return The upserted relationships.
      * @throws Exception
      */
-    public List<Event> upsert(List<Event> events) throws Exception {
+    public List<Relationship> upsert(List<Relationship> relationships) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeEvents()
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRelationships()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateEvents()
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRelationships()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<Event> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
-                .withUpdateItemWriter(updateItemWriter)
-                .withUpdateMappingFunction(this::toRequestUpdateItem)
-                .withIdFunction(this::getEventId);
+        UpsertItems<Relationship> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+                .withDeleteItemWriter(deleteItemWriter)
+                .withItemMappingFunction(this::toItem)
+                .withIdFunction(this::getRelationshipId);
 
-        if (getClient().getClientConfig().getUpsertMode() == UpsertMode.REPLACE) {
-            upsertItems = upsertItems.withUpdateMappingFunction(this::toRequestReplaceItem);
-        }
-
-        return upsertItems.upsertViaCreateAndUpdate(events).stream()
-                .map(this::parseEvent)
+        return upsertItems.upsertViaCreateAndUpdate(relationships).stream()
+                .map(this::parseRelationship)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Deletes a set of Events.
+     * Deletes a set of Relationships.
      *
      * The events to delete are identified via their {@code externalId / id} by submitting a list of
      * {@link Item}.
      *
-     * @param events a list of {@link Item} representing the events (externalId / id) to be deleted
+     * @param relationships a list of {@link Item} representing the events (externalId / id) to be deleted
      * @return The deleted events via {@link Item}
      * @throws Exception
      */
-    public List<Item> delete(List<Item> events) throws Exception {
+    public List<Item> delete(List<Item> relationships) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEvents()
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRelationships()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
                 .withParameter("ignoreUnknownIds", true);
 
-        return deleteItems.deleteItems(events);
+        return deleteItems.deleteItems(relationships);
     }
 
     /*
     Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
     deal very well with exceptions.
      */
-    private Event parseEvent(String json) {
+    private Relationship parseRelationship(String json) {
         try {
-            return EventParser.parseEvent(json);
+            return RelationshipParser.parseRelationship(json);
         } catch (Exception e)  {
             throw new RuntimeException(e);
         }
@@ -196,33 +189,9 @@ public abstract class Events extends ApiBase {
     Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
     deal very well with exceptions.
      */
-    private Map<String, Object> toRequestInsertItem(Event item) {
+    private Map<String, Object> toRequestInsertItem(Relationship item) {
         try {
-            return EventParser.toRequestInsertItem(item);
-        } catch (Exception e)  {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
-     */
-    private Map<String, Object> toRequestUpdateItem(Event item) {
-        try {
-            return EventParser.toRequestUpdateItem(item);
-        } catch (Exception e)  {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
-     */
-    private Map<String, Object> toRequestReplaceItem(Event item) {
-        try {
-            return EventParser.toRequestReplaceItem(item);
+            return RelationshipParser.toRequestInsertItem(item);
         } catch (Exception e)  {
             throw new RuntimeException(e);
         }
@@ -233,18 +202,22 @@ public abstract class Events extends ApiBase {
 
     If no id is found, it returns an empty Optional.
      */
-    private Optional<String> getEventId(Event item) {
-        if (item.hasExternalId()) {
-            return Optional.of(item.getExternalId().getValue());
-        } else if (item.hasId()) {
-            return Optional.of(String.valueOf(item.getId().getValue()));
-        } else {
-            return Optional.<String>empty();
-        }
+    private Optional<String> getRelationshipId(Relationship item) {
+        return Optional.of(item.getExternalId());
+    }
+
+    /*
+    Returns an Item reflecting the input relationship. This will extract the relationship externalId
+    and populate the Item with it.
+     */
+    private Item toItem(Relationship item) {
+        return Item.newBuilder()
+                .setExternalId(item.getExternalId())
+                .build();
     }
 
     @AutoValue.Builder
     abstract static class Builder extends ApiBase.Builder<Builder> {
-        abstract Events build();
+        abstract Relationships build();
     }
 }
