@@ -116,7 +116,7 @@ class EventsTest {
                     .collect(Collectors.toList());
 
             List<Event> eventUpdateResults = client.events().upsert(editedEventsInput);
-            LOG.info(loggingPrefix + "Finished events. Duration: {}",
+            LOG.info(loggingPrefix + "Finished updating events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
             LOG.info(loggingPrefix + "Start update replace events.");
@@ -127,6 +127,8 @@ class EventsTest {
             List<Event> eventReplaceResults = client.events().upsert(editedEventsInput);
             LOG.info(loggingPrefix + "Finished update replace events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+
+            Thread.sleep(3000); // wait for eventual consistency
 
             LOG.info(loggingPrefix + "Start reading events.");
             List<Event> listEventsResults = new ArrayList<>();

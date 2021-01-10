@@ -2,11 +2,10 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
 import com.cognite.client.util.DataGenerator;
+import com.google.protobuf.FloatValue;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -16,8 +15,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RelationshipsTest {
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
@@ -46,16 +48,16 @@ class RelationshipsTest {
 
             Thread.sleep(15000); // wait for eventual consistency
 
-            LOG.info(loggingPrefix + "Start reading relationships.");
+            LOG.info(loggingPrefix + "Start listing relationships.");
             List<Relationship> listRelationshipsResults = new ArrayList<>();
             client.relationships()
                     .list(RequestParameters.create()
                             )
                     .forEachRemaining(relationships -> listRelationshipsResults.addAll(relationships));
-            LOG.info(loggingPrefix + "Finished reading relationships. Duration: {}",
+            LOG.info(loggingPrefix + "Finished listing relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            LOG.info(loggingPrefix + "Start deleting events.");
+            LOG.info(loggingPrefix + "Start deleting relationships.");
             List<Item> deleteItemsInput = new ArrayList<>();
             listRelationshipsResults.stream()
                     .map(event -> Item.newBuilder()
@@ -77,62 +79,70 @@ class RelationshipsTest {
 
     @Test
     @Tag("remoteCDP")
-    void writeRetrieveAndDeleteEvents() {
+    void writeEditAndDeleteRelationships() {
         Instant startInstant = Instant.now();
-        String loggingPrefix = "UnitTest - writeReadAndDeleteEvents() -";
+        String loggingPrefix = "UnitTest - writeEditAndDeleteRelationships() -";
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
         CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
                 .withBaseUrl(TestConfigProvider.getHost())
-                //.withClientConfig(config)
                 ;
         LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
                 Duration.between(startInstant, Instant.now()));
 
         try {
-            LOG.info(loggingPrefix + "Start upserting events.");
-            List<Event> upsertEventsList = DataGenerator.generateEvents(16800);
-            client.events().upsert(upsertEventsList);
-            LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
+            LOG.info(loggingPrefix + "Start upserting relationships.");
+            List<Relationship> upsertRelationshipsList = DataGenerator.generateRelationships(21);
+            List<Relationship> upsertedRelationships = client.relationships().upsert(upsertRelationshipsList);
+            LOG.info(loggingPrefix + "Finished upserting relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            Thread.sleep(15000); // wait for eventual consistency
+            Thread.sleep(3000); // wait for eventual consistency
 
-            LOG.info(loggingPrefix + "Start listing events.");
-            List<Event> listEventsResults = new ArrayList<>();
-            client.events()
-                    .list(RequestParameters.create()
-                            .withFilterParameter("source", DataGenerator.sourceValue))
-                    .forEachRemaining(events -> listEventsResults.addAll(events));
-            LOG.info(loggingPrefix + "Finished listing events. Duration: {}",
+            LOG.info(loggingPrefix + "Start updating relationships.");
+            List<Relationship> updatedRelationshipsInput = upsertedRelationships.stream()
+                    .map(relationship ->
+                        relationship.toBuilder()
+                                .setConfidence(FloatValue.of(1f))
+                                .build())
+                    .collect(Collectors.toList());
+            List<Relationship> updatedRelationshipsResult = client.relationships().upsert(updatedRelationshipsInput);
+
+            LOG.info(loggingPrefix + "Finished updating relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            LOG.info(loggingPrefix + "Start retrieving events.");
-            List<Item> eventItems = new ArrayList<>();
-            listEventsResults.stream()
-                    .map(event -> Item.newBuilder()
-                            .setExternalId(event.getExternalId().getValue())
-                            .build())
-                    .forEach(item -> eventItems.add(item));
+            Thread.sleep(3000); // wait for eventual consistency
 
-            List<Event> retrievedEvents = client.events().retrieve(eventItems);
-            LOG.info(loggingPrefix + "Finished retrieving events. Duration: {}",
-                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "Start deleting relationships.");
+            List<Relationship> listRelationshipsResults = new ArrayList<>();
+            client.relationships()
+                    .list(RequestParameters.create())
+                    .forEachRemaining(relationships -> listRelationshipsResults.addAll(relationships));
 
-            LOG.info(loggingPrefix + "Start deleting events.");
             List<Item> deleteItemsInput = new ArrayList<>();
-            retrievedEvents.stream()
+            listRelationshipsResults.stream()
                     .map(event -> Item.newBuilder()
-                            .setExternalId(event.getExternalId().getValue())
+                            .setExternalId(event.getExternalId())
                             .build())
                     .forEach(item -> deleteItemsInput.add(item));
 
-            List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
-            LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
+            List<Item> deleteItemsResults = client.relationships().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            assertEquals(upsertEventsList.size(), listEventsResults.size());
+            BooleanSupplier updateCondition = () -> {
+                for (Relationship relationship : updatedRelationshipsResult)  {
+                    if (relationship.getConfidence().getValue() > 0.99f) {
+                        // all good
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            assertTrue(updateCondition, "Relationship update not correct");
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
-            assertEquals(eventItems.size(), retrievedEvents.size());
+            assertEquals(upsertRelationshipsList.size(), listRelationshipsResults.size());
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();
@@ -141,11 +151,9 @@ class RelationshipsTest {
 
     @Test
     @Tag("remoteCDP")
-    void writeAggregateAndDeleteEvents() {
-        int noItems = 745;
+    void writeRetrieveAndDeleteRelationships() {
         Instant startInstant = Instant.now();
-
-        String loggingPrefix = "UnitTest - writeAggregateAndDeleteEvents() -";
+        String loggingPrefix = "UnitTest - writeRetrieveAndDeleteRelationships() -";
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
         CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
                 .withBaseUrl(TestConfigProvider.getHost())
@@ -154,49 +162,53 @@ class RelationshipsTest {
                 Duration.between(startInstant, Instant.now()));
 
         try {
-            LOG.info(loggingPrefix + "Start upserting events.");
-            List<Event> upsertEventsList = DataGenerator.generateEvents(noItems);
-            client.events().upsert(upsertEventsList);
-            LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
+            LOG.info(loggingPrefix + "Start upserting relationships.");
+            List<Relationship> upsertRelationshipsList = DataGenerator.generateRelationships(9876);
+            client.relationships().upsert(upsertRelationshipsList);
+            LOG.info(loggingPrefix + "Finished upserting relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            Thread.sleep(10000); // wait for eventual consistency
+            Thread.sleep(15000); // wait for eventual consistency
 
-            LOG.info(loggingPrefix + "Start aggregating events.");
-            Aggregate aggregateResult = client.events()
-                    .aggregate(RequestParameters.create()
-                            .withFilterParameter("source", DataGenerator.sourceValue));
-            LOG.info(loggingPrefix + "Aggregate results: {}", aggregateResult);
-            LOG.info(loggingPrefix + "Finished aggregating events. Duration: {}",
-                    Duration.between(startInstant, Instant.now()));
-
-            LOG.info(loggingPrefix + "Start reading events.");
-            List<Event> listEventsResults = new ArrayList<>();
-            client.events()
+            LOG.info(loggingPrefix + "Start listing relationships.");
+            List<Relationship> listRelationshipsResults = new ArrayList<>();
+            client.relationships()
                     .list(RequestParameters.create()
-                            .withFilterParameter("source", DataGenerator.sourceValue))
-                    .forEachRemaining(events -> listEventsResults.addAll(events));
-            LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
+                    )
+                    .forEachRemaining(relationships -> listRelationshipsResults.addAll(relationships));
+            LOG.info(loggingPrefix + "Finished listing relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            LOG.info(loggingPrefix + "Start deleting events.");
+            LOG.info(loggingPrefix + "Start retrieving relationships.");
+            List<Item> relationshipItems = new ArrayList<>();
+            listRelationshipsResults.stream()
+                    .map(relationship -> Item.newBuilder()
+                            .setExternalId(relationship.getExternalId())
+                            .build())
+                    .forEach(item -> relationshipItems.add(item));
+
+            List<Relationship> retrievedRelationships = client.relationships().retrieve(relationshipItems);
+            LOG.info(loggingPrefix + "Finished retrieving relationships. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+
+            LOG.info(loggingPrefix + "Start deleting relationships.");
             List<Item> deleteItemsInput = new ArrayList<>();
-            listEventsResults.stream()
+            listRelationshipsResults.stream()
                     .map(event -> Item.newBuilder()
-                            .setExternalId(event.getExternalId().getValue())
+                            .setExternalId(event.getExternalId())
                             .build())
                     .forEach(item -> deleteItemsInput.add(item));
 
-            List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
-            LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
+            List<Item> deleteItemsResults = client.relationships().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            assertEquals(upsertEventsList.size(), listEventsResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+            assertEquals(relationshipItems.size(), retrievedRelationships.size());
+            assertEquals(upsertRelationshipsList.size(), listRelationshipsResults.size());
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();
         }
     }
-
 }
