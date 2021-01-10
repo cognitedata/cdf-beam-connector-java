@@ -77,7 +77,7 @@ public class RelationshipParser {
             throw new Exception(RelationshipParser.buildParsingExceptionString("sourceType", jsonExcerpt));
         }
         if (root.path("targetExternalId").isTextual()) {
-            relationshipBuilder.setSourceExternalId(root.get("targetExternalId").textValue());
+            relationshipBuilder.setTargetExternalId(root.get("targetExternalId").textValue());
         } else {
             throw new Exception(RelationshipParser.buildParsingExceptionString("targetExternalId", jsonExcerpt));
         }

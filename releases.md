@@ -47,6 +47,8 @@ Changes are grouped as follows:
 
 - Fixed missing duplicate detection when upserting sequences rows. 
 
+- Fixed a bug when reading `Relationship` where `TargetExternalId` would always be set to `null`.
+
 ## 0.9.14
 
 ### Fixed
