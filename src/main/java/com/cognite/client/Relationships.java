@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * This class represents the Cognite events api endpoint.
+ * This class represents the Cognite relationships api endpoint.
  *
  * It provides methods for reading and writing {@link Relationship}.
  */

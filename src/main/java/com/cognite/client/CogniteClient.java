@@ -155,6 +155,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Timeseries} representing the Cognite timeseries api endpoint.
+     *
+     * @return The timeseries api object.
+     */
+    public Timeseries timeseries() {
+        return Timeseries.of(this);
+    }
+
+    /**
      * Returns {@link Events} representing the Cognite events api endpoint.
      *
      * @return The events api object.
