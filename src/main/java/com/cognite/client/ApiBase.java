@@ -187,6 +187,9 @@ abstract class ApiBase {
             case RELATIONSHIP:
                 itemReader = connector.readRelationshipsById();
                 break;
+            case DATA_SET:
+                itemReader = connector.readDataSetsById();
+                break;
             default:
                 LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
                 throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
