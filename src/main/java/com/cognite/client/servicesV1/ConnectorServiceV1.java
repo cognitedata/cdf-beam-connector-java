@@ -1367,7 +1367,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public Iterator<CompletableFuture<ResponseItems<String>>> readDataSets(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read data sets service.");
+        LOG.debug(loggingPrefix + "Initiating read data sets service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -1379,6 +1379,26 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .build();
 
         return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * Read data sets by id from Cognite.
+     *
+     * @return
+     */
+    public ItemReader<String> readDataSetsById() {
+        LOG.debug(loggingPrefix + "Initiating read data sets by id service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("datasets/byids")
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
                 .withMaxRetries(getMaxRetries().get());
     }
 
