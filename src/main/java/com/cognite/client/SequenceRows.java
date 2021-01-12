@@ -115,23 +115,23 @@ public abstract class SequenceRows extends ApiBase {
     }
 
     /**
-     * Creates or update a set of {@link TimeseriesPoint} objects.
+     * Creates or update a set of {@link SequenceBody} objects.
      *
      * If it is a new {@link TimeseriesPoint} object (based on the {@code id / externalId}, then it will be created.
      *
      * If an {@link TimeseriesPoint} object already exists in Cognite Data Fusion, it will be updated. The update
      * behaviour is specified via the update mode in the {@link com.cognite.client.config.ClientConfig} settings.
      *
-     * @param timeseries The timeseries to upsert
-     * @return The upserted timeseries
+     * @param sequenceRows The sequences rows to upsert
+     * @return The upserted sequences rows
      * @throws Exception
      */
-    public List<SequenceBody> upsert(List<TimeseriesPoint> timeseries) throws Exception {
+    public List<SequenceBody> upsert(List<SequenceBody> sequenceRows) throws Exception {
         // todo: implement
         return Collections.emptyList();
     }
 
-    public List<Item> delete(List<Item> timeseries) throws Exception {
+    public List<SequenceBody> delete(List<SequenceBody> sequenceRows) throws Exception {
         // todo: implement
 
         return Collections.emptyList();

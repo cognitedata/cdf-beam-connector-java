@@ -90,7 +90,7 @@ public abstract class Sequences extends ApiBase {
 
     /**
      * Returns all {@link SequenceMetadata} objects that matches the filters set in the {@link RequestParameters} for
-     * the specified partitions. Thi method is intended for advanced use cases you need direct control over the
+     * the specified partitions. This method is intended for advanced use cases you need direct control over the
      * individual partitions. For example, when using the SDK in a distributed environment.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
