@@ -283,6 +283,9 @@ abstract class ApiBase {
             case TIMESERIES_HEADER:
                 itemReader = connector.readTsAggregates();
                 break;
+            case DATA_SET:
+                itemReader = connector.readDataSetsAggregates();
+                break;
             default:
                 LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
                 throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
