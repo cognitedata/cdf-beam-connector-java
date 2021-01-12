@@ -173,12 +173,21 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
-     * Returns {@link com.cognite.client.dto.Relationship} representing the Cognite relationships api endpoint.
+     * Returns {@link Relationships} representing the Cognite relationships api endpoint.
      *
      * @return The relationships api object.
      */
     public Relationships relationships() {
         return Relationships.of(this);
+    }
+
+    /**
+     * Returns {@link Sequences} representing the Cognite sequences api endpoint.
+     *
+     * @return The sequences api object.
+     */
+    public Sequences sequences() {
+        return Sequences.of(this);
     }
 
     /**
