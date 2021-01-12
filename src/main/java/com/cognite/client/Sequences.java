@@ -60,6 +60,15 @@ public abstract class Sequences extends ApiBase {
     }
 
     /**
+     * Returns {@link SequenceRows} representing the sequences data / rows api.
+     *
+     * @return The sequences data / rows api object.
+     */
+    public SequenceRows rows() {
+        return SequenceRows.of(getClient());
+    }
+
+    /**
      * Return all {@link SequenceMetadata} object that matches the filters set in the {@link SequenceMetadata}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in

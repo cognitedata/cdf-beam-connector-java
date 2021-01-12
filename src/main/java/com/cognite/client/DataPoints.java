@@ -20,16 +20,14 @@ import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.TimeseriesMetadata;
 import com.cognite.client.dto.Item;
+import com.cognite.client.dto.TimeseriesMetadata;
+import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.google.auto.value.AutoValue;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -38,14 +36,14 @@ import java.util.stream.Collectors;
  * It provides methods for reading and writing {@link TimeseriesMetadata}.
  */
 @AutoValue
-public abstract class Timeseries extends ApiBase {
+public abstract class DataPoints extends ApiBase {
 
     private static Builder builder() {
-        return new AutoValue_Timeseries.Builder();
+        return new AutoValue_DataPoints.Builder();
     }
 
     /**
-     * Construct a new {@link Timeseries} object using the provided configuration.
+     * Construct a new {@link DataPoints} object using the provided configuration.
      *
      * This method is intended for internal use--SDK clients should always use {@link CogniteClient}
      * as the entry point to this class.
@@ -53,23 +51,14 @@ public abstract class Timeseries extends ApiBase {
      * @param client The {@link CogniteClient} to use for configuration settings.
      * @return the assets api object.
      */
-    public static Timeseries of(CogniteClient client) {
-        return Timeseries.builder()
+    public static DataPoints of(CogniteClient client) {
+        return DataPoints.builder()
                 .setClient(client)
                 .build();
     }
 
     /**
-     * Returns {@link DataPoints} representing the time series data points api.
-     *
-     * @return The time series data points api object.
-     */
-    public DataPoints dataPoints() {
-        return DataPoints.of(getClient());
-    }
-
-    /**
-     * Returns all {@link TimeseriesMetadata} object that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link TimeseriesPoint} object that matches the filters set in the {@link RequestParameters}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
@@ -82,14 +71,14 @@ public abstract class Timeseries extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<TimeseriesMetadata>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<TimeseriesPoint>> list(RequestParameters requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
     /**
-     * Returns all {@link TimeseriesMetadata} objects that matches the filters set in the {@link RequestParameters} for
+     * Returns all {@link TimeseriesPoint} objects that matches the filters set in the {@link RequestParameters} for
      * the specified partitions. This method is intended for advanced use cases where you need direct control over the
      * individual partitions. For example, when using the SDK in a distributed computing environment.
      *
@@ -102,8 +91,19 @@ public abstract class Timeseries extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<TimeseriesMetadata>> list(RequestParameters requestParameters, String... partitions) throws Exception {
-        return AdapterIterator.of(listJson(ResourceType.TIMESERIES_HEADER, requestParameters, partitions), this::parseTimeseries);
+    public Iterator<List<TimeseriesPoint>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+        // todo: implement
+        return new Iterator<List<TimeseriesPoint>>() {
+            @Override
+            public boolean hasNext() {
+                return false;
+            }
+
+            @Override
+            public List<TimeseriesPoint> next() {
+                return null;
+            }
+        };
     }
 
     /**
@@ -113,73 +113,32 @@ public abstract class Timeseries extends ApiBase {
      * @return The retrieved timeseries.
      * @throws Exception
      */
-    public List<TimeseriesMetadata> retrieve(List<Item> items) throws Exception {
-        return retrieveJson(ResourceType.TIMESERIES_HEADER, items).stream()
-                .map(this::parseTimeseries)
-                .collect(Collectors.toList());
+    public List<TimeseriesPoint> retrieve(List<Item> items) throws Exception {
+        // todo: implement
+        return Collections.emptyList();
     }
 
     /**
-     * Performs an item aggregation request to Cognite Data Fusion.
+     * Creates or update a set of {@link TimeseriesPoint} objects.
      *
-     * The default aggregation is a total item count based on the (optional) filters in the request.
-     * Multiple aggregation types are supported. Please refer to the Cognite API specification for more information
-     * on the possible settings.
+     * If it is a new {@link TimeseriesPoint} object (based on the {@code id / externalId}, then it will be created.
      *
-     * @param requestParameters The filtering and aggregates specification.
-     * @return The aggregation results.
-     * @throws Exception
-     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
-     */
-    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
-        return aggregate(ResourceType.TIMESERIES_HEADER, requestParameters);
-    }
-
-    /**
-     * Creates or update a set of {@link TimeseriesMetadata} objects.
-     *
-     * If it is a new {@link TimeseriesMetadata} object (based on the {@code id / externalId}, then it will be created.
-     *
-     * If an {@link TimeseriesMetadata} object already exists in Cognite Data Fusion, it will be updated. The update
+     * If an {@link TimeseriesPoint} object already exists in Cognite Data Fusion, it will be updated. The update
      * behaviour is specified via the update mode in the {@link com.cognite.client.config.ClientConfig} settings.
      *
      * @param timeseries The timeseries to upsert
      * @return The upserted timeseries
      * @throws Exception
      */
-    public List<TimeseriesMetadata> upsert(List<TimeseriesMetadata> timeseries) throws Exception {
-        ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateTsHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-
-        UpsertItems<TimeseriesMetadata> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
-                .withUpdateItemWriter(updateItemWriter)
-                .withUpdateMappingFunction(this::toRequestUpdateItem)
-                .withIdFunction(this::getTimeseriesId);
-
-        if (getClient().getClientConfig().getUpsertMode() == UpsertMode.REPLACE) {
-            upsertItems = upsertItems.withUpdateMappingFunction(this::toRequestReplaceItem);
-        }
-
-        return upsertItems.upsertViaCreateAndUpdate(timeseries).stream()
-                .map(this::parseTimeseries)
-                .collect(Collectors.toList());
+    public List<TimeseriesPoint> upsert(List<TimeseriesPoint> timeseries) throws Exception {
+        // todo: implement
+        return Collections.emptyList();
     }
 
     public List<Item> delete(List<Item> timeseries) throws Exception {
-        ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteTsHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        // todo: implement
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .withParameter("ignoreUnknownIds", true);
-
-        return deleteItems.deleteItems(timeseries);
+        return Collections.emptyList();
     }
 
     /*
@@ -247,6 +206,6 @@ public abstract class Timeseries extends ApiBase {
 
     @AutoValue.Builder
     abstract static class Builder extends ApiBase.Builder<Builder> {
-        abstract Timeseries build();
+        abstract DataPoints build();
     }
 }
