@@ -91,7 +91,7 @@ class RelationshipsTest {
 
         try {
             LOG.info(loggingPrefix + "Start upserting relationships.");
-            List<Relationship> upsertRelationshipsList = DataGenerator.generateRelationships(21);
+            List<Relationship> upsertRelationshipsList = DataGenerator.generateRelationships(221);
             List<Relationship> upsertedRelationships = client.relationships().upsert(upsertRelationshipsList);
             LOG.info(loggingPrefix + "Finished upserting relationships. Duration: {}",
                     Duration.between(startInstant, Instant.now()));

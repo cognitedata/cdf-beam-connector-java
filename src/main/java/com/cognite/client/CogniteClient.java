@@ -191,6 +191,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Labels} representing the Cognite labels api endpoints.
+     *
+     * @return The labels api endpoint.
+     */
+    public Labels labels() {
+        return Labels.of(this);
+    }
+
+    /**
      * Returns the services layer mirroring the Cognite Data Fusion API.
      * @return
      */
