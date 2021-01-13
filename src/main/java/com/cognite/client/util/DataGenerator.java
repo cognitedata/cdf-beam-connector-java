@@ -146,6 +146,19 @@ public class DataGenerator {
         return objects;
     }
 
+    public static List<Label> generateLabels(int noObjects) {
+        List<Label> objects = new ArrayList<>(noObjects);
+        for (int i = 0; i < noObjects; i++) {
+            objects.add(Label.newBuilder()
+                    .setExternalId(DataGenerator.sourceValue + StringValue.of(RandomStringUtils.randomAlphanumeric(10)).getValue())
+                    .setName(StringValue.of(RandomStringUtils.randomAlphanumeric(10)).getValue())
+                    .setDescription(StringValue.of("generated_event_" + RandomStringUtils.randomAlphanumeric(50)))
+                    .build());
+        }
+
+        return objects;
+    }
+
     public static List<Relationship> generateRelationships(int noObjects) {
         List<Relationship> objects = new ArrayList<>(noObjects);
         for (int i = 0; i < noObjects; i++) {
