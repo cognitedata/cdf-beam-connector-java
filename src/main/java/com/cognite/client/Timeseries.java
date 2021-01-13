@@ -177,7 +177,7 @@ public abstract class Timeseries extends ApiBase {
                 .withExecutorService(getClient().getExecutorService());
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .withParameter("ignoreUnknownIds", true);
+                .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(timeseries);
     }

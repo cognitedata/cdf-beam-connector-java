@@ -139,6 +139,7 @@ public abstract class Relationships extends ApiBase {
 
         UpsertItems<Relationship> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
                 .withDeleteItemWriter(deleteItemWriter)
+                .addDeleteParameter("ignoreUnknownIds", true)
                 .withItemMappingFunction(this::toItem)
                 .withIdFunction(this::getRelationshipId);
 
@@ -164,7 +165,7 @@ public abstract class Relationships extends ApiBase {
                 .withExecutorService(getClient().getExecutorService());
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .withParameter("ignoreUnknownIds", true);
+                .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(relationships);
     }

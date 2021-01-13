@@ -175,7 +175,7 @@ public abstract class Events extends ApiBase {
                 .withExecutorService(getClient().getExecutorService());
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .withParameter("ignoreUnknownIds", true);
+                .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(events);
     }

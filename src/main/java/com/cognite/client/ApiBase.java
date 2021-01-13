@@ -635,6 +635,7 @@ abstract class ApiBase {
         abstract ConnectorServiceV1.ItemWriter getUpdateItemWriter();
         @Nullable
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
+        abstract ImmutableMap<String, Object> getDeleteParameters();
 
         /**
          * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
@@ -665,6 +666,18 @@ abstract class ApiBase {
          */
         public UpsertItems<T> withDeleteItemWriter(ConnectorServiceV1.ItemWriter deleteWriter) {
             return toBuilder().setDeleteItemWriter(deleteWriter).build();
+        }
+
+        /**
+         * Adds an attribute to the delete items request.
+         *
+         * This is typically used to add attributes such as {@code ignoreUnknownIds} and / or {@code recursive}.
+         * @param key The name of the attribute.
+         * @param value The value of the attribute
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> addDeleteParameter(String key, Object value) {
+            return toBuilder().addDeleteParameter(key, value).build();
         }
 
         /**
@@ -1077,7 +1090,7 @@ abstract class ApiBase {
 
             // Configure the delete handler
             DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getProjectConfig())
-                    .withParameter("ignoreUnknownIds", true);
+                    .setParameters(getDeleteParameters());
 
             // Insert, update, completed lists
             List<T> elementListCreate = deduplicate(items);
@@ -1357,6 +1370,12 @@ abstract class ApiBase {
             abstract Builder<T> setUpdateItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder<T> setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
 
+            abstract ImmutableMap.Builder<String, Object> deleteParametersBuilder();
+            UpsertItems.Builder<T> addDeleteParameter(String key, Object value) {
+                deleteParametersBuilder().put(key, value);
+                return this;
+            }
+
             abstract UpsertItems<T> build();
         }
     }
@@ -1419,8 +1438,19 @@ abstract class ApiBase {
          * @param value The value of the attribute
          * @return The {@link DeleteItems} object with the configuration applied.
          */
-        public DeleteItems withParameter(String key, Object value) {
+        public DeleteItems addParameter(String key, Object value) {
             return toBuilder().addParameter(key, value).build();
+        }
+
+        /**
+         * Sets the delete parameters map.
+         *
+         * This is typically used to add attributes such as {@code ignoreUnknownIds} and / or {@code recursive}.
+         * @param parameters The parameter map.
+         * @return The {@link DeleteItems} object with the configuration applied.
+         */
+        public DeleteItems setParameters(Map<String, Object> parameters) {
+            return toBuilder().setParameters(parameters).build();
         }
 
         /**
@@ -1662,6 +1692,7 @@ abstract class ApiBase {
             abstract Builder setMaxBatchSize(int value);
             abstract Builder setProjectConfig(ProjectConfig value);
             abstract Builder setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
+            abstract Builder setParameters(Map<String, Object> value);
 
             abstract ImmutableMap.Builder<String, Object> parametersBuilder();
             Builder addParameter(String key, Object value) {

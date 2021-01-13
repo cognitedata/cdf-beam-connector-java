@@ -239,7 +239,7 @@ public abstract class Assets extends ApiBase {
                 .withExecutorService(getClient().getExecutorService());
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .withParameter("ignoreUnknownIds", true);
+                .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(items);
     }
