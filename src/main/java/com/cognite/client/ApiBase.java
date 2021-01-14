@@ -317,7 +317,7 @@ abstract class ApiBase {
      * @return The request parameters with auth info added to it.
      * @throws Exception
      */
-    private RequestParameters addAuthInfo(RequestParameters requestParameters) throws Exception {
+    protected RequestParameters addAuthInfo(RequestParameters requestParameters) throws Exception {
         // Check if there already is auth info.
         if (null != requestParameters.getProjectConfig().getProject()
                 && null != requestParameters.getProjectConfig().getHost()
@@ -343,7 +343,7 @@ abstract class ApiBase {
      * @return The request parameters with auth info added to it.
      * @throws Exception
      */
-    private Request addAuthInfo(Request request) throws Exception {
+    protected Request addAuthInfo(Request request) throws Exception {
         // Check if there already is auth info.
         if (null != request.getAuthConfig()
                 && null != request.getAuthConfig().getProject()
@@ -357,7 +357,7 @@ abstract class ApiBase {
     /*
     Builds a single stream iterator to page through a query to a list/filter endpoint.
      */
-    private Iterator<CompletableFuture<ResponseItems<String>>>
+    protected Iterator<CompletableFuture<ResponseItems<String>>>
             getListResponseIterator(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
 
