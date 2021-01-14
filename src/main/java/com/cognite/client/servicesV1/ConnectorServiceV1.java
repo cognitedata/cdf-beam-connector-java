@@ -425,7 +425,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readSequencesHeaders(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readSequencesHeaders(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read sequences headers service.");
         this.validate();
 
@@ -558,7 +558,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readSequencesRows(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readSequencesRows(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read sequences rows service.");
         this.validate();
 
@@ -628,7 +628,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the TS query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readTsHeaders(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readTsHeaders(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read TS headers service.");
         this.validate();
 
@@ -762,7 +762,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readTsDatapoints(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readTsDatapoints(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read TS datapoints service.");
         this.validate();
 
@@ -1021,7 +1021,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the file query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readFileHeaders(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readFileHeaders(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read File headers service.");
         this.validate();
 
@@ -1238,7 +1238,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the data sets query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRelationships(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readRelationships(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read relationships service.");
         this.validate();
 
@@ -1355,7 +1355,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the data sets query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readDataSets(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readDataSets(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read data sets service.");
         this.validate();
 
@@ -1441,7 +1441,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the data sets query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readLabels(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readLabels(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read labels service.");
         this.validate();
 

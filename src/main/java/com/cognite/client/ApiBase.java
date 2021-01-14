@@ -376,25 +376,46 @@ abstract class ApiBase {
                 // TODO move the executor and client spec up to the connector
                 break;
             case SEQUENCE_HEADER:
-                results = connector.readSequencesHeaders(requestParameters);
+                results = connector.readSequencesHeaders(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case SEQUENCE_BODY:
-                results = connector.readSequencesRows(requestParameters);
+                results = connector.readSequencesRows(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case TIMESERIES_HEADER:
-                results = connector.readTsHeaders(requestParameters);
+                results = connector.readTsHeaders(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case FILE_HEADER:
-                results = connector.readFileHeaders(requestParameters);
+                results = connector.readFileHeaders(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case DATA_SET:
-                results = connector.readDataSets(requestParameters);
+                results = connector.readDataSets(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case RELATIONSHIP:
-                results = connector.readRelationships(requestParameters);
+                results = connector.readRelationships(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case LABEL:
-                results = connector.readLabels(requestParameters);
+                results = connector.readLabels(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             default:
                 throw new Exception("Not a supported resource type: " + resourceType);
