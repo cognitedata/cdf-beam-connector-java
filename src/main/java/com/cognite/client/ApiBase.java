@@ -425,6 +425,21 @@ abstract class ApiBase {
     }
 
     /**
+     * Parses a list of item object in json representation to typed objects.
+     *
+     * @param input the item list in Json string representation
+     * @return the parsed item objects
+     * @throws Exception
+     */
+    protected List<Item> parseItems(List<String> input) throws Exception {
+        ImmutableList.Builder<Item> listBuilder = ImmutableList.builder();
+        for (String item : input) {
+            listBuilder.add(ItemParser.parseItem(item));
+        }
+        return listBuilder.build();
+    }
+
+    /**
      * An iterator that uses multiple input iterators and combines them into a single stream / collection.
      *
      * It is used to support multiple, parallel read streams from the Cognite api and present them as a single
@@ -737,13 +752,13 @@ abstract class ApiBase {
          * @throws Exception
          */
         public List<String> upsertViaCreateAndUpdate(List<T> items) throws Exception {
+            Instant startInstant = Instant.now();
             String batchLogPrefix =
                     "upsertViaCreateAndUpdate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
             Preconditions.checkArgument(itemsHaveId(items),
                     batchLogPrefix + "All items must have externalId or id.");
-            LOG.debug(String.format(batchLogPrefix + "Received %d items to upsert",
-                    items.size()));
-            Instant startInstant = Instant.now();
+            LOG.debug(batchLogPrefix + "Received {} items to upsert",
+                    items.size());
 
             // Should not happen--but need to guard against empty input
             if (items.isEmpty()) {

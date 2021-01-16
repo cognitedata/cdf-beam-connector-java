@@ -25,7 +25,10 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.StringValue;
+import org.apache.commons.lang3.RandomStringUtils;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -126,15 +129,137 @@ public abstract class SequenceRows extends ApiBase {
     }
 
     /**
-     * Creates or update a set of {@link SequenceBody} objects.
+     * Creates or updates a set of {@link SequenceBody} objects.
      *
-     * @param sequenceRows The sequences rows to upsert
+     * @param sequenceBodies The sequences rows to upsert
      * @return The upserted sequences rows
      * @throws Exception
      */
-    public List<SequenceBody> upsert(List<SequenceBody> sequenceRows) throws Exception {
-        // todo: implement
-        return Collections.emptyList();
+    public List<SequenceBody> upsert(List<SequenceBody> sequenceBodies) throws Exception {
+        Instant startInstant = Instant.now();
+        String batchLogPrefix =
+                "upsert() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+        Preconditions.checkArgument(sequenceBodies.stream().allMatch(sequenceBody -> getSequenceId(sequenceBody).isPresent()),
+                batchLogPrefix + "All items must have externalId or id.");
+
+        int inputRowsCounter = 0;
+        int inputCellsCounter = 0;
+        for (SequenceBody sequenceBody : sequenceBodies) {
+            inputRowsCounter += sequenceBody.getRowsCount();
+            inputCellsCounter += sequenceBody.getRowsCount() * sequenceBody.getColumnsCount();
+        }
+        LOG.debug(batchLogPrefix + "Received {} sequence body objects with {} cells across {} rows to upsert",
+                sequenceBodies.size(),
+                inputCellsCounter,
+                inputRowsCounter);
+
+        // Should not happen--but need to guard against empty input
+        if (sequenceBodies.isEmpty()) {
+            LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+            return Collections.<SequenceBody>emptyList();
+        }
+
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSequencesRows()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
+
+        /*
+        Start the upsert:
+        1. Write all sequences to the Cognite API.
+        2. If one (or more) of the sequences fail, it is most likely because of missing headers. Add temp headers.
+        3. Retry the failed sequences
+        */
+        Map<ResponseItems<String>, List<SequenceBody>> responseMap = splitAndUpsertSeqBody(sequenceBodies, createItemWriter);
+        LOG.debug(batchLogPrefix + "Completed create items requests for {} input items across {} batches at duration {}",
+                sequenceBodies.size(),
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        // Check for unsuccessful request
+        List<Item> missingItems = new ArrayList<>();
+        List<SequenceBody> retrySequenceBodyList = new ArrayList<>(sequenceBodies);
+        List<ResponseItems<String>> successfulBatches = new ArrayList<>(sequenceBodies.size());
+        boolean requestsAreSuccessful = true;
+        for (ResponseItems<String> responseItems : responseMap.keySet()) {
+            requestsAreSuccessful = requestsAreSuccessful && responseItems.isSuccessful();
+            if (!responseItems.isSuccessful()) {
+                // Check for duplicates. Duplicates should not happen, so fire off an exception.
+                if (!responseItems.getDuplicateItems().isEmpty()) {
+                    String message = String.format(batchLogPrefix + "Duplicates reported: %d %n "
+                                    + "Response body: %s",
+                            responseItems.getDuplicateItems().size(),
+                            responseItems.getResponseBodyAsString()
+                                    .substring(0, Math.min(1000, responseItems.getResponseBodyAsString().length())));
+                    LOG.error(message);
+                    throw new Exception(message);
+                }
+
+                // Get the missing items and add the original sequence bodies to the retry list
+                missingItems.addAll(parseItems(responseItems.getMissingItems()));
+                retrySequenceBodyList.addAll(responseMap.get(responseItems));
+            } else {
+                successfulBatches.add(responseItems);
+            }
+        }
+
+        if (!requestsAreSuccessful) {
+            LOG.warn(batchLogPrefix + "Write sequence rows failed. Most likely due to missing sequence header / metadata. "
+                    + "Will add minimum sequence metadata and retry the sequence rows insert.");
+            LOG.info(batchLogPrefix + "Number of missing entries reported by CDF: {}", missingItems.size());
+
+            // check if the missing items are based on internal id--not supported
+            List<SequenceBody> missingSequences = new ArrayList<>(missingItems.size());
+            for (Item item : missingItems) {
+                if (item.getIdTypeCase() != Item.IdTypeCase.EXTERNAL_ID) {
+                    String message = batchLogPrefix + "Sequence with internal id refers to a non-existing sequence. "
+                            + "Only externalId is supported. Item specification: " + item.toString();
+                    LOG.error(message);
+                    throw new Exception(message);
+                }
+                // add the corresponding sequence body to a list for later processing
+                sequenceBodies.stream()
+                        .filter(sequence -> sequence.getExternalId().getValue().equals(item.getExternalId()))
+                        .forEach(missingSequences::add);
+            }
+            LOG.debug(batchLogPrefix + "All missing items are based on externalId");
+
+            // If we have missing items, add default sequence header
+            if (missingSequences.isEmpty()) {
+                LOG.warn(batchLogPrefix + "Write sequences rows failed, but cannot identify missing sequences headers");
+            } else {
+                LOG.debug(batchLogPrefix + "Start writing default sequence headers for {} items",
+                        missingSequences.size());
+                writeSeqHeaderForRows(missingSequences);
+            }
+
+            // Retry the failed sequence body upsert
+            LOG.debug(batchLogPrefix + "Finished writing default headers. Will retry {} sequence body items.",
+                    retrySequenceBodyList.size());
+            Map<ResponseItems<String>, List<SequenceBody>> retryResponseMap =
+                    splitAndUpsertSeqBody(retrySequenceBodyList, createItemWriter);
+
+            // Check status of the requests
+            requestsAreSuccessful = true;
+            for (ResponseItems<String> responseItems : retryResponseMap.keySet()) {
+                requestsAreSuccessful = requestsAreSuccessful && responseItems.isSuccessful();
+            }
+        }
+
+        if (!requestsAreSuccessful) {
+            String message = batchLogPrefix + "Failed to write sequences rows.";
+            LOG.error(message);
+            throw new Exception(message);
+        }
+        LOG.info(batchLogPrefix + "Completed writing {} sequence items with {} total rows and {} cells "
+                        + "across {} requests within a duration of {}.",
+                sequenceBodies.size(),
+                inputRowsCounter,
+                inputCellsCounter,
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        return ImmutableList.copyOf(sequenceBodies);
     }
 
     public List<SequenceBody> delete(List<SequenceBody> sequenceRows) throws Exception {
@@ -150,14 +275,12 @@ public abstract class SequenceRows extends ApiBase {
      *
      * @param itemList
      * @param seqBodyCreateWriter
-     * @param batchLogPrefix
      * @return
      * @throws Exception
      */
     private Map<ResponseItems<String>, List<SequenceBody>> splitAndUpsertSeqBody(List<SequenceBody> itemList,
-                                                                                                    ConnectorServiceV1.ItemWriter seqBodyCreateWriter,
-                                                                                                    String batchLogPrefix) throws Exception {
-
+                                                                                 ConnectorServiceV1.ItemWriter seqBodyCreateWriter) throws Exception {
+        String loggingPrefix = "splitAndUpsertSeqBody() - ";
         Map<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> responseMap = new HashMap<>();
         List<SequenceBody> batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
         List<String> sequenceIds = new ArrayList<>(); // To check for existing / duplicate item ids
@@ -180,7 +303,7 @@ public abstract class SequenceRows extends ApiBase {
                     if (getSequenceId(sequence).isPresent()) {
                         if (sequenceIds.contains(getSequenceId(sequence).get())) {
                             // The externalId / id already exists in the batch, submit it
-                            responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter, batchLogPrefix), batch);
+                            responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
                             batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
                             batchRowCounter = 0;
                             batchColumnsCounter = 0;
@@ -196,7 +319,7 @@ public abstract class SequenceRows extends ApiBase {
                     itemCounter++;
                     if ((batch.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH)
                             || ((batchRowCounter * batchColumnsCounter) >= DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH)) {
-                        responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter, batchLogPrefix), batch);
+                        responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
                         batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
                         batchRowCounter = 0;
                         batchColumnsCounter = 0;
@@ -209,7 +332,7 @@ public abstract class SequenceRows extends ApiBase {
                 if (getSequenceId(sequence).isPresent()) {
                     if (sequenceIds.contains(getSequenceId(sequence).get())) {
                         // The externalId / id already exists in the batch, submit it
-                        responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter, batchLogPrefix), batch);
+                        responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
                         batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
                         batchRowCounter = 0;
                         batchColumnsCounter = 0;
@@ -225,7 +348,7 @@ public abstract class SequenceRows extends ApiBase {
             }
 
             if (batch.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH) {
-                responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter, batchLogPrefix), batch);
+                responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
                 batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
                 batchRowCounter = 0;
                 batchColumnsCounter = 0;
@@ -233,10 +356,10 @@ public abstract class SequenceRows extends ApiBase {
             }
         }
         if (batch.size() > 0) {
-            responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter, batchLogPrefix), batch);
+            responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
         }
 
-        LOG.debug(batchLogPrefix + "Finished submitting {} cells by {} rows across {} sequence items in {} requests batches.",
+        LOG.debug(loggingPrefix + "Finished submitting {} cells by {} rows across {} sequence items in {} requests batches.",
                 totalCellsCounter,
                 totalRowCounter,
                 itemCounter,
@@ -268,13 +391,12 @@ public abstract class SequenceRows extends ApiBase {
      *
      * @param itemList
      * @param seqBodyCreateWriter
-     * @param batchLogPrefix
      * @return
      * @throws Exception
      */
     private CompletableFuture<ResponseItems<String>> upsertSeqBody(List<SequenceBody> itemList,
-                                                                   ConnectorServiceV1.ItemWriter seqBodyCreateWriter,
-                                                                   String batchLogPrefix) throws Exception {
+                                                                   ConnectorServiceV1.ItemWriter seqBodyCreateWriter) throws Exception {
+        String loggingPrefix = "upsertSeqBody() - ";
         // Check that all sequences carry an id/externalId + no duplicates + build items list
         ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
         int rowCounter = 0;
@@ -286,11 +408,11 @@ public abstract class SequenceRows extends ApiBase {
             maxColumnCounter = Math.max(maxColumnCounter, item.getColumnsCount());
             cellCounter += (item.getColumnsCount() * item.getRowsCount());
             if (!(item.hasExternalId() || item.hasId())) {
-                throw new Exception(batchLogPrefix + "Sequence body does not contain externalId nor id");
+                throw new Exception(loggingPrefix + "Sequence body does not contain externalId nor id");
             }
             if (getSequenceId(item).isPresent()) {
                 if (sequenceIds.contains(getSequenceId(item).get())) {
-                    throw new Exception(String.format(batchLogPrefix + "Duplicate sequence body items detected. ExternalId: %s",
+                    throw new Exception(String.format(loggingPrefix + "Duplicate sequence body items detected. ExternalId: %s",
                             getSequenceId(item).get()));
                 }
                 sequenceIds.add(getSequenceId(item).get());
@@ -298,7 +420,7 @@ public abstract class SequenceRows extends ApiBase {
             insertItemsBuilder.add(SequenceParser.toRequestInsertItem(item));
         }
 
-        LOG.debug(batchLogPrefix + "Starting the upsert sequence body request. "
+        LOG.debug(loggingPrefix + "Starting the upsert sequence body request. "
                         + "No sequences: {}, Max no columns: {}, Total no rows: {}, Total no cells: {} ",
                 itemList.size(),
                 maxColumnCounter,
