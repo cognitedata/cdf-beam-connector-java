@@ -5,6 +5,7 @@ import com.cognite.client.config.ClientConfig;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
+import com.cognite.client.dto.SequenceBody;
 import com.cognite.client.dto.SequenceMetadata;
 import com.cognite.client.util.DataGenerator;
 import com.google.protobuf.StringValue;
@@ -49,7 +50,7 @@ class SequencesTest {
             LOG.info(loggingPrefix + "Finished upserting sequences. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            Thread.sleep(15000); // wait for eventual consistency
+            Thread.sleep(10000); // wait for eventual consistency
 
             LOG.info(loggingPrefix + "Start reading sequences.");
             List<SequenceMetadata> listSequencesResults = new ArrayList<>();
@@ -71,6 +72,98 @@ class SequencesTest {
             List<Item> deleteItemsResults = client.sequences().delete(deleteItemsInput);
             LOG.info(loggingPrefix + "Finished deleting sequences. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+
+            assertEquals(upsertSequencesList.size(), listSequencesResults.size());
+            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+        } catch (Exception e) {
+            LOG.error(e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    @Tag("remoteCDP")
+    void writeReadAndDeleteSequencesRows() {
+        Instant startInstant = Instant.now();
+        String loggingPrefix = "UnitTest - writeReadAndDeleteSequencesRows() -";
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+        LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
+        CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
+                .withBaseUrl(TestConfigProvider.getHost())
+                //.withClientConfig(config)
+                ;
+        LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
+                Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+        try {
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+            LOG.info(loggingPrefix + "Start upserting sequences headers.");
+            List<SequenceMetadata> upsertSequencesList = DataGenerator.generateSequenceMetadata(53);
+            client.sequences().upsert(upsertSequencesList);
+            LOG.info(loggingPrefix + "Finished upserting sequences headers. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            Thread.sleep(1000); // Pause... just in case
+
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+            LOG.info(loggingPrefix + "Start upserting sequences rows.");
+            List<SequenceBody> upsertSequenceBodyList = new ArrayList<>();
+            upsertSequencesList.forEach(sequence ->
+                    upsertSequenceBodyList.add(DataGenerator.generateSequenceRows(sequence, 567)));
+            List<SequenceBody> upsertSequenceBodyResponse = client.sequences().rows().upsert(upsertSequenceBodyList);
+            LOG.info(loggingPrefix + "Finished upserting sequences rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            Thread.sleep(5000); // Wait for evt. consistency
+
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+            LOG.info(loggingPrefix + "Start reading sequences headers.");
+            List<SequenceMetadata> listSequencesResults = new ArrayList<>();
+            client.sequences()
+                    .list(RequestParameters.create()
+                            .withFilterMetadataParameter("source", DataGenerator.sourceValue))
+                    .forEachRemaining(sequences -> listSequencesResults.addAll(sequences));
+            LOG.info(loggingPrefix + "Finished reading sequences headers. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+            LOG.info(loggingPrefix + "Start reading sequences rows.");
+            List<SequenceBody> listSequencesRowsResults = new ArrayList<>();
+            List<Item> sequenceBodyRequestItems = listSequencesResults.stream()
+                    .map(sequenceMetadata -> Item.newBuilder().setId(sequenceMetadata.getId().getValue()).build())
+                    .collect(Collectors.toList());
+            client.sequences().rows()
+                    .retrieveComplete(sequenceBodyRequestItems)
+                    .forEachRemaining(sequenceBodies -> listSequencesRowsResults.addAll(sequenceBodies));
+            LOG.info(loggingPrefix + "Finished reading sequences rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+            LOG.info(loggingPrefix + "Start deleting sequences rows.");
+            List<SequenceBody> deleteRowsInput = listSequencesRowsResults;
+            List<SequenceBody> deleteRowsResults = client.sequences().rows().delete(deleteRowsInput);
+            LOG.info(loggingPrefix + "Finished deleting sequences rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+            LOG.info(loggingPrefix + "Start deleting sequences.");
+            List<Item> deleteItemsInput = new ArrayList<>();
+            listSequencesResults.stream()
+                    .map(sequences -> Item.newBuilder()
+                            .setExternalId(sequences.getExternalId().getValue())
+                            .build())
+                    .forEach(item -> deleteItemsInput.add(item));
+
+            List<Item> deleteItemsResults = client.sequences().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting sequences. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             assertEquals(upsertSequencesList.size(), listSequencesResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());

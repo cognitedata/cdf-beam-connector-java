@@ -17,20 +17,26 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.servicesV1.parser.SequenceParser;
+import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.StringValue;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.cognite.client.servicesV1.ConnectorConstants.*;
 import static com.cognite.client.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH;
@@ -52,6 +58,8 @@ public abstract class SequenceRows extends ApiBase {
         return new AutoValue_SequenceRows.Builder();
     }
 
+    protected static final Logger LOG = LoggerFactory.getLogger(SequenceRows.class);
+
     /**
      * Construct a new {@link SequenceRows} object using the provided configuration.
      *
@@ -68,68 +76,102 @@ public abstract class SequenceRows extends ApiBase {
     }
 
     /**
-     * Returns all {@link SequenceBody} object that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link SequenceBody} objects (i.e. sequences rows x columns) that matches the
+     * specification set in the {@link RequestParameters}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
      * have to stream these results into your own data structure.
      *
-     * The timeseries are retrieved using multiple, parallel request streams towards the Cognite api. The number of
+     * The sequence bodies are retrieved using multiple, parallel request streams towards the Cognite api. The number of
      * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
      *
-     * @param requestParameters the filters to use for retrieving timeseries.
+     * @param requestParameters the filters to use for retrieving sequences bodies.
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SequenceBody>> list(RequestParameters requestParameters) throws Exception {
-        List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
-
-        return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
+    public Iterator<List<SequenceBody>> retrieve(RequestParameters requestParameters) throws Exception {
+        return this.retrieve(ImmutableList.of(requestParameters));
     }
 
     /**
-     * Returns all {@link SequenceBody} objects that matches the filters set in the {@link RequestParameters} for
-     * the specified partitions. This method is intended for advanced use cases where you need direct control over the
-     * individual partitions. For example, when using the SDK in a distributed computing environment.
+     * Returns all {@link SequenceBody} objects (i.e. sequences rows x columns) that matches the
+     * specification set in the collection of {@link RequestParameters}.
+     *
+     * By submitting a collection of {@link RequestParameters}, the requests will be submitted in parallel to
+     * Cognite Data Fusion, potentially increasing the overall I/O performance.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
      * have to stream these results into your own data structure.
      *
-     * @param requestParameters the filters to use for retrieving the timeseries.
-     * @param partitions the partitions to include.
+     * The sequence bodies are retrieved using multiple, parallel request streams towards the Cognite api. The number of
+     * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
+     *
+     * @param requestParametersList the filters to use for retrieving sequences bodies.
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SequenceBody>> list(RequestParameters requestParameters, String... partitions) throws Exception {
-        // todo: implement
-        return new Iterator<List<SequenceBody>>() {
-            @Override
-            public boolean hasNext() {
-                return false;
-            }
+    public Iterator<List<SequenceBody>> retrieve(List<RequestParameters> requestParametersList) throws Exception {
+        // Build the api iterators.
+        List<Iterator<CompletableFuture<ResponseItems<String>>>> iterators = new ArrayList<>();
+        for (RequestParameters requestParameters : requestParametersList) {
+            iterators.add(getListResponseIterator(ResourceType.SEQUENCE_BODY, addAuthInfo(requestParameters)));
+        }
 
-            @Override
-            public List<SequenceBody> next() {
-                return null;
-            }
-        };
+        // The iterator that will collect results across multiple results streams
+        FanOutIterator fanOutIterator = FanOutIterator.of(iterators);
+
+        // Add results object parsing
+        return AdapterIterator.of(fanOutIterator, this::parseSequenceBody);
     }
 
+
     /**
-     * Retrieves timeseries by id.
+     * Retrieves {@link SequenceBody} by id.
      *
-     * @param items The item(s) {@code externalId / id} to retrieve.
-     * @return The retrieved timeseries.
+     * The entire Sequence body (i.e. all rows and columns) will be retrieved.
+     *
+     * The sequence bodies are retrieved using multiple, parallel request streams towards the Cognite api. The number of
+     * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
+     *
+     * @param items The sequences {@code externalId / id} to retrieve rows for.
+     * @return The retrieved sequence rows / bodies.
      * @throws Exception
      */
-    public List<SequenceBody> retrieve(List<Item> items) throws Exception {
-        // todo: implement
-        return Collections.emptyList();
+    public Iterator<List<SequenceBody>> retrieveComplete(List<Item> items) throws Exception {
+        List<RequestParameters> requestParametersList = new ArrayList<>(items.size());
+
+        // Build the request objects representing the items
+        for (Item item : items) {
+            RequestParameters requestParameters = RequestParameters.create()
+                    .withRootParameter("limit", DEFAULT_MAX_BATCH_SIZE_SEQUENCES_ROWS);
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                requestParameters = requestParameters.withRootParameter("externalId", item.getExternalId());
+            } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+                requestParameters = requestParameters.withRootParameter("id", item.getId());
+            } else {
+                throw new Exception("Item does not contain externalId or id: " + item.toString());
+            }
+
+            requestParametersList.add(requestParameters);
+        }
+
+        return this.retrieve(requestParametersList);
     }
 
     /**
      * Creates or updates a set of {@link SequenceBody} objects.
+     *
+     * A {@link SequenceBody} carries the data cells (columns x rows) to be upserted to a sequence. If the
+     * main sequence object hasn't been created in Cognite Data Fusion yet (maybe because of a large job where
+     * both sequence headers and bodies are upserted in parallel), this method will create the sequence objects
+     * based on the information carried in the {@link SequenceBody}.
+     *
+     * The algorithm runs as follows:
+     * 1. Write all {@link SequenceBody} objects to the Cognite API.
+     * 2. If one (or more) of the objects fail, check if it is because of missing sequence objects--create temp headers.
+     * 3. Retry the failed {@link SequenceBody} objects.
      *
      * @param sequenceBodies The sequences rows to upsert
      * @return The upserted sequences rows
@@ -262,10 +304,284 @@ public abstract class SequenceRows extends ApiBase {
         return ImmutableList.copyOf(sequenceBodies);
     }
 
+    /**
+     * Deletes the given rows of the sequence(s).
+     *
+     * This method will delete the rows specified via the sequence externalId/id + row number list in the input
+     * {@link SequenceBody} objects. You don't need to specify columns or values. All columns will always be removed
+     * from the listed row numbers.
+     *
+     * @param sequenceRows
+     * @return The deleted rows
+     * @throws Exception
+     */
     public List<SequenceBody> delete(List<SequenceBody> sequenceRows) throws Exception {
-        // todo: implement
+        String loggingPrefix = "delete() - ";
+        Instant startInstant = Instant.now();
+        int maxDeleteLoopIterations = 3;
 
-        return Collections.emptyList();
+        // should not happen, but need to guard against empty input
+        if (sequenceRows.isEmpty()) {
+            LOG.warn(loggingPrefix + "No items in the input. Returning without deleting any rows.");
+            return Collections.emptyList();
+        }
+
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSequencesRows()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
+
+        // Delete and completed lists
+        List<SequenceBody> elementListDelete = sequenceRows;
+        List<SequenceBody> elementListCompleted = new ArrayList<>(elementListDelete.size());
+
+        /*
+        The delete loop. If there are items left to delete:
+        1. Delete items
+        2. If conflict, remove duplicates and missing items.
+        */
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        String exceptionMessage = "";
+        for (int i = 0; i < maxDeleteLoopIterations && elementListDelete.size() > 0;
+             i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+            LOG.debug(loggingPrefix + "Start delete loop {} with {} sequence body items to delete and "
+                            + "{} completed items at duration {}",
+                    i,
+                    elementListDelete.size(),
+                    elementListCompleted.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
+
+            /*
+            Delete items
+             */
+            Map<ResponseItems<String>, List<SequenceBody>> deleteResponseMap =
+                    splitAndDeleteItems(elementListDelete, deleteItemWriter);
+            LOG.debug(loggingPrefix + "Completed delete items requests for {} items across {} batches at duration {}",
+                    elementListDelete.size(),
+                    deleteResponseMap.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
+            elementListDelete.clear(); // Must prepare the list for possible new entries.
+
+            for (ResponseItems<String> response : deleteResponseMap.keySet()) {
+                if (response.isSuccessful()) {
+                    elementListCompleted.addAll(deleteResponseMap.get(response));
+                    LOG.debug(loggingPrefix + "Delete items request success. Adding {} delete result items to result collection.",
+                            deleteResponseMap.get(response).size());
+                } else {
+                    exceptionMessage = response.getResponseBodyAsString();
+                    LOG.debug(loggingPrefix + "Delete items request failed: {}", response.getResponseBodyAsString());
+                    if (i == maxDeleteLoopIterations - 1) {
+                        // Add the error message to std logging
+                        LOG.error(loggingPrefix + "Delete items request failed. {}", response.getResponseBodyAsString());
+                    }
+                    LOG.debug(loggingPrefix + "Delete items request failed. "
+                            + "Removing duplicates and missing items and retrying the request");
+                    List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                    List<Item> missing = ItemParser.parseItems(response.getMissingItems());
+                    LOG.debug(loggingPrefix + "No of duplicate entries reported by CDF: {}", duplicates.size());
+                    LOG.debug(loggingPrefix + "No of missing items reported by CDF: {}", missing.size());
+
+                    // Remove missing items from the delete request
+                    Map<String, SequenceBody> itemsMap = mapToId(deleteResponseMap.get(response));
+                    for (Item value : missing) {
+                        if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                            itemsMap.remove(value.getExternalId());
+                        } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                            itemsMap.remove(value.getId());
+                        }
+                    }
+
+                    // Remove duplicate items from the delete request
+                    for (Item value : duplicates) {
+                        if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                            itemsMap.remove(value.getExternalId());
+                        } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                            itemsMap.remove(value.getId());
+                        }
+                    }
+
+                    elementListDelete.addAll(itemsMap.values()); // Add remaining items to be re-deleted
+                }
+            }
+        }
+
+        // Check if all elements completed the upsert requests
+        if (elementListDelete.isEmpty()) {
+            LOG.info(loggingPrefix + "Successfully deleted {} items within a duration of {}.",
+                    elementListCompleted.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
+        } else {
+            LOG.error(loggingPrefix + "Failed to delete items. {} items remaining. {} items completed delete."
+                            + System.lineSeparator() + "{}",
+                    elementListDelete.size(),
+                    elementListCompleted.size(),
+                    exceptionMessage);
+            throw new Exception(String.format(loggingPrefix + "Failed to upsert items. %d items remaining. "
+                            + " %d items completed upsert. %n " + exceptionMessage,
+                    elementListDelete.size(),
+                    elementListCompleted.size()));
+        }
+
+        return elementListCompleted;
+    }
+
+    /**
+     * Delete sequences rows.
+     *
+     * Submits a (large) batch of sequence body / row items by splitting it up into multiple, parallel delete requests.
+     * The response from each request is returned along with the items used as input.
+     *
+     * This method will:
+     * 1. Check all input for valid ids.
+     * 2. Deduplicate the items, including row numbers.
+     * 3. Split the input into request batches (if necessary).
+     *
+     * @param sequenceRows The sequence rows to delete
+     * @param deleteWriter The {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} to use for the delete requests.
+     * @return A {@link Map} with the responses and request inputs.
+     * @throws Exception
+     */
+    private Map<ResponseItems<String>, List<SequenceBody>> splitAndDeleteItems(List<SequenceBody> sequenceRows,
+                                                                               ConnectorServiceV1.ItemWriter deleteWriter) throws Exception {
+        String loggingPrefix = "splitAndDeleteItems() - ";
+        Instant startInstant = Instant.now();
+        int maxItemsPerBatch = 1000;
+        int maxRowsPerItem = 10_000;
+        List<SequenceBody> deleteItemsList = new ArrayList<>(sequenceRows.size());
+
+        /*
+         check that ids are provided + remove duplicate rows.
+         1. Map all input objects to id.
+         2. Consolidate all rows per id.
+         */
+        Map<String, List<SequenceBody>> itemMap = new HashMap<>();
+        long rowCounter = 0;
+        for (SequenceBody value : sequenceRows) {
+            if (getSequenceId(value).isPresent()) {
+                List<SequenceBody> rows = itemMap.getOrDefault(getSequenceId(value).get(), new ArrayList<>());
+                rows.add(value);
+                itemMap.put(getSequenceId(value).get(), rows);
+                rowCounter += value.getRowsCount();
+            } else {
+                String message = loggingPrefix + "Sequence does not contain id nor externalId: " + value.toString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+        }
+        LOG.debug(loggingPrefix + "Received {} rows to remove from {} sequences, with {} unique sequence ids. Duration of: {}",
+                rowCounter,
+                sequenceRows.size(),
+                itemMap.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        int dedupeRowCounter = 0;
+        for (List<SequenceBody> elements : itemMap.values()) {
+            List<Long> sequenceRowNumbers = new ArrayList<>();
+            SequenceBody sequenceBody = elements.get(0).toBuilder()
+                    .clearRows()
+                    .clearColumns()
+                    .build();
+            for (SequenceBody item : elements) {
+                // deduplicate row numbers
+                Set<Long> uniqueRowNos = new HashSet<>(sequenceRowNumbers.size() + item.getRowsCount());
+                sequenceRowNumbers.forEach(uniqueRowNos::add);
+                item.getRowsList().forEach(row -> uniqueRowNos.add(row.getRowNumber()));
+                sequenceRowNumbers = new ArrayList<>(uniqueRowNos);
+            }
+            List<SequenceRow> sequenceRowsDeduplicated = new ArrayList<>();
+            sequenceRowNumbers.forEach(rowNumber ->
+                    sequenceRowsDeduplicated.add(SequenceRow.newBuilder().setRowNumber(rowNumber).build()));
+            deleteItemsList.add(sequenceBody.toBuilder()
+                    .addAllRows(sequenceRowsDeduplicated)
+                    .build());
+            dedupeRowCounter += sequenceRowsDeduplicated.size();
+        }
+        LOG.debug(loggingPrefix + "Finished deduplication. Result: {} rows across {} sequences. Duration of: {}",
+                dedupeRowCounter,
+                deleteItemsList.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        // Split into batches and submit delete requests
+        Map<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> responseMap = new HashMap<>();
+        List<SequenceBody> deleteBatch = new ArrayList<>(maxItemsPerBatch);
+        int submitDeleteRowCounter = 0;
+        int submitItemsCounter = 0;
+        for (SequenceBody deleteItem : deleteItemsList) {
+            // Check if there are too many rows per item
+            if (deleteItem.getRowsCount() > maxRowsPerItem) {
+                List<List<SequenceRow>> rowBatches = Partition.ofSize(deleteItem.getRowsList(), maxRowsPerItem);
+                for (List<SequenceRow> rowBatch : rowBatches) {
+                    deleteBatch.add(deleteItem.toBuilder()
+                            .clearRows()
+                            .addAllRows(rowBatch)
+                            .build());
+                    submitDeleteRowCounter += rowBatch.size();
+
+                    // Always submit a request when splitting up the rows for a single sequence id.
+                    // Because we cannot have multiple items with the same id in the same batch.
+                    responseMap.put(deleteItems(deleteBatch, deleteWriter), deleteBatch);
+                    submitItemsCounter += deleteBatch.size();
+                    deleteBatch = new ArrayList<>();
+                }
+            } else {
+                deleteBatch.add(deleteItem);
+                submitDeleteRowCounter += deleteItem.getRowsCount();
+                if (deleteBatch.size() >= maxItemsPerBatch) {
+                    responseMap.put(deleteItems(deleteBatch, deleteWriter), deleteBatch);
+                    submitItemsCounter += deleteBatch.size();
+                    deleteBatch = new ArrayList<>();
+                }
+            }
+        }
+        if (!deleteBatch.isEmpty()) {
+            responseMap.put(deleteItems(deleteBatch, deleteWriter), deleteBatch);
+            submitItemsCounter += deleteBatch.size();
+        }
+        LOG.debug(loggingPrefix + "Finished submitting delete requests for {} rows across {} sequences items via {} batches. "
+                        + "Duration of: {}",
+                submitDeleteRowCounter,
+                submitItemsCounter,
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        // Wait for all requests futures to complete
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        responseMap.keySet().forEach(future -> futureList.add(future));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the responses from the futures
+        Map<ResponseItems<String>, List<SequenceBody>> resultsMap = new HashMap<>(responseMap.size());
+        for (Map.Entry<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> entry : responseMap.entrySet()) {
+            resultsMap.put(entry.getKey().join(), entry.getValue());
+        }
+
+        return resultsMap;
+    }
+
+    /**
+     * Submits a set of items as a delete sequence rows request to the Cognite API.
+     *
+     * @param sequenceRows the objects to delete.
+     * @return a {@link CompletableFuture} representing the response from the create request.
+     * @throws Exception
+     */
+    private CompletableFuture<ResponseItems<String>> deleteItems(List<SequenceBody> sequenceRows,
+                                                                 ConnectorServiceV1.ItemWriter deleteWriter) throws Exception {
+        ImmutableList.Builder<Map<String, Object>> deleteItemsBuilder = ImmutableList.builder();
+        // Build the delete items request objects
+        for (SequenceBody sequenceBody : sequenceRows) {
+            Map<String, Object> deleteItemObject = SequenceParser.toRequestDeleteRowsItem(sequenceBody);
+            deleteItemsBuilder.add(deleteItemObject);
+        }
+
+        // build request object
+        RequestParameters deleteItemsRequest = addAuthInfo(RequestParameters.create()
+                .withItems(deleteItemsBuilder.build()));
+
+        // post write request
+        return deleteWriter.writeItemsAsync(deleteItemsRequest);
     }
 
     /**
@@ -396,6 +712,7 @@ public abstract class SequenceRows extends ApiBase {
      */
     private CompletableFuture<ResponseItems<String>> upsertSeqBody(List<SequenceBody> itemList,
                                                                    ConnectorServiceV1.ItemWriter seqBodyCreateWriter) throws Exception {
+        Instant startInstant = Instant.now();
         String loggingPrefix = "upsertSeqBody() - ";
         // Check that all sequences carry an id/externalId + no duplicates + build items list
         ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
@@ -421,11 +738,12 @@ public abstract class SequenceRows extends ApiBase {
         }
 
         LOG.debug(loggingPrefix + "Starting the upsert sequence body request. "
-                        + "No sequences: {}, Max no columns: {}, Total no rows: {}, Total no cells: {} ",
+                        + "No sequences: {}, Max no columns: {}, Total no rows: {}, Total no cells: {}. Duration: {} ",
                 itemList.size(),
                 maxColumnCounter,
                 rowCounter,
-                cellCounter);
+                cellCounter,
+                Duration.between(startInstant, Instant.now()).toString());
 
         // build request object
         RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
@@ -459,6 +777,29 @@ public abstract class SequenceRows extends ApiBase {
                 .setExternalId(body.getExternalId())
                 .addAllColumns(body.getColumnsList())
                 .build();
+    }
+
+    /**
+     * Maps all items to their externalId (primary) or id (secondary). If the id function does not return any
+     * identity, the item will be mapped to the empty string.
+     *
+     * Via the identity mapping, this function will also perform deduplication of the input items.
+     *
+     * @param items the sequence bodies to map to externalId / id.
+     * @return the {@link Map} with all items mapped to externalId / id.
+     */
+    private Map<String, SequenceBody> mapToId(List<SequenceBody> items) {
+        Map<String, SequenceBody> resultMap = new HashMap<>((int) (items.size() * 1.35));
+        for (SequenceBody item : items) {
+            if (item.hasExternalId()) {
+                resultMap.put(item.getExternalId().getValue(), item);
+            } else if (item.hasId()) {
+                resultMap.put(String.valueOf(item.getId().getValue()), item);
+            } else {
+                resultMap.put("", item);
+            }
+        }
+        return resultMap;
     }
 
     /*

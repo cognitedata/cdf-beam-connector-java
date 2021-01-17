@@ -57,7 +57,7 @@ abstract class ApiBase {
     private static final ImmutableList<ResourceType> resourcesSupportingPartitions =
             ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT, ResourceType.FILE, ResourceType.TIMESERIES_HEADER);
 
-    protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+    protected static final Logger LOG = LoggerFactory.getLogger(ApiBase.class);
 
     public abstract CogniteClient getClient();
 
@@ -1642,13 +1642,13 @@ abstract class ApiBase {
          * @throws Exception
          */
         public List<Item> deleteItems(List<Item> items) throws Exception {
+            Instant startInstant = Instant.now();
             String batchLogPrefix =
                     "deleteItems() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
             Preconditions.checkArgument(itemsHaveId(items),
                     batchLogPrefix + "All items must have externalId or id.");
             LOG.debug(String.format(batchLogPrefix + "Received %d items to delete",
                     items.size()));
-            Instant startInstant = Instant.now();
 
             // Should not happen--but need to guard against empty input
             if (items.isEmpty()) {

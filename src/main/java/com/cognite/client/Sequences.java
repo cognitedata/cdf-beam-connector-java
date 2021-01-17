@@ -25,6 +25,8 @@ import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.SequenceParser;
 import com.google.auto.value.AutoValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.List;
@@ -43,6 +45,8 @@ public abstract class Sequences extends ApiBase {
     private static Builder builder() {
         return new AutoValue_Sequences.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Sequences.class);
 
     /**
      * Construct a new {@link Sequences} object using the provided configuration.
