@@ -596,6 +596,7 @@ public abstract class SequenceRows extends ApiBase {
      */
     private Map<ResponseItems<String>, List<SequenceBody>> splitAndUpsertSeqBody(List<SequenceBody> itemList,
                                                                                  ConnectorServiceV1.ItemWriter seqBodyCreateWriter) throws Exception {
+        Instant startInstant = Instant.now();
         String loggingPrefix = "splitAndUpsertSeqBody() - ";
         Map<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> responseMap = new HashMap<>();
         List<SequenceBody> batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
@@ -675,11 +676,13 @@ public abstract class SequenceRows extends ApiBase {
             responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
         }
 
-        LOG.debug(loggingPrefix + "Finished submitting {} cells by {} rows across {} sequence items in {} requests batches.",
+        LOG.debug(loggingPrefix + "Finished submitting {} cells by {} rows across {} sequence items in {} requests batches. "
+                + "Duration: {}",
                 totalCellsCounter,
                 totalRowCounter,
                 itemCounter,
-                responseMap.size());
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()));
 
         // Wait for all requests futures to complete
         List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
