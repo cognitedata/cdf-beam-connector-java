@@ -111,7 +111,7 @@ public class DataGenerator {
                 } else if (header.getColumns(j).getValueType() == SequenceColumn.ValueType.LONG) {
                     values.add(Values.of(ThreadLocalRandom.current().nextLong(10000000)));
                 } else {
-                    values.add(Values.of(RandomStringUtils.randomAlphanumeric(20)));
+                    values.add(Values.of(RandomStringUtils.randomAlphanumeric(5, 30)));
                 }
             }
             rows.add(SequenceRow.newBuilder()

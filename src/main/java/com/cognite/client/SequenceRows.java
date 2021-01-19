@@ -602,74 +602,69 @@ public abstract class SequenceRows extends ApiBase {
         Map<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> responseMap = new HashMap<>();
         List<SequenceBody> batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
         List<String> sequenceIds = new ArrayList<>(); // To check for existing / duplicate item ids
-        int itemCounter = 0;
-        int batchRowCounter = 0;
+        int totalItemCounter = 0;
         int totalRowCounter = 0;
-        int batchColumnsCounter = 0;
         int totalCellsCounter = 0;
+        int totalCharacterCounter = 0;
+        int batchCellsCounter = 0;
+        int batchCharacterCounter = 0;
         for (SequenceBody sequence : itemList)  {
-            totalCellsCounter += sequence.getColumnsCount() * sequence.getRowsCount();
-            batchColumnsCounter = Math.max(batchColumnsCounter, sequence.getColumnsCount());
-            List<SequenceRow> rowList = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ROWS_PER_ITEM);
+            // Check for duplicate items in the same batch
+            if (getSequenceId(sequence).isPresent()) {
+                if (sequenceIds.contains(getSequenceId(sequence).get())) {
+                    // The externalId / id already exists in the batch, submit it
+                    responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
+                    batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                    batchCellsCounter = 0;
+                    batchCharacterCounter = 0;
+                    sequenceIds.clear();
+                }
+                sequenceIds.add(getSequenceId(sequence).get());
+            }
+
+            List<SequenceRow> rowList = new ArrayList<>();
             for (SequenceRow row : sequence.getRowsList()) {
-                rowList.add(row);
-                batchRowCounter++;
-                totalRowCounter++;
-                if ((rowList.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ROWS_PER_ITEM)
-                        || ((batchRowCounter * batchColumnsCounter) >= DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH))  {
-                    // Check for duplicate items in the same batch
-                    if (getSequenceId(sequence).isPresent()) {
-                        if (sequenceIds.contains(getSequenceId(sequence).get())) {
-                            // The externalId / id already exists in the batch, submit it
-                            responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
-                            batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
-                            batchRowCounter = 0;
-                            batchColumnsCounter = 0;
-                            sequenceIds.clear();
-                        }
-                        sequenceIds.add(getSequenceId(sequence).get());
-                    }
+                // Check if the new row will make the current batch too large.
+                // If yes, add the current row list to the batch and submit it before adding the new row
+                if ((batchCellsCounter + getColumnsCount(row)) >= DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH
+                        || (batchCharacterCounter + getCharacterCount(row)) >= DEFAULT_SEQUENCE_WRITE_MAX_CHARS_PER_BATCH) {
+                    // Add the current rows as a new item together with the sequence reference
                     batch.add(sequence.toBuilder()
                             .clearRows()
                             .addAllRows(rowList)
                             .build());
-                    rowList = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ROWS_PER_ITEM);
-                    itemCounter++;
-                    if ((batch.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH)
-                            || ((batchRowCounter * batchColumnsCounter) >= DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH)) {
-                        responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
-                        batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
-                        batchRowCounter = 0;
-                        batchColumnsCounter = 0;
-                        sequenceIds.clear();
-                    }
+                    rowList = new ArrayList<>();
+                    totalItemCounter++;
+
+                    // Submit the batch
+                    responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
+                    batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                    batchCellsCounter = 0;
+                    batchCharacterCounter = 0;
+                    sequenceIds.clear();
                 }
+
+                // Add the row to the row list
+                rowList.add(row);
+                batchCellsCounter += getColumnsCount(row);
+                totalCellsCounter += getColumnsCount(row);
+                batchCharacterCounter += getCharacterCount(row);
+                totalCharacterCounter += getCharacterCount(row);
+                totalRowCounter++;
             }
             if (rowList.size() > 0) {
-                // Check for duplicate items in the same batch
-                if (getSequenceId(sequence).isPresent()) {
-                    if (sequenceIds.contains(getSequenceId(sequence).get())) {
-                        // The externalId / id already exists in the batch, submit it
-                        responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
-                        batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
-                        batchRowCounter = 0;
-                        batchColumnsCounter = 0;
-                        sequenceIds.clear();
-                    }
-                    sequenceIds.add(getSequenceId(sequence).get());
-                }
                 batch.add(sequence.toBuilder()
                         .clearRows()
                         .addAllRows(rowList)
                         .build());
-                itemCounter++;
+                totalItemCounter++;
             }
 
             if (batch.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH) {
                 responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
                 batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
-                batchRowCounter = 0;
-                batchColumnsCounter = 0;
+                batchCellsCounter = 0;
+                batchCharacterCounter = 0;
                 sequenceIds.clear();
             }
         }
@@ -677,11 +672,12 @@ public abstract class SequenceRows extends ApiBase {
             responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
         }
 
-        LOG.debug(loggingPrefix + "Finished submitting {} cells by {} rows across {} sequence items in {} requests batches. "
-                + "Duration: {}",
+        LOG.debug(loggingPrefix + "Finished submitting {} cells with {} characters by {} rows across {} sequence items "
+                + "in {} requests batches. Duration: {}",
                 totalCellsCounter,
+                totalCharacterCounter,
                 totalRowCounter,
-                itemCounter,
+                totalItemCounter,
                 responseMap.size(),
                 Duration.between(startInstant, Instant.now()));
 
@@ -723,11 +719,13 @@ public abstract class SequenceRows extends ApiBase {
         int rowCounter = 0;
         int maxColumnCounter = 0;
         int cellCounter = 0;
+        int characterCounter = 0;
         List<String> sequenceIds = new ArrayList<>();
         for (SequenceBody item : itemList) {
             rowCounter += item.getRowsCount();
             maxColumnCounter = Math.max(maxColumnCounter, item.getColumnsCount());
             cellCounter += (item.getColumnsCount() * item.getRowsCount());
+            characterCounter += getCharacterCount(item);
             if (!(item.hasExternalId() || item.hasId())) {
                 throw new Exception(loggingPrefix + "Sequence body does not contain externalId nor id");
             }
@@ -742,11 +740,13 @@ public abstract class SequenceRows extends ApiBase {
         }
 
         LOG.debug(loggingPrefix + "Starting the upsert sequence body request. "
-                        + "No sequences: {}, Max no columns: {}, Total no rows: {}, Total no cells: {}. Duration: {} ",
+                        + "No sequences: {}, Max no columns: {}, Total no rows: {}, Total no cells: {}. "
+                        + "Total no characters: {}. Duration: {} ",
                 itemList.size(),
                 maxColumnCounter,
                 rowCounter,
                 cellCounter,
+                characterCounter,
                 Duration.between(startInstant, Instant.now()).toString());
 
         // build request object
