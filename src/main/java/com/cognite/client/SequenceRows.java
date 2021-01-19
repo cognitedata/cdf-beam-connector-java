@@ -28,6 +28,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.StringValue;
+import com.google.protobuf.Value;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -803,6 +804,43 @@ public abstract class SequenceRows extends ApiBase {
             }
         }
         return resultMap;
+    }
+
+    /**
+     * Returns the number of columns for a sequence row.
+     * @param sequenceRow
+     * @return
+     */
+    private int getColumnsCount(SequenceRow sequenceRow) {
+        return sequenceRow.getValuesCount();
+    }
+
+    /**
+     * Returns the total count of characters in the (String) columns of a sequence body (collection of rows)
+     * @param sequenceBody
+     * @return
+     */
+    private int getCharacterCount(SequenceBody sequenceBody) {
+        int characterCount = 0;
+        for (SequenceRow sequenceRow : sequenceBody.getRowsList()) {
+            characterCount += getCharacterCount(sequenceRow);
+        }
+        return characterCount;
+    }
+
+    /**
+     * Returns the total count of characters in the (string) columns of a sequence row.
+     * @param sequenceRow
+     * @return
+     */
+    private int getCharacterCount(SequenceRow sequenceRow) {
+        int characterCount = 0;
+        for (Value value : sequenceRow.getValuesList()) {
+            if (value.getKindCase() == Value.KindCase.STRING_VALUE) {
+                characterCount += value.getStringValue().length();
+            }
+        }
+        return characterCount;
     }
 
     /*
