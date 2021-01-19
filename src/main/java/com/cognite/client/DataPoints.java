@@ -19,12 +19,10 @@ package com.cognite.client;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Item;
-import com.cognite.client.dto.TimeseriesMetadata;
-import com.cognite.client.dto.TimeseriesPoint;
+import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
+import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 
 import java.util.*;
@@ -139,6 +137,67 @@ public abstract class DataPoints extends ApiBase {
         // todo: implement
 
         return Collections.emptyList();
+    }
+
+    /**
+     * Builds a proto request object for upserting a collection of time series data points.
+     *
+     * @param externalIdInsertMap Data points linked to an external id.
+     * @param internalIdInsertMap Data points linked to an internal id.
+     * @return The proto request object.
+     * @throws Exception
+     */
+    private DataPointInsertionRequest toRequestProto(Map<String, Map<Long, TimeseriesPointPost>> externalIdInsertMap,
+                                                     Map<Long, Map<Long, TimeseriesPointPost>> internalIdInsertMap) {
+        DataPointInsertionRequest.Builder requestBuilder = DataPointInsertionRequest.newBuilder();
+        for (Map.Entry<String, Map<Long, TimeseriesPointPost>> element : externalIdInsertMap.entrySet()) {
+            requestBuilder.addItems(this.toRequestProtoItem(element.getValue().values()));
+        }
+        for (Map.Entry<Long, Map<Long, TimeseriesPointPost>> element : internalIdInsertMap.entrySet()) {
+            requestBuilder.addItems(this.toRequestProtoItem(element.getValue().values()));
+        }
+
+        return requestBuilder.build();
+    }
+
+    /**
+     * Convert a collection of time series point post object to a Cognite API request proto object.
+     * All data points in the input collection must belong to the same time series (externalId / id).
+     *
+     * @param elements The time series point to build insert object for.
+     * @return The proto insert object.
+     */
+    private DataPointInsertionItem toRequestProtoItem(Collection<TimeseriesPointPost> elements) {
+        TimeseriesPointPost[] points = elements.toArray(new TimeseriesPointPost[0]);
+        DataPointInsertionItem.Builder itemBuilder = DataPointInsertionItem.newBuilder();
+
+        // set ids, identify points type
+        if (points[0].getIdTypeCase() == TimeseriesPointPost.IdTypeCase.EXTERNAL_ID) {
+            itemBuilder.setExternalId(points[0].getExternalId());
+        } else {
+            itemBuilder.setId(points[0].getId());
+        }
+
+        if(points[0].getValueTypeCase() == TimeseriesPointPost.ValueTypeCase.VALUE_NUM) {
+            NumericDatapoints.Builder numPointsBuilder = NumericDatapoints.newBuilder();
+            for (TimeseriesPointPost point : points) {
+                numPointsBuilder.addDatapoints(NumericDatapoint.newBuilder()
+                        .setTimestamp(point.getTimestamp())
+                        .setValue(point.getValueNum())
+                        .build());
+            }
+            itemBuilder.setNumericDatapoints(numPointsBuilder.build());
+        } else {
+            StringDatapoints.Builder stringPointsBuilder = StringDatapoints.newBuilder();
+            for (TimeseriesPointPost point : points) {
+                stringPointsBuilder.addDatapoints(StringDatapoint.newBuilder()
+                        .setTimestamp(point.getTimestamp())
+                        .setValue(point.getValueString())
+                        .build());
+            }
+            itemBuilder.setStringDatapoints(stringPointsBuilder.build());
+        }
+        return itemBuilder.build();
     }
 
     /*
