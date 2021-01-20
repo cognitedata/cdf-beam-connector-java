@@ -21,11 +21,18 @@ import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.StringValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -35,10 +42,19 @@ import java.util.stream.Collectors;
  */
 @AutoValue
 public abstract class DataPoints extends ApiBase {
+    private static final TimeseriesMetadata DEFAULT_TS_METADATA = TimeseriesMetadata.newBuilder()
+            .setExternalId(StringValue.of("SDK_default"))
+            .setName(StringValue.of("SDK_default"))
+            .setDescription(StringValue.of("Default TS metadata created by the Java SDK."))
+            .setIsStep(false)
+            .setIsString(false)
+            .build();
 
     private static Builder builder() {
         return new AutoValue_DataPoints.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(DataPoints.class);
 
     /**
      * Construct a new {@link DataPoints} object using the provided configuration.
@@ -139,6 +155,8 @@ public abstract class DataPoints extends ApiBase {
         return Collections.emptyList();
     }
 
+    //private CompletableFuture<ResponseItems<String>> upsertDataPoints(List<>)
+
     /**
      * Builds a proto request object for upserting a collection of time series data points.
      *
@@ -198,6 +216,38 @@ public abstract class DataPoints extends ApiBase {
             itemBuilder.setStringDatapoints(stringPointsBuilder.build());
         }
         return itemBuilder.build();
+    }
+
+    /**
+     * Writes default time series headers / metadata for the input data points.
+     *
+     * @param points The data points to write a default header for.
+     * @throws Exception
+     */
+    private void writeTsHeadersForPoints(List<TimeseriesPointPost> points) throws Exception {
+        List<TimeseriesMetadata> tsMetadataList = new ArrayList<>(points.size());
+        points.forEach(point -> tsMetadataList.add(generateDefaultTsMetadata(point)));
+
+        if (!tsMetadataList.isEmpty()) {
+            getClient().timeseries().upsert(tsMetadataList);
+        }
+    }
+
+    /**
+     * Generates a time series header / metadata based on a data point.
+     *
+     * @param datapoint The {@link TimeseriesPointPost} to generate a header for.
+     * @return The default header.
+     */
+    private TimeseriesMetadata generateDefaultTsMetadata(TimeseriesPointPost datapoint) {
+        Preconditions.checkArgument(datapoint.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.EXTERNAL_ID,
+                "Time series data point is not based on externalId: " + datapoint.toString());
+
+        return DEFAULT_TS_METADATA.toBuilder()
+                .setExternalId(StringValue.of(datapoint.getExternalId()))
+                .setIsStep(datapoint.getIsStep())
+                .setIsString(datapoint.getValueTypeCase() == TimeseriesPointPost.ValueTypeCase.VALUE_STRING)
+                .build();
     }
 
     /*
