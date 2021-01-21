@@ -758,11 +758,11 @@ public abstract class SequenceRows extends ApiBase {
     }
 
     /**
-     * Inserts default sequence headers for the input sequence list.
+     * Writes default sequence headers for the input sequence list.
      */
     private void writeSeqHeaderForRows(List<SequenceBody> sequenceList) throws Exception {
         List<SequenceMetadata> sequenceMetadataList = new ArrayList<>(sequenceList.size());
-        sequenceList.forEach(sequenceBody -> sequenceMetadataList.add(generateDefaultSequenceMetadataInsertItem(sequenceBody)));
+        sequenceList.forEach(sequenceBody -> sequenceMetadataList.add(generateDefaultSequenceMetadata(sequenceBody)));
 
         if (!sequenceMetadataList.isEmpty()) {
             getClient().sequences().upsert(sequenceMetadataList);
@@ -772,8 +772,11 @@ public abstract class SequenceRows extends ApiBase {
     /**
      * Builds a single sequence header with default values. It relies on information completeness
      * related to the columns as these cannot be updated at a later time.
+     *
+     * @param body The {@link SequenceBody} to generate header / metadata for.
+     * @return Default header / metadata.
      */
-    private SequenceMetadata generateDefaultSequenceMetadataInsertItem(SequenceBody body) {
+    private SequenceMetadata generateDefaultSequenceMetadata(SequenceBody body) {
         Preconditions.checkArgument(body.hasExternalId(),
                 "Sequence body is not based on externalId: " + body.toString());
 
