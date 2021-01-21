@@ -701,7 +701,7 @@ public abstract class SequenceRows extends ApiBase {
      * Post a {@link SequenceBody} upsert request on a separate thread. The response is wrapped in a
      * {@link CompletableFuture} that is returned immediately to the caller.
      *
-     * This method will send the entire input {@link List<SequenceBody>} in a single request. It does not
+     * This method will send the entire input in a single request. It does not
      * split the input into multiple batches. If you have a large batch of {@link SequenceBody} that
      * you would like to split across multiple requests, use the {@code splitAndUpsertSeqBody} method.
      *

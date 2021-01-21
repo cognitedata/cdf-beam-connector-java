@@ -21,11 +21,13 @@ import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -140,21 +142,44 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
+     * Post a collection of {@link TimeseriesPointPost} upsert request on a separate thread. The response is wrapped in a
+     * {@link CompletableFuture} that is returned immediately to the caller.
+     *
+     * The data points must be grouped by id. That is, the inner list of data points must all belong to the same
+     * time series. Multiple time series (max 10k) can be handled in a single collection.
+     *
+     *  This method will send the entire input in a single request. It does not
+     *  split the input into multiple batches. If you have a large batch of {@link TimeseriesPointPost} that
+     *  you would like to split across multiple requests, use the {@code splitAndUpsertDataPoints} method.
+     *
+     * @param dataPointsBatch
+     * @param dataPointsWriter
+     * @return
+     * @throws Exception
+     */
+    private CompletableFuture<ResponseItems<String>> upsertDataPoints(Collection<List<TimeseriesPointPost>> dataPointsBatch,
+                                                                      ConnectorServiceV1.ItemWriter dataPointsWriter) throws Exception {
+        DataPointInsertionRequest requestPayload = toRequestProto(dataPointsBatch);
+
+        // build request object
+        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+                .withProtoRequestBody(requestPayload));
+
+        // post write request
+        return dataPointsWriter.writeItemsAsync(postSeqBody);
+    }
+
+    /**
      * Builds a proto request object for upserting a collection of time series data points.
      *
-     * @param externalIdInsertMap Data points linked to an external id.
-     * @param internalIdInsertMap Data points linked to an internal id.
+     * @param dataPoints Data points to build request object for.
      * @return The proto request object.
      * @throws Exception
      */
-    private DataPointInsertionRequest toRequestProto(Map<String, Map<Long, TimeseriesPointPost>> externalIdInsertMap,
-                                                     Map<Long, Map<Long, TimeseriesPointPost>> internalIdInsertMap) {
+    private DataPointInsertionRequest toRequestProto(Collection<List<TimeseriesPointPost>> dataPoints) {
         DataPointInsertionRequest.Builder requestBuilder = DataPointInsertionRequest.newBuilder();
-        for (Map.Entry<String, Map<Long, TimeseriesPointPost>> element : externalIdInsertMap.entrySet()) {
-            requestBuilder.addItems(this.toRequestProtoItem(element.getValue().values()));
-        }
-        for (Map.Entry<Long, Map<Long, TimeseriesPointPost>> element : internalIdInsertMap.entrySet()) {
-            requestBuilder.addItems(this.toRequestProtoItem(element.getValue().values()));
+        for (List<TimeseriesPointPost> points : dataPoints) {
+            requestBuilder.addItems(this.toRequestProtoItem(points));
         }
 
         return requestBuilder.build();
@@ -198,6 +223,56 @@ public abstract class DataPoints extends ApiBase {
             itemBuilder.setStringDatapoints(stringPointsBuilder.build());
         }
         return itemBuilder.build();
+    }
+
+    /**
+     * Groups the data points into sub-collections per externalId / id.
+     *
+     * This method will also de-duplicate the data points based on id and timestamp.
+     *
+     * @param dataPoints The data points to organize into sub-collections
+     * @return The data points partitioned into sub-collections by externalId / id.
+     */
+    private Map<String, List<TimeseriesPointPost>> groupById(Collection<TimeseriesPointPost> dataPoints) throws Exception {
+        String loggingPrefix = "collectById() - ";
+        // Check all elements for id / externalId + naive deduplication
+        Map<String, Map<Long, TimeseriesPointPost>> externalIdInsertMap = new HashMap<>(100);
+        Map<Long, Map<Long, TimeseriesPointPost>> internalIdInsertMap = new HashMap<>(100);
+
+        for (TimeseriesPointPost value : dataPoints) {
+            if (value.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.IDTYPE_NOT_SET) {
+                String message = loggingPrefix + "Neither externalId nor id found. "
+                        + "Time series point must specify either externalId or id";
+                LOG.error(message);
+                throw new Exception(message);
+            }
+            if (value.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.EXTERNAL_ID) {
+                if (!externalIdInsertMap.containsKey(value.getExternalId())) {
+                    externalIdInsertMap.put(value.getExternalId(), new HashMap<Long, TimeseriesPointPost>(20000));
+                }
+                externalIdInsertMap.get(value.getExternalId()).put(value.getTimestamp(), value);
+            } else {
+                if (!internalIdInsertMap.containsKey(value.getId())) {
+                    internalIdInsertMap.put(value.getId(), new HashMap<Long, TimeseriesPointPost>(10000));
+                }
+                internalIdInsertMap.get(value.getId()).put(value.getTimestamp(), value);
+            }
+        }
+
+        // Collect the groups
+        Map<String, List<TimeseriesPointPost>> result = new HashMap<>();
+        externalIdInsertMap.forEach((key, value) -> {
+            List<TimeseriesPointPost> points = new ArrayList<>(value.size());
+            dataPoints.addAll(value.values());
+            result.put(key, points);
+        });
+        internalIdInsertMap.forEach((key, value) -> {
+            List<TimeseriesPointPost> points = new ArrayList<>(value.size());
+            dataPoints.addAll(value.values());
+            result.put(String.valueOf(key), points);
+        });
+
+        return result;
     }
 
     /*
