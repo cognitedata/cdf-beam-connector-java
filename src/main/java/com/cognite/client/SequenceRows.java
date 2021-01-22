@@ -628,13 +628,15 @@ public abstract class SequenceRows extends ApiBase {
                 // If yes, add the current row list to the batch and submit it before adding the new row
                 if ((batchCellsCounter + getColumnsCount(row)) >= DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH
                         || (batchCharacterCounter + getCharacterCount(row)) >= DEFAULT_SEQUENCE_WRITE_MAX_CHARS_PER_BATCH) {
-                    // Add the current rows as a new item together with the sequence reference
-                    batch.add(sequence.toBuilder()
-                            .clearRows()
-                            .addAllRows(rowList)
-                            .build());
-                    rowList = new ArrayList<>();
-                    totalItemCounter++;
+                    if (!rowList.isEmpty()) {
+                        // Add the current rows as a new item together with the sequence reference
+                        batch.add(sequence.toBuilder()
+                                .clearRows()
+                                .addAllRows(rowList)
+                                .build());
+                        rowList = new ArrayList<>();
+                        totalItemCounter++;
+                    }
 
                     // Submit the batch
                     responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
@@ -850,18 +852,6 @@ public abstract class SequenceRows extends ApiBase {
     private SequenceBody parseSequenceBody(String json) {
         try {
             return SequenceParser.parseSequenceBody(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
-     */
-    private Map<String, Object> toRequestInsertItem(SequenceBody item) {
-        try {
-            return SequenceParser.toRequestInsertItem(item);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
