@@ -673,7 +673,7 @@ public abstract class SequenceRows extends ApiBase {
         }
 
         LOG.debug(loggingPrefix + "Finished submitting {} cells with {} characters by {} rows across {} sequence items "
-                + "in {} requests batches. Duration: {}",
+                        + "in {} requests batches. Duration: {}",
                 totalCellsCounter,
                 totalCharacterCounter,
                 totalRowCounter,
@@ -758,11 +758,11 @@ public abstract class SequenceRows extends ApiBase {
     }
 
     /**
-     * Writes default sequence headers for the input sequence list.
+     * Inserts default sequence headers for the input sequence list.
      */
     private void writeSeqHeaderForRows(List<SequenceBody> sequenceList) throws Exception {
         List<SequenceMetadata> sequenceMetadataList = new ArrayList<>(sequenceList.size());
-        sequenceList.forEach(sequenceBody -> sequenceMetadataList.add(generateDefaultSequenceMetadata(sequenceBody)));
+        sequenceList.forEach(sequenceBody -> sequenceMetadataList.add(generateDefaultSequenceMetadataInsertItem(sequenceBody)));
 
         if (!sequenceMetadataList.isEmpty()) {
             getClient().sequences().upsert(sequenceMetadataList);
@@ -772,11 +772,8 @@ public abstract class SequenceRows extends ApiBase {
     /**
      * Builds a single sequence header with default values. It relies on information completeness
      * related to the columns as these cannot be updated at a later time.
-     *
-     * @param body The {@link SequenceBody} to generate header / metadata for.
-     * @return Default header / metadata.
      */
-    private SequenceMetadata generateDefaultSequenceMetadata(SequenceBody body) {
+    private SequenceMetadata generateDefaultSequenceMetadataInsertItem(SequenceBody body) {
         Preconditions.checkArgument(body.hasExternalId(),
                 "Sequence body is not based on externalId: " + body.toString());
 
@@ -877,7 +874,7 @@ public abstract class SequenceRows extends ApiBase {
      */
     private Optional<String> getSequenceId(SequenceBody item) {
         if (item.hasExternalId()) {
-          return Optional.of(item.getExternalId().getValue());
+            return Optional.of(item.getExternalId().getValue());
         } else if (item.hasId()) {
             return Optional.of(String.valueOf(item.getId().getValue()));
         } else {
