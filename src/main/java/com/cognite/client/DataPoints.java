@@ -18,7 +18,6 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
-import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
@@ -26,9 +25,12 @@ import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH;
 
 /**
  * This class represents the Cognite timeseries api endpoint.
@@ -37,6 +39,9 @@ import java.util.stream.Collectors;
  */
 @AutoValue
 public abstract class DataPoints extends ApiBase {
+    private static final int DATA_POINTS_WRITE_MAX_ITEMS_PER_BATCH = 10_000;
+    private static final int DATA_POINTS_WRITE_MAX_POINTS_PER_BATCH = 100_000;
+    private static final int DATA_POINTS_WRITE_MAX_CHARS_PER_BATCH = 1_000_000;
 
     private static Builder builder() {
         return new com.cognite.client.AutoValue_DataPoints.Builder();
@@ -139,6 +144,96 @@ public abstract class DataPoints extends ApiBase {
         // todo: implement
 
         return Collections.emptyList();
+    }
+
+    /**
+     * Writes a (large) batch of {@link TimeseriesPointPost} by splitting it up into multiple, parallel requests.
+     *
+     * The response from each individual request is returned along with its part of the input.
+     * @param dataPoints
+     * @param dataPointsWriter
+     * @return
+     * @throws Exception
+     */
+    private Map<ResponseItems<String>, List<List<TimeseriesPointPost>>> splitAndUpsertDataPoints(Collection<TimeseriesPointPost> dataPoints,
+                                                                      ConnectorServiceV1.ItemWriter dataPointsWriter) throws Exception {
+        Instant startInstant = Instant.now();
+        String loggingPrefix = "splitAndUpsertDataPoints() - ";
+        Map<String, List<TimeseriesPointPost>> groupedPoints = groupById(dataPoints);
+
+        Map<CompletableFuture<ResponseItems<String>>, List<List<TimeseriesPointPost>>> responseMap = new HashMap<>();
+        List<List<TimeseriesPointPost>> batch = new ArrayList<>();
+        int totalItemCounter = 0;
+        int totalPointsCounter = 0;
+        int totalCharacterCounter = 0;
+        int batchItemsCounter = 0;
+        int batchPointsCounter = 0;
+        int batchCharacterCounter = 0;
+        for (Map.Entry<String, List<TimeseriesPointPost>> entry : groupedPoints.entrySet()) {
+            List<TimeseriesPointPost> pointsList = new ArrayList<>();
+            for (TimeseriesPointPost dataPoint : entry.getValue()) {
+                // Check if the new data point will make the current batch too large.
+                // If yes, submit the batch before continuing the iteration.
+                if (batchPointsCounter + 1 >= DATA_POINTS_WRITE_MAX_POINTS_PER_BATCH
+                        || batchCharacterCounter + getCharacterCount(dataPoint) >= DATA_POINTS_WRITE_MAX_CHARS_PER_BATCH) {
+                    if (pointsList.size() > 0) {
+                        // We have some points to add to the batch before submitting
+                        batch.add(pointsList);
+                        pointsList = new ArrayList<>();
+                    }
+                    responseMap.put(upsertDataPoints(batch, dataPointsWriter), batch);
+                    batch = new ArrayList<>();
+                    batchCharacterCounter = 0;
+                    batchItemsCounter = 0;
+                    batchPointsCounter = 0;
+                }
+
+                // Add the point to the points list
+                pointsList.add(dataPoint);
+                batchPointsCounter++;
+                totalPointsCounter++;
+                batchCharacterCounter += getCharacterCount(dataPoint);
+                totalCharacterCounter += getCharacterCount(dataPoint);
+            }
+            if (pointsList.size() > 0) {
+                batch.add(pointsList);
+                totalItemCounter++;
+            }
+
+            if (batchItemsCounter >= DATA_POINTS_WRITE_MAX_ITEMS_PER_BATCH) {
+                responseMap.put(upsertDataPoints(batch, dataPointsWriter), batch);
+                batch = new ArrayList<>();
+                batchCharacterCounter = 0;
+                batchItemsCounter = 0;
+                batchPointsCounter = 0;
+            }
+        }
+        if (batch.size() > 0) {
+            responseMap.put(upsertDataPoints(batch, dataPointsWriter), batch);
+        }
+
+        LOG.debug(loggingPrefix + "Finished submitting {} data points with {} characters across {} TS items "
+                        + "in {} requests batches. Duration: {}",
+                totalPointsCounter,
+                totalCharacterCounter,
+                totalItemCounter,
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()));
+
+        // Wait for all requests futures to complete
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        responseMap.keySet().forEach(future -> futureList.add(future));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the responses from the futures
+        Map<ResponseItems<String>, List<List<TimeseriesPointPost>>> resultsMap = new HashMap<>(responseMap.size());
+        for (Map.Entry<CompletableFuture<ResponseItems<String>>, List<List<TimeseriesPointPost>>> entry : responseMap.entrySet()) {
+            resultsMap.put(entry.getKey().join(), entry.getValue());
+        }
+
+        return resultsMap;
     }
 
     /**
@@ -275,10 +370,24 @@ public abstract class DataPoints extends ApiBase {
         return result;
     }
 
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
+    /**
+     * Returns the total character count. If it is a numeric data point, the count will be 0.
+     *
+     * @param point The data point to check for character count.
+     * @return The number of string characters.
      */
+    private int getCharacterCount(TimeseriesPointPost point) {
+        int count = 0;
+        if (point.getValueTypeCase() == TimeseriesPointPost.ValueTypeCase.VALUE_STRING) {
+            count = point.getValueString().length();
+        }
+        return count;
+    }
+
+    /*
+        Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+        deal very well with exceptions.
+         */
     private TimeseriesMetadata parseTimeseries(String json) {
         try {
             return TimeseriesParser.parseTimeseriesMetadata(json);

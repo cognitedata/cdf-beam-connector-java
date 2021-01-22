@@ -586,7 +586,7 @@ public abstract class SequenceRows extends ApiBase {
     }
 
     /**
-     * Post a (large) batch of {@link SequenceBody} by splitting it up into multiple parallel requests.
+     * Writes a (large) batch of {@link SequenceBody} by splitting it up into multiple parallel requests.
      *
      * The response from each individual request is returned along with its part of the input.
      *
