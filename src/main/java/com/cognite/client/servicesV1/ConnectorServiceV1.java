@@ -787,7 +787,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>
+    public ResultFutureIterator<DataPointListItem>
             readTsDatapointsProto(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read TS datapoints service.");
         this.validate();

@@ -17,19 +17,25 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.SequenceParser;
+import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.StringValue;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class represents the Cognite timeseries api endpoint.
@@ -70,64 +76,34 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
-     * Returns all {@link TimeseriesPoint} object that matches the filters set in the {@link RequestParameters}.
-     *
-     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
-     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
-     * have to stream these results into your own data structure.
-     *
-     * The timeseries are retrieved using multiple, parallel request streams towards the Cognite api. The number of
-     * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
-     *
-     * @param requestParameters the filters to use for retrieving timeseries.
-     * @return an {@link Iterator} to page through the results set.
-     * @throws Exception
-     */
-    public Iterator<List<TimeseriesPoint>> list(RequestParameters requestParameters) throws Exception {
-        List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
-
-        return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
-    }
-
-    /**
-     * Returns all {@link TimeseriesPoint} objects that matches the filters set in the {@link RequestParameters} for
-     * the specified partitions. This method is intended for advanced use cases where you need direct control over the
-     * individual partitions. For example, when using the SDK in a distributed computing environment.
+     * Returns all {@link TimeseriesPoint} objects that matches the filters set in the {@link RequestParameters}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
      * have to stream these results into your own data structure.
      *
      * @param requestParameters the filters to use for retrieving the timeseries.
-     * @param partitions the partitions to include.
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<TimeseriesPoint>> list(RequestParameters requestParameters, String... partitions) throws Exception {
-        // todo: implement
-        return new Iterator<List<TimeseriesPoint>>() {
-            @Override
-            public boolean hasNext() {
-                return false;
-            }
+    public Iterator<List<TimeseriesPoint>> retrieve(RequestParameters requestParameters) throws Exception {
+        // Build the api iterators.
+        List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
+        for (RequestParameters request : splitRetrieveRequest(requestParameters)) {
+            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
+                    .withExecutorService(getClient().getExecutorService())
+                    .withHttpClient(getClient().getHttpClient()));
+            // todo: move executor service and client spec to connector service config
+        }
 
-            @Override
-            public List<TimeseriesPoint> next() {
-                return null;
-            }
-        };
-    }
+        // The iterator that will collect results across multiple results streams
+        FanOutIterator fanOutIterator = FanOutIterator.of(iterators);
 
-    /**
-     * Retrieves timeseries by id.
-     *
-     * @param items The item(s) {@code externalId / id} to retrieve.
-     * @return The retrieved timeseries.
-     * @throws Exception
-     */
-    public List<TimeseriesPoint> retrieve(List<Item> items) throws Exception {
-        // todo: implement
-        return Collections.emptyList();
+        // Add results object parsing
+        AdapterIterator adapterIterator = AdapterIterator.of(fanOutIterator, this::parseDataPointListItem);
+
+        // Un-nest the nested results lists
+        return FlatMapIterator.of(fanOutIterator);
     }
 
     /**
@@ -147,7 +123,7 @@ public abstract class DataPoints extends ApiBase {
      * @return The upserted data points
      * @throws Exception
      */
-    public List<TimeseriesPointPost> upsert(List<TimeseriesPointPost> dataPoints) throws Exception {
+    public List<TimeseriesPointPost> upsert(@NotNull List<TimeseriesPointPost> dataPoints) throws Exception {
         Instant startInstant = Instant.now();
         String batchLogPrefix =
                 "upsert() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
@@ -283,6 +259,19 @@ public abstract class DataPoints extends ApiBase {
                 .withDeleteItemMappingFunction(this::toRequestDeleteItem);
 
         return deleteItems.deleteItems(dataPoints);
+    }
+
+    /**
+     * Split a retrieve data points request into multiple, smaller request for parallel retrieval.
+     *
+     * @param requestParameters
+     * @return
+     * @throws Exception
+     */
+    private List<RequestParameters> splitRetrieveRequest(RequestParameters requestParameters) throws Exception {
+        // todo implement
+
+        return Collections.emptyList();
     }
 
     /**
@@ -560,6 +549,18 @@ public abstract class DataPoints extends ApiBase {
     Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
     deal very well with exceptions.
      */
+    private List<TimeseriesPoint> parseDataPointListItem(DataPointListItem listItem) {
+        try {
+            return TimeseriesParser.parseDataPointListItem(listItem);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
     private Map<String, Object> toRequestDeleteItem(Item item) {
         Map<String, Object> deleteItem = new HashMap<>();
 
@@ -589,7 +590,6 @@ public abstract class DataPoints extends ApiBase {
 
     /*
     Returns the id of a time series header. It will first check for an externalId, second it will check for id.
-
     If no id is found, it returns an empty Optional.
      */
     private Optional<String> getTimeseriesId(TimeseriesMetadata item) {
@@ -604,7 +604,6 @@ public abstract class DataPoints extends ApiBase {
 
     /*
     Returns the id of a time series header. It will first check for an externalId, second it will check for id.
-
     If no id is found, it returns an empty Optional.
      */
     private Optional<String> getTimeseriesId(TimeseriesPointPost item) {
@@ -614,6 +613,64 @@ public abstract class DataPoints extends ApiBase {
             return Optional.of(String.valueOf(item.getId()));
         } else {
             return Optional.<String>empty();
+        }
+    }
+
+    /**
+     * This {@link Iterator} takes the input from an input {@link Iterator} and maps the output to a new
+     * type via a mapping {@link Function}.
+     *
+     * The input {@link Iterator} must provide a nested list ({@code List<List<T>>}) as its output.
+     * I.e. it iterates over a potentially large collection via a set of batches.
+     *
+     * @param <T> The element type of the input iterator's nested list.
+     */
+    @AutoValue
+    public abstract static class FlatMapIterator<T> implements Iterator<List<T>> {
+
+        private static <T> DataPoints.FlatMapIterator.Builder<T> builder() {
+            return new AutoValue_DataPoints_FlatMapIterator.Builder<T>();
+        }
+
+        /**
+         * Creates a new {@link DataPoints.FlatMapIterator} translating the input {@link Iterator} elements by
+         * unwrapping the nested list objects.
+         *
+         * @param inputIterator The iterator who's elements should be un-nested.
+         * @param <T> The object type of the input iterator's list.
+         * @return The iterator producing the mapped objects.
+         */
+        public static <T> DataPoints.FlatMapIterator<T> of(Iterator<List<List<T>>> inputIterator) {
+            return DataPoints.FlatMapIterator.<T>builder()
+                    .setInputIterator(inputIterator)
+                    .build();
+        }
+
+        abstract Iterator<List<List<T>>> getInputIterator();
+
+        @Override
+        public boolean hasNext() {
+            return getInputIterator().hasNext();
+        }
+
+        @Override
+        public List<T> next() throws NoSuchElementException {
+            if (!this.hasNext()) {
+                throw new NoSuchElementException("No more elements to iterate over.");
+            }
+
+            List<T> results = new ArrayList<>();
+            getInputIterator().next().stream()
+                    .forEach(list -> results.addAll(list));
+
+            return results;
+        }
+
+        @AutoValue.Builder
+        abstract static class Builder<T> {
+            abstract DataPoints.FlatMapIterator.Builder<T> setInputIterator(Iterator<List<List<T>>> value);
+
+            abstract DataPoints.FlatMapIterator<T> build();
         }
     }
 
