@@ -17,20 +17,20 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.StringValue;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-
-import static com.cognite.client.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH;
 
 /**
  * This class represents the Cognite timeseries api endpoint.
@@ -42,6 +42,14 @@ public abstract class DataPoints extends ApiBase {
     private static final int DATA_POINTS_WRITE_MAX_ITEMS_PER_BATCH = 10_000;
     private static final int DATA_POINTS_WRITE_MAX_POINTS_PER_BATCH = 100_000;
     private static final int DATA_POINTS_WRITE_MAX_CHARS_PER_BATCH = 1_000_000;
+
+    private static final TimeseriesMetadata DEFAULT_TS_METADATA = TimeseriesMetadata.newBuilder()
+            .setExternalId(StringValue.of("java_sdk_default"))
+            .setName(StringValue.of("java_sdk_default"))
+            .setDescription(StringValue.of("Default TS metadata created by the Java SDK."))
+            .setIsStep(false)
+            .setIsString(false)
+            .build();
 
     private static Builder builder() {
         return new com.cognite.client.AutoValue_DataPoints.Builder();
@@ -131,13 +139,139 @@ public abstract class DataPoints extends ApiBase {
      * If an {@link TimeseriesPoint} object already exists in Cognite Data Fusion, it will be updated. The update
      * behaviour is specified via the update mode in the {@link com.cognite.client.config.ClientConfig} settings.
      *
-     * @param timeseries The timeseries to upsert
-     * @return The upserted timeseries
+     * The algorithm runs as follows:
+     * 1. Write all {@link TimeseriesPointPost} objects to the Cognite API.
+     * 2. If one (or more) of the objects fail, check if it is because of missing time series objects--create temp headers.
+     * 3. Retry the failed {@link TimeseriesPointPost} objects.
+     *
+     * @param dataPoints The data points to upsert
+     * @return The upserted data points
      * @throws Exception
      */
-    public List<TimeseriesPoint> upsert(List<TimeseriesPoint> timeseries) throws Exception {
-        // todo: implement
-        return Collections.emptyList();
+    public List<TimeseriesPointPost> upsert(List<TimeseriesPointPost> dataPoints) throws Exception {
+        Instant startInstant = Instant.now();
+        String batchLogPrefix =
+                "upsert() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+        Preconditions.checkArgument(dataPoints.stream().allMatch(point -> getTimeseriesId(point).isPresent()),
+                batchLogPrefix + "All items must have externalId or id.");
+
+        LOG.debug(batchLogPrefix + "Received {} data points to upsert",
+                dataPoints.size());
+
+        // Should not happen--but need to guard against empty input
+        if (dataPoints.isEmpty()) {
+            LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+            return Collections.<TimeseriesPointPost>emptyList();
+        }
+
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsDatapointsProto()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
+
+        /*
+        Start the upsert:
+        1. Write all sequences to the Cognite API.
+        2. If one (or more) of the sequences fail, it is most likely because of missing headers. Add temp headers.
+        3. Retry the failed sequences
+        */
+        Map<ResponseItems<String>, List<List<TimeseriesPointPost>>> responseMap = splitAndUpsertDataPoints(dataPoints, createItemWriter);
+        LOG.debug(batchLogPrefix + "Completed create items requests for {} data points across {} batches at duration {}",
+                dataPoints.size(),
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        // Check for unsuccessful request
+        List<Item> missingItems = new ArrayList<>();
+        List<List<TimeseriesPointPost>> retryDataPointsGroups = new ArrayList<>();
+        List<ResponseItems<String>> successfulBatches = new ArrayList<>();
+        boolean requestsAreSuccessful = true;
+        for (ResponseItems<String> responseItems : responseMap.keySet()) {
+            requestsAreSuccessful = requestsAreSuccessful && responseItems.isSuccessful();
+            if (!responseItems.isSuccessful()) {
+                // Check for duplicates. Duplicates should not happen, so fire off an exception.
+                if (!responseItems.getDuplicateItems().isEmpty()) {
+                    String message = String.format(batchLogPrefix + "Duplicates reported: %d %n "
+                                    + "Response body: %s",
+                            responseItems.getDuplicateItems().size(),
+                            responseItems.getResponseBodyAsString()
+                                    .substring(0, Math.min(1000, responseItems.getResponseBodyAsString().length())));
+                    LOG.error(message);
+                    throw new Exception(message);
+                }
+
+                // Get the missing items and add the original data points to the retry list
+                missingItems.addAll(parseItems(responseItems.getMissingItems()));
+                retryDataPointsGroups.addAll(responseMap.get(responseItems));
+            } else {
+                successfulBatches.add(responseItems);
+            }
+        }
+
+        if (!requestsAreSuccessful) {
+            LOG.warn(batchLogPrefix + "Write data points failed. Most likely due to missing header / metadata. "
+                    + "Will add minimum time series metadata and retry the data points insert.");
+            LOG.info(batchLogPrefix + "Number of missing entries reported by CDF: {}", missingItems.size());
+
+            // check if the missing items are based on internal id--not supported
+            List<TimeseriesPointPost> missingTimeSeries = new ArrayList<>(missingItems.size());
+            for (Item item : missingItems) {
+                if (item.getIdTypeCase() != Item.IdTypeCase.EXTERNAL_ID) {
+                    String message = batchLogPrefix + "Sequence with internal id refers to a non-existing sequence. "
+                            + "Only externalId is supported. Item specification: " + item.toString();
+                    LOG.error(message);
+                    throw new Exception(message);
+                }
+                // add a data point representing the item (via id) so we can create a header for it later.
+                retryDataPointsGroups.stream()
+                        .filter((List<TimeseriesPointPost> collection) ->
+                                getTimeseriesId(collection.get(0)).get().equalsIgnoreCase(item.getExternalId()))
+                        .forEach(collection -> missingTimeSeries.add(collection.get(0)));
+            }
+            LOG.debug(batchLogPrefix + "All missing items are based on externalId");
+
+            // If we have missing items, add default time series header
+            if (missingTimeSeries.isEmpty()) {
+                LOG.warn(batchLogPrefix + "Write data points failed, but cannot identify missing headers");
+            } else {
+                LOG.debug(batchLogPrefix + "Start writing default time series headers for {} items",
+                        missingTimeSeries.size());
+                writeTsHeaderForPoints(missingTimeSeries);
+            }
+
+            // Retry the failed data points upsert
+            List<TimeseriesPointPost> retryPointsList = new ArrayList<>();
+            retryDataPointsGroups.stream()
+                    .forEach(group -> retryPointsList.addAll(group));
+            LOG.info(batchLogPrefix + "Finished writing default headers. Will retry {} data points. Duration {}",
+                    retryDataPointsGroups.size(),
+                    Duration.between(startInstant, Instant.now()));
+            if (retryPointsList.isEmpty()) {
+                LOG.warn(batchLogPrefix + "Write data points failed, but cannot identify data points to retry.");
+            } else {
+                Map<ResponseItems<String>, List<List<TimeseriesPointPost>>> retryResponseMap =
+                        splitAndUpsertDataPoints(retryPointsList, createItemWriter);
+
+                // Check status of the requests
+                requestsAreSuccessful = true;
+                for (ResponseItems<String> responseItems : retryResponseMap.keySet()) {
+                    requestsAreSuccessful = requestsAreSuccessful && responseItems.isSuccessful();
+                }
+            }
+        }
+
+        if (!requestsAreSuccessful) {
+            String message = batchLogPrefix + "Failed to write data points.";
+            LOG.error(message);
+            throw new Exception(message);
+        }
+        LOG.info(batchLogPrefix + "Completed writing {} data points "
+                        + "across {} requests within a duration of {}.",
+                dataPoints.size(),
+                responseMap.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        return dataPoints;
     }
 
     public List<Item> delete(List<Item> timeseries) throws Exception {
@@ -159,7 +293,7 @@ public abstract class DataPoints extends ApiBase {
                                                                       ConnectorServiceV1.ItemWriter dataPointsWriter) throws Exception {
         Instant startInstant = Instant.now();
         String loggingPrefix = "splitAndUpsertDataPoints() - ";
-        Map<String, List<TimeseriesPointPost>> groupedPoints = groupById(dataPoints);
+        Map<String, List<TimeseriesPointPost>> groupedPoints = sortAndGroupById(dataPoints);
 
         Map<CompletableFuture<ResponseItems<String>>, List<List<TimeseriesPointPost>>> responseMap = new HashMap<>();
         List<List<TimeseriesPointPost>> batch = new ArrayList<>();
@@ -321,19 +455,24 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
-     * Groups the data points into sub-collections per externalId / id.
+     * Sorts and groups the data points into sub-collections per externalId / id. The data points are sorted
+     * by timestamp, ascending order, before being grouped by time series id.
      *
      * This method will also de-duplicate the data points based on id and timestamp.
      *
      * @param dataPoints The data points to organize into sub-collections
      * @return The data points partitioned into sub-collections by externalId / id.
      */
-    private Map<String, List<TimeseriesPointPost>> groupById(Collection<TimeseriesPointPost> dataPoints) throws Exception {
+    private Map<String, List<TimeseriesPointPost>> sortAndGroupById(Collection<TimeseriesPointPost> dataPoints) throws Exception {
         String loggingPrefix = "collectById() - ";
+
+        // Sort the data points by timestamp
+        List<TimeseriesPointPost> sortedPoints = new ArrayList<>(dataPoints);
+        sortedPoints.sort(Comparator.comparingLong(point -> point.getTimestamp()));
+
         // Check all elements for id / externalId + naive deduplication
         Map<String, Map<Long, TimeseriesPointPost>> externalIdInsertMap = new HashMap<>(100);
         Map<Long, Map<Long, TimeseriesPointPost>> internalIdInsertMap = new HashMap<>(100);
-
         for (TimeseriesPointPost value : dataPoints) {
             if (value.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.IDTYPE_NOT_SET) {
                 String message = loggingPrefix + "Neither externalId nor id found. "
@@ -384,10 +523,37 @@ public abstract class DataPoints extends ApiBase {
         return count;
     }
 
+    /**
+     * Inserts default time series headers for the input data points list.
+     */
+    private void writeTsHeaderForPoints(List<TimeseriesPointPost> dataPoints) throws Exception {
+        List<TimeseriesMetadata> tsMetadataList = new ArrayList<>();
+        dataPoints.forEach(point -> tsMetadataList.add(generateDefaultTimseriesMetadata(point)));
+
+        if (!tsMetadataList.isEmpty()) {
+            getClient().timeseries().upsert(tsMetadataList);
+        }
+    }
+
+    /**
+     * Builds a single sequence header with default values. It relies on information completeness
+     * related to the columns as these cannot be updated at a later time.
+     */
+    private TimeseriesMetadata generateDefaultTimseriesMetadata(TimeseriesPointPost dataPoint) {
+        Preconditions.checkArgument(dataPoint.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.EXTERNAL_ID,
+                "Data point is not based on externalId: " + dataPoint.toString());
+
+        return DEFAULT_TS_METADATA.toBuilder()
+                .setExternalId(StringValue.of(dataPoint.getExternalId()))
+                .setIsStep(dataPoint.getIsStep())
+                .setIsString(dataPoint.getValueTypeCase() == TimeseriesPointPost.ValueTypeCase.VALUE_STRING)
+                .build();
+    }
+
     /*
-        Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-        deal very well with exceptions.
-         */
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+    */
     private TimeseriesMetadata parseTimeseries(String json) {
         try {
             return TimeseriesParser.parseTimeseriesMetadata(json);
@@ -433,7 +599,7 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /*
-    Returns the id of an event. It will first check for an externalId, second it will check for id.
+    Returns the id of a time series header. It will first check for an externalId, second it will check for id.
 
     If no id is found, it returns an empty Optional.
      */
@@ -442,6 +608,21 @@ public abstract class DataPoints extends ApiBase {
             return Optional.of(item.getExternalId().getValue());
         } else if (item.hasId()) {
             return Optional.of(String.valueOf(item.getId().getValue()));
+        } else {
+            return Optional.<String>empty();
+        }
+    }
+
+    /*
+    Returns the id of a time series header. It will first check for an externalId, second it will check for id.
+
+    If no id is found, it returns an empty Optional.
+     */
+    private Optional<String> getTimeseriesId(TimeseriesPointPost item) {
+        if (item.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.EXTERNAL_ID) {
+            return Optional.of(item.getExternalId());
+        } else if (item.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.ID) {
+            return Optional.of(String.valueOf(item.getId()));
         } else {
             return Optional.<String>empty();
         }

@@ -221,7 +221,7 @@ public abstract class SequenceRows extends ApiBase {
 
         // Check for unsuccessful request
         List<Item> missingItems = new ArrayList<>();
-        List<SequenceBody> retrySequenceBodyList = new ArrayList<>(sequenceBodies);
+        List<SequenceBody> retrySequenceBodyList = new ArrayList<>(sequenceBodies.size());
         List<ResponseItems<String>> successfulBatches = new ArrayList<>(sequenceBodies.size());
         boolean requestsAreSuccessful = true;
         for (ResponseItems<String> responseItems : responseMap.keySet()) {
@@ -279,14 +279,19 @@ public abstract class SequenceRows extends ApiBase {
             // Retry the failed sequence body upsert
             LOG.debug(batchLogPrefix + "Finished writing default headers. Will retry {} sequence body items.",
                     retrySequenceBodyList.size());
-            Map<ResponseItems<String>, List<SequenceBody>> retryResponseMap =
-                    splitAndUpsertSeqBody(retrySequenceBodyList, createItemWriter);
+            if (retrySequenceBodyList.isEmpty()) {
+                LOG.warn(batchLogPrefix + "Write sequences rows failed, but cannot identify sequences to retry.");
+            } else {
+                Map<ResponseItems<String>, List<SequenceBody>> retryResponseMap =
+                        splitAndUpsertSeqBody(retrySequenceBodyList, createItemWriter);
 
-            // Check status of the requests
-            requestsAreSuccessful = true;
-            for (ResponseItems<String> responseItems : retryResponseMap.keySet()) {
-                requestsAreSuccessful = requestsAreSuccessful && responseItems.isSuccessful();
+                // Check status of the requests
+                requestsAreSuccessful = true;
+                for (ResponseItems<String> responseItems : retryResponseMap.keySet()) {
+                    requestsAreSuccessful = requestsAreSuccessful && responseItems.isSuccessful();
+                }
             }
+
         }
 
         if (!requestsAreSuccessful) {
