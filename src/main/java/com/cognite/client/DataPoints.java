@@ -20,7 +20,6 @@ import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
@@ -274,10 +273,16 @@ public abstract class DataPoints extends ApiBase {
         return dataPoints;
     }
 
-    public List<Item> delete(List<Item> timeseries) throws Exception {
-        // todo: implement
+    public List<Item> delete(List<Item> dataPoints) throws Exception {
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteDatapoints()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
 
-        return Collections.emptyList();
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+                .withDeleteItemMappingFunction(this::toRequestDeleteItem);
+
+        return deleteItems.deleteItems(dataPoints);
     }
 
     /**
@@ -528,7 +533,7 @@ public abstract class DataPoints extends ApiBase {
      */
     private void writeTsHeaderForPoints(List<TimeseriesPointPost> dataPoints) throws Exception {
         List<TimeseriesMetadata> tsMetadataList = new ArrayList<>();
-        dataPoints.forEach(point -> tsMetadataList.add(generateDefaultTimseriesMetadata(point)));
+        dataPoints.forEach(point -> tsMetadataList.add(generateDefaultTimeseriesMetadata(point)));
 
         if (!tsMetadataList.isEmpty()) {
             getClient().timeseries().upsert(tsMetadataList);
@@ -539,7 +544,7 @@ public abstract class DataPoints extends ApiBase {
      * Builds a single sequence header with default values. It relies on information completeness
      * related to the columns as these cannot be updated at a later time.
      */
-    private TimeseriesMetadata generateDefaultTimseriesMetadata(TimeseriesPointPost dataPoint) {
+    private TimeseriesMetadata generateDefaultTimeseriesMetadata(TimeseriesPointPost dataPoint) {
         Preconditions.checkArgument(dataPoint.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.EXTERNAL_ID,
                 "Data point is not based on externalId: " + dataPoint.toString());
 
@@ -550,52 +555,36 @@ public abstract class DataPoints extends ApiBase {
                 .build();
     }
 
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
-    */
-    private TimeseriesMetadata parseTimeseries(String json) {
-        try {
-            return TimeseriesParser.parseTimeseriesMetadata(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     /*
     Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
     deal very well with exceptions.
      */
-    private Map<String, Object> toRequestInsertItem(TimeseriesMetadata item) {
-        try {
-            return TimeseriesParser.toRequestInsertItem(item);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private Map<String, Object> toRequestDeleteItem(Item item) {
+        Map<String, Object> deleteItem = new HashMap<>();
 
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
-     */
-    private Map<String, Object> toRequestUpdateItem(TimeseriesMetadata item) {
-        try {
-            return TimeseriesParser.toRequestUpdateItem(item);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        // Add the id
+        if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+            deleteItem.put("externalId", item.getExternalId());
+        } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+            deleteItem.put("id", item.getId());
+        } else {
+            throw new RuntimeException("Item contains neither externalId nor id.");
         }
-    }
 
-    /*
-    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
-    deal very well with exceptions.
-     */
-    private Map<String, Object> toRequestReplaceItem(TimeseriesMetadata item) {
-        try {
-            return TimeseriesParser.toRequestReplaceItem(item);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        // Add the time window
+        if (item.hasInclusiveBegin()) {
+            deleteItem.put("inclusiveBegin", item.getInclusiveBegin().getValue());
+        } else {
+            // Add a default start value
+            deleteItem.put("inclusiveBegin", 0L);
         }
+
+        if (item.hasExclusiveEnd()) {
+            deleteItem.put("exclusiveEnd", item.getExclusiveEnd().getValue());
+        }
+
+        return deleteItem;
     }
 
     /*

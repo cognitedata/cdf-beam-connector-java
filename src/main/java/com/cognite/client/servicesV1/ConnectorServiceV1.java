@@ -856,6 +856,30 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Delete data points in Cognite.
+     *
+     * Calling this method will return an <code>ItemWriter</code>
+     * @return
+     */
+    public ItemWriter deleteDatapoints() {
+        LOG.debug(loggingPrefix + "Initiating delete data points service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("timeseries/data/delete")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
      * Fetch 3d models from Cognite.
      *
      * @param queryParameters The parameters for the events query.

@@ -20,12 +20,14 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.ResourceType;
+import com.cognite.client.dto.SequenceBody;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.AggregateParser;
 import com.cognite.client.servicesV1.parser.ItemParser;
+import com.cognite.client.servicesV1.parser.SequenceParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
@@ -1576,7 +1578,23 @@ abstract class ApiBase {
 
         private static Builder builder() {
             return new AutoValue_ApiBase_DeleteItems.Builder()
-                    .setMaxBatchSize(DEFAULT_MAX_BATCH_SIZE);
+                    .setMaxBatchSize(DEFAULT_MAX_BATCH_SIZE)
+                    .setDeleteItemMappingFunction(DeleteItems::toDeleteItem);
+        }
+
+        /**
+         * The default function for translating an Item to a delete items object.
+         * @param item
+         * @return
+         */
+        private static Map<String, Object> toDeleteItem(Item item) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                return ImmutableMap.of("externalId", item.getExternalId());
+            } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+                return ImmutableMap.of("id", item.getId());
+            } else {
+                throw new RuntimeException("Item contains neither externalId nor id.");
+            }
         }
 
         /**
@@ -1598,6 +1616,7 @@ abstract class ApiBase {
 
         abstract int getMaxBatchSize();
         abstract ProjectConfig getProjectConfig();
+        abstract Function<Item, Map<String, Object>> getDeleteItemMappingFunction();
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
         abstract ImmutableMap<String, Object> getParameters();
 
@@ -1621,6 +1640,19 @@ abstract class ApiBase {
          */
         public DeleteItems addParameter(String key, Object value) {
             return toBuilder().addParameter(key, value).build();
+        }
+
+        /**
+         * Sets the delete item mapping function.
+         *
+         * This function builds the delete item object based on the input {@link Item}. The default function
+         * builds delete items based on {@code externalId / id}.
+         *
+         * @param mappingFunction The mapping function
+         * @return The {@link DeleteItems} object with the configuration applied.
+         */
+        public DeleteItems withDeleteItemMappingFunction(Function<Item, Map<String, Object>> mappingFunction) {
+            return toBuilder().setDeleteItemMappingFunction(mappingFunction).build();
         }
 
         /**
@@ -1799,11 +1831,7 @@ abstract class ApiBase {
         private CompletableFuture<ResponseItems<String>> deleteBatch(List<Item> items) throws Exception {
             ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
             for (Item item : items) {
-                if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
-                    insertItemsBuilder.add(ImmutableMap.of("externalId", item.getExternalId()));
-                } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
-                    insertItemsBuilder.add(ImmutableMap.of("id", item.getId()));
-                }
+                insertItemsBuilder.add(getDeleteItemMappingFunction().apply(item));
             }
             RequestParameters writeItemsRequest = RequestParameters.create()
                     .withItems(insertItemsBuilder.build())
@@ -1872,6 +1900,7 @@ abstract class ApiBase {
         abstract static class Builder {
             abstract Builder setMaxBatchSize(int value);
             abstract Builder setProjectConfig(ProjectConfig value);
+            abstract Builder setDeleteItemMappingFunction(Function<Item, Map<String, Object>> value);
             abstract Builder setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder setParameters(Map<String, Object> value);
 
