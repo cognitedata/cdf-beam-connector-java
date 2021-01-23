@@ -103,7 +103,7 @@ public abstract class DataPoints extends ApiBase {
         AdapterIterator adapterIterator = AdapterIterator.of(fanOutIterator, this::parseDataPointListItem);
 
         // Un-nest the nested results lists
-        return FlatMapIterator.of(fanOutIterator);
+        return FlatMapIterator.of(adapterIterator);
     }
 
     /**
