@@ -17,36 +17,51 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.SequenceParser;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
+import com.cognite.client.servicesV1.util.TSIterationUtilities;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.Int64Value;
 import com.google.protobuf.StringValue;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * This class represents the Cognite timeseries api endpoint.
  *
- * It provides methods for reading and writing {@link TimeseriesMetadata}.
+ * It provides methods for reading {@link TimeseriesPoint} and writing {@link TimeseriesPointPost}.
  */
 @AutoValue
 public abstract class DataPoints extends ApiBase {
-    private static final int DATA_POINTS_WRITE_MAX_ITEMS_PER_BATCH = 10_000;
-    private static final int DATA_POINTS_WRITE_MAX_POINTS_PER_BATCH = 100_000;
-    private static final int DATA_POINTS_WRITE_MAX_CHARS_PER_BATCH = 1_000_000;
+    // Write request batch limits
+    private static final int DATA_POINTS_WRITE_MAX_ITEMS_PER_REQUEST = 10_000;
+    private static final int DATA_POINTS_WRITE_MAX_POINTS_PER_REQUEST = 100_000;
+    private static final int DATA_POINTS_WRITE_MAX_CHARS_PER_REQUEST = 1_000_000;
+
+    // Read request limits
+    private static final int MAX_RAW_POINTS = 100000;
+    private static final int MAX_AGG_POINTS = 10000;
+    //private static final int PARALLELIZATION = 4;
+    private static final int MAX_ITEMS_PER_REQUEST = 20;
+
+    // Request parameter keys
+    private static final String START_KEY = "start";
+    private static final String END_KEY = "end";
+    private static final String GRANULARITY_KEY = "granularity";
+    private static final String AGGREGATES_KEY = "aggregates";
 
     private static final TimeseriesMetadata DEFAULT_TS_METADATA = TimeseriesMetadata.newBuilder()
             .setExternalId(StringValue.of("java_sdk_default"))
@@ -78,6 +93,11 @@ public abstract class DataPoints extends ApiBase {
     /**
      * Returns all {@link TimeseriesPoint} objects that matches the filters set in the {@link RequestParameters}.
      *
+     * Please note that only root-level filter and aggregate specifications are supported. That is, per-item
+     * specifications of time filters and/or aggregations are not supported. If you need to apply different time
+     * and/or aggregation specifications, then these should be submitted in separate requests--each using
+     * root-level specifications.
+     *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
      * have to stream these results into your own data structure.
@@ -87,6 +107,20 @@ public abstract class DataPoints extends ApiBase {
      * @throws Exception
      */
     public Iterator<List<TimeseriesPoint>> retrieve(RequestParameters requestParameters) throws Exception {
+        String loggingPrefix = "retrieve() -";
+        if (requestParameters.getItems().isEmpty()) {
+            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
+            return Collections.emptyIterator();
+        }
+
+        // Check that we have item ids and don't have per-item filter specifications
+        for (Map<String, Object> item : requestParameters.getItems()) {
+            Preconditions.checkArgument(itemHasId(item),
+                    loggingPrefix + "All items must contain externalId or id.");
+            Preconditions.checkArgument(!itemHasQuerySpecification(item),
+                    loggingPrefix + "Per item query specification is not supported.");
+        }
+
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
         for (RequestParameters request : splitRetrieveRequest(requestParameters)) {
@@ -104,6 +138,34 @@ public abstract class DataPoints extends ApiBase {
 
         // Un-nest the nested results lists
         return FlatMapIterator.of(adapterIterator);
+    }
+
+    /**
+     * Returns all {@link TimeseriesPoint} objects that matches the item specifications (externalId / id).
+     *
+     * the results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into your own data structure.
+     * @param items
+     * @return
+     * @throws Exception
+     */
+    public Iterator<List<TimeseriesPoint>> retrieveComplete(List<Item> items) throws Exception {
+        String loggingPrefix = "retrieveComplete() - ";
+        List<Map<String, Object>> itemsList = new ArrayList<>();
+        for (Item item : items) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                itemsList.add(ImmutableMap.of("externalId", item.getExternalId()));
+            } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+                itemsList.add(ImmutableMap.of("id", item.getId()));
+            } else {
+                throw new Exception(String.format(loggingPrefix + "Item does not contain externalId nor id: %s"
+                        , item.toString()));
+            }
+        }
+
+        return this.retrieve(RequestParameters.create()
+                .withItems(itemsList));
     }
 
     /**
@@ -264,14 +326,151 @@ public abstract class DataPoints extends ApiBase {
     /**
      * Split a retrieve data points request into multiple, smaller request for parallel retrieval.
      *
+     * The splitting performed along two dimensions: 1) the time window and 2) time series items.
+     *
+     * First the algorithm looks at the total number of items and splits them based on a target
+     * of 20 items per request. Depending on the effect of this split, the algorithm looks at
+     * further splitting per time window.
+     *
+     *
+     *
      * @param requestParameters
      * @return
      * @throws Exception
      */
     private List<RequestParameters> splitRetrieveRequest(RequestParameters requestParameters) throws Exception {
-        // todo implement
+        String loggingPrefix = "splitRetrieveRequest - ";
+        List<RequestParameters> splitsByItems = new ArrayList<>();
 
-        return Collections.emptyList();
+        // First, perform a split by items.
+        if (requestParameters.getItems().size() > MAX_ITEMS_PER_REQUEST) {
+            List<Map<String, Object>> itemsBatch = new ArrayList();
+            int batchCounter = 0;
+            for (ImmutableMap<String, Object> item : requestParameters.getItems()) {
+                itemsBatch.add(item);
+                batchCounter++;
+
+                if (batchCounter >= MAX_ITEMS_PER_REQUEST) {
+                    splitsByItems.add(requestParameters.withItems(itemsBatch));
+                    itemsBatch = new ArrayList<>();
+                    batchCounter = 0;
+                }
+            }
+            if (itemsBatch.size() > 0) {
+                splitsByItems.add(requestParameters.withItems(itemsBatch));
+            }
+            LOG.info(loggingPrefix + "Split the original {} request items across {} requests.",
+                    requestParameters.getItems().size(),
+                    splitsByItems.size());
+        } else {
+            // No need to split by items. Just replicate the original request.
+            splitsByItems.add(requestParameters);
+        }
+
+        // If the split by items will utilize min 50% of available resources (read partitions and workers)
+        // then we don't need to split further by time window.
+        int capacity = Math.min(getClient().getClientConfig().getNoWorkers(),
+                getClient().getClientConfig().getNoListPartitions());
+        if (splitsByItems.size() / (long) capacity > 0.5) {
+            LOG.info(loggingPrefix + "Splitting by items into {} requests offers good utilization of the available {} "
+                    + "capacity units. Will not split further (by time window).",
+                    splitsByItems.size(),
+                    capacity);
+            return splitsByItems;
+        }
+
+        // Split further by time windows.
+        // Establish the request time window
+        long startTimestamp = 0L;
+        long endTimestamp = Instant.now().truncatedTo(ChronoUnit.SECONDS).toEpochMilli();
+
+        LOG.debug(loggingPrefix + "Get end time from request attribute {}: [{}]",
+                END_KEY,
+                requestParameters.getRequestParameters().get(END_KEY));
+        Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(requestParameters);
+        if (requestEndTime.isPresent()) {
+            endTimestamp = requestEndTime.get();
+        }
+
+        LOG.debug(loggingPrefix + "Get start time from request attribute {}: [{}]",
+                START_KEY,
+                requestParameters.getRequestParameters().get(START_KEY));
+        Optional<Long> requestStartTime = TSIterationUtilities.getStartAsMillis(requestParameters);
+        if (requestStartTime.isPresent()) {
+            startTimestamp = requestStartTime.get();
+        }
+
+        if (startTimestamp >= endTimestamp) {
+            LOG.error(loggingPrefix + "Request start time > end time. Request parameters: {}", requestParameters);
+            throw new Exception(loggingPrefix + "Request start time >= end time.");
+        }
+
+        //
+        int noTsItems = splitsByItems.get(0).getItems().size();  // get the no items after the item split
+        Duration duration = Duration.ofMillis(endTimestamp - startTimestamp);
+        // Minimum duration is set based on a TS with 1Hz frequency and 20 iterations.
+        final Duration SPLIT_LOWER_LIMIT = Duration.ofHours(Math.max(12, (240 / noTsItems)));
+
+        LOG.debug(loggingPrefix + "Splitting request with {} items, a duration of {} and a min time window of {}.",
+                noTsItems,
+                duration.toString(),
+                SPLIT_LOWER_LIMIT.toString());
+
+        if (duration.compareTo(SPLIT_LOWER_LIMIT) < 0) {
+            // The restriction range is too small to split.
+            LOG.info(loggingPrefix + "The request's time window is too small to split. Will just keep it as it is.");
+            return splitsByItems;
+        }
+
+        List<RequestParameters> splitByTimeWindow = new ArrayList<>();
+
+        if (requestParameters.getRequestParameters().containsKey(GRANULARITY_KEY)) {
+            // Run the aggregate split
+            return splitsByItems; // no splits
+        } else {
+            // We have raw data points. Check the max frequency
+            double maxFrequency = getMaxFrequency(requestParameters,
+                    Instant.ofEpochMilli(startTimestamp),
+                    Instant.ofEpochMilli(endTimestamp));
+            if (maxFrequency == 0d) {
+                // no datapoints in the range--don't split it
+                LOG.warn(loggingPrefix + "Unable to build statistics for the restriction / range. No counts. "
+                        + "Will keep the original range/restriction.");
+                return splitsByItems;
+            }
+
+            // Calculate the number of splits by time window.
+            long maxSplitsByCapacity = Math.floorDiv(capacity, splitsByItems.size()); // may result in zero
+            long estimatedNoDataPoints = (long) maxFrequency * noTsItems * Duration.ofMillis(endTimestamp - startTimestamp).getSeconds();
+            long minDataPointsPerRequest = 100_000 * 10L;
+            long maxSplitsByFrequency = Math.floorDiv(estimatedNoDataPoints, minDataPointsPerRequest); // may result in zero
+            long targetNoSplits = Math.min(maxSplitsByCapacity, maxSplitsByFrequency);
+
+            if (targetNoSplits <= 1) {
+                // no need to split further
+                return splitsByItems;
+            }
+            long splitDelta = Math.floorDiv(endTimestamp - startTimestamp, targetNoSplits);
+            long previousEnd = startTimestamp;
+            for (int i = 0; i < targetNoSplits; i++) {
+                long deltaStart = previousEnd;
+                long deltaEnd = deltaStart + splitDelta;
+                if (i == targetNoSplits - 1) {
+                    // We are on the final iteration, so make sure we include the rest of the time range.
+                    deltaEnd = endTimestamp;
+                }
+                for (RequestParameters request : splitsByItems) {
+                    LOG.debug(loggingPrefix + "Adding time based split with start {} and end {}",
+                            deltaStart,
+                            deltaEnd);
+                    splitByTimeWindow.add(request
+                            .withRootParameter(START_KEY, deltaStart)
+                            .withRootParameter(END_KEY, deltaEnd));
+                }
+            }
+        }
+
+        return splitByTimeWindow;
     }
 
     /**
@@ -302,8 +501,8 @@ public abstract class DataPoints extends ApiBase {
             for (TimeseriesPointPost dataPoint : entry.getValue()) {
                 // Check if the new data point will make the current batch too large.
                 // If yes, submit the batch before continuing the iteration.
-                if (batchPointsCounter + 1 >= DATA_POINTS_WRITE_MAX_POINTS_PER_BATCH
-                        || batchCharacterCounter + getCharacterCount(dataPoint) >= DATA_POINTS_WRITE_MAX_CHARS_PER_BATCH) {
+                if (batchPointsCounter + 1 >= DATA_POINTS_WRITE_MAX_POINTS_PER_REQUEST
+                        || batchCharacterCounter + getCharacterCount(dataPoint) >= DATA_POINTS_WRITE_MAX_CHARS_PER_REQUEST) {
                     if (pointsList.size() > 0) {
                         // We have some points to add to the batch before submitting
                         batch.add(pointsList);
@@ -328,7 +527,7 @@ public abstract class DataPoints extends ApiBase {
                 totalItemCounter++;
             }
 
-            if (batchItemsCounter >= DATA_POINTS_WRITE_MAX_ITEMS_PER_BATCH) {
+            if (batchItemsCounter >= DATA_POINTS_WRITE_MAX_ITEMS_PER_REQUEST) {
                 responseMap.put(upsertDataPoints(batch, dataPointsWriter), batch);
                 batch = new ArrayList<>();
                 batchCharacterCounter = 0;
@@ -544,6 +743,183 @@ public abstract class DataPoints extends ApiBase {
                 .build();
     }
 
+    /**
+     * Check if a time series request item contains query specifications other than {@code externalId / id}.
+     *
+     * Per-item query specification is not supported for retrieve / read requests.
+     * @param item The item to check for query specification.
+     * @return true if a specification is detected, false if the item does not carry a specification.
+     */
+    private boolean itemHasQuerySpecification(Map<String, Object> item) {
+        boolean hasSpecification = false;
+        if (item.containsKey("granularity")
+                || item.containsKey("aggregates")
+                || item.containsKey("start")
+                || item.containsKey("end")
+                || item.containsKey("limit")
+                || item.containsKey("includeOutsidePoints")) {
+            hasSpecification = true;
+        }
+        return hasSpecification;
+    }
+
+    /**
+     * Check if a time series request item contains an id specification ({@code externalId / id}).
+     *
+     * @param item The item to check for id.
+     * @return true if an id is found, false if not.
+     */
+    private boolean itemHasId(Map<String, Object> item) {
+        boolean hasId = false;
+        if (item.containsKey("id")
+                || item.containsKey("externalId")) {
+            hasId = true;
+        }
+        return hasId;
+    }
+
+    /**
+     * Calculate the max frequency of the TS items in the query.
+     *
+     * @param requestParameters
+     * @param startOfWindow
+     * @param endOfWindow
+     * @return
+     * @throws Exception
+     */
+    private double getMaxFrequency(RequestParameters requestParameters,
+                                   Instant startOfWindow,
+                                   Instant endOfWindow) throws Exception {
+        final String loggingPrefix = "getMaxFrequency() - ";
+        final Duration MAX_STATS_DURATION = Duration.ofDays(10);
+        long from = startOfWindow.toEpochMilli();
+        long to = endOfWindow.toEpochMilli();
+
+        double frequency = 0d;
+
+        Duration duration = Duration.ofMillis(to - from);
+        if (duration.compareTo(MAX_STATS_DURATION) > 0) {
+            // we have a really long range, shorten it for the statistics request.
+            from = to - MAX_STATS_DURATION.toMillis();
+            duration = Duration.ofMillis(to - from);
+        }
+
+        if (duration.compareTo(Duration.ofDays(1)) > 0) {
+            // build stats from days granularity
+            LOG.info(loggingPrefix + "Calculating TS stats based on day granularity, using a time window "
+                            + "from [{}] to [{}]",
+                    Instant.ofEpochMilli(from).toString(),
+                    Instant.ofEpochMilli(to).toString());
+
+            RequestParameters statsQuery = requestParameters
+                    .withRootParameter(START_KEY, from)
+                    .withRootParameter(END_KEY, to)
+                    .withRootParameter(GRANULARITY_KEY, "d")
+                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"));
+
+            double averageCount = this.getMaxAverageCount(statsQuery);
+            frequency = averageCount / (Duration.ofDays(1).toMinutes() * 60);
+            LOG.info(loggingPrefix + "Average TS count per day: {}, frequency: {}", averageCount, frequency);
+
+        } else {
+            // build stats from hour granularity
+            LOG.info(loggingPrefix + "Calculating TS stats based on hour granularity, using a time window "
+                            + "from [{}] to [{}]",
+                    Instant.ofEpochMilli(from).toString(),
+                    Instant.ofEpochMilli(to).toString());
+
+            RequestParameters statsQuery = requestParameters
+                    .withRootParameter(START_KEY, from)
+                    .withRootParameter(END_KEY, to)
+                    .withRootParameter(GRANULARITY_KEY, "h")
+                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"));
+
+            double averageCount = this.getMaxAverageCount(statsQuery);
+            frequency = averageCount / (Duration.ofHours(1).toMinutes() * 60);
+            LOG.info(loggingPrefix + "Average TS count per hour: {}, frequency: {}", averageCount, frequency);
+        }
+
+        return frequency;
+    }
+
+    /**
+     * Gets the max average TS count from a query.
+     * @param query
+     * @return
+     * @throws Exception
+     */
+    private double getMaxAverageCount(RequestParameters query) throws Exception {
+        String loggingPrefix = "getMaxAverageCount() - ";
+        Preconditions.checkArgument(query.getRequestParameters().containsKey(AGGREGATES_KEY)
+                        && query.getRequestParameters().get(AGGREGATES_KEY) instanceof List
+                        && ((List) query.getRequestParameters().get(AGGREGATES_KEY)).contains("count"),
+                "The query must specify the count aggregate.");
+
+        double average = 0d;
+        try {
+            Iterator<CompletableFuture<ResponseItems<DataPointListItem>>> results =
+                    getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(query));
+            CompletableFuture<ResponseItems<DataPointListItem>> responseItemsFuture;
+            ResponseItems<DataPointListItem> responseItems;
+
+            while (results.hasNext()) {
+                responseItemsFuture = results.next();
+                responseItems = responseItemsFuture.join();
+
+                if (!responseItems.isSuccessful()) {
+                    // something went wrong with the request
+                    String message = loggingPrefix + "Error while iterating through the results from Fusion: "
+                            + responseItems.getResponseBodyAsString();
+                    LOG.error(message);
+                    throw new Exception(message);
+                }
+
+                for (DataPointListItem item : responseItems.getResultsItems()) {
+                    LOG.debug(loggingPrefix + "Item in results list, Ts id: {}", item.getId());
+                    List<TimeseriesPoint> points = TimeseriesParser.parseDataPointListItem(item);
+                    LOG.info(loggingPrefix + "Number of datapoints in TS list item: {}", points.size());
+
+                    double candidate = points.stream()
+                            .map(TimeseriesPoint::getValueAggregates)
+                            .map(TimeseriesPoint.Aggregates::getCount)
+                            .mapToDouble(Int64Value::getValue)
+                            .average()
+                            .orElse(0d);
+
+                    if (candidate > average) average = candidate;
+                }
+            }
+        } catch (Exception e) {
+            LOG.error(loggingPrefix + "Error reading results from the Cognite connector.", e);
+            throw e;
+        }
+        return average;
+    }
+
+    /**
+     * Builds a request object with the specified start and end times.
+     *
+     * @param requestParameters
+     * @param start
+     * @param end
+     * @return
+     */
+    private RequestParameters buildRequestParameters(RequestParameters requestParameters,
+                                                     long start,
+                                                     long end) {
+        String loggingPrefix = "buildRequestParameters() - ";
+        Preconditions.checkArgument(start < end, "Trying to build request with start >= end.");
+        Preconditions.checkArgument(
+                ((Long) requestParameters.getRequestParameters().getOrDefault(START_KEY, 0L)) <= start,
+                "Trying to build request with start < original start time.");
+        Preconditions.checkArgument(
+                ((Long) requestParameters.getRequestParameters().getOrDefault(END_KEY, Long.MAX_VALUE)) >= end,
+                "Trying to build request with end > original end time.");
+        LOG.debug(loggingPrefix + "Building RequestParameters with start = {} and end = {}", start, end);
+        return requestParameters
+                .withRootParameter(START_KEY, start)
+                .withRootParameter(END_KEY, end);
+    }
 
     /*
     Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
