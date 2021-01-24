@@ -3,9 +3,7 @@ package com.cognite.client;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.config.UpsertMode;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.TimeseriesMetadata;
-import com.cognite.client.dto.Item;
+import com.cognite.client.dto.*;
 import com.cognite.client.util.DataGenerator;
 import com.google.protobuf.StringValue;
 import org.junit.jupiter.api.Tag;
@@ -82,11 +80,97 @@ class TimeseriesTest {
 
     @Test
     @Tag("remoteCDP")
-    void writeEditAndDeleteTimeseries() {
+    void writeReadAndDeleteTimeseriesDataPoints() {
         Instant startInstant = Instant.now();
+        final int noTsHeaders = 30;
+        final int noTsPoints = 300000;
+        final double tsPointsFrequency = 1d;
         ClientConfig config = ClientConfig.create()
                 .withNoWorkers(1)
                 .withNoListPartitions(1);
+        String loggingPrefix = "UnitTest - writeReadAndDeleteTimeseriesDataPoints() -";
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+        LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
+        CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
+                .withBaseUrl(TestConfigProvider.getHost())
+                //.withClientConfig(config)
+                ;
+        LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
+                Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+        try {
+            LOG.info(loggingPrefix + "Start upserting timeseries.");
+            List<TimeseriesMetadata> upsertTimeseriesList = DataGenerator.generateTsHeaderObjects(noTsHeaders);
+            client.timeseries().upsert(upsertTimeseriesList);
+            LOG.info(loggingPrefix + "Finished upserting timeseries. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            Thread.sleep(5000); // wait for eventual consistency
+            LOG.info(loggingPrefix + "Start upserting data points.");
+            List<TimeseriesPointPost> upsertDataPointsList = DataGenerator.generateTsDatapointsObjects(
+                    noTsPoints,
+                    tsPointsFrequency,
+                    upsertTimeseriesList.stream()
+                            .map(header -> header.getExternalId().getValue())
+                            .collect(Collectors.toList()));
+            client.timeseries().dataPoints().upsert(upsertDataPointsList);
+            LOG.info(loggingPrefix + "Finished upserting data points. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            Thread.sleep(5000); // wait for eventual consistency
+
+            LOG.info(loggingPrefix + "Start reading timeseries.");
+            List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();
+            client.timeseries()
+                    .list(RequestParameters.create()
+                            .withFilterMetadataParameter("source", DataGenerator.sourceValue))
+                    .forEachRemaining(timeseries -> listTimeseriesResults.addAll(timeseries));
+            LOG.info(loggingPrefix + "Finished reading timeseries. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "Start reading data points.");
+            List<Item> listDataPointsItems = upsertTimeseriesList.stream()
+                    .map(header -> Item.newBuilder()
+                            .setExternalId(header.getExternalId().getValue())
+                            .build())
+                    .collect(Collectors.toList());
+            List<TimeseriesPoint> readDataPointsResults = new ArrayList<>();
+            client.timeseries().dataPoints().retrieveComplete(listDataPointsItems)
+                    .forEachRemaining(timeseries -> readDataPointsResults.addAll(timeseries));
+            LOG.info(loggingPrefix + "Finished reading data points. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "Start deleting timeseries.");
+            List<Item> deleteItemsInput = new ArrayList<>();
+            listTimeseriesResults.stream()
+                    .map(timeseries -> Item.newBuilder()
+                            .setExternalId(timeseries.getExternalId().getValue())
+                            .build())
+                    .forEach(item -> deleteItemsInput.add(item));
+
+            List<Item> deleteItemsResults = client.timeseries().delete(deleteItemsInput);
+            LOG.info(loggingPrefix + "Finished deleting timeseries. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            assertEquals(upsertDataPointsList.size(), readDataPointsResults.size());
+            assertEquals(upsertTimeseriesList.size(), listTimeseriesResults.size());
+            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+        } catch (Exception e) {
+            LOG.error(e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    @Tag("remoteCDP")
+    void writeEditAndDeleteTimeseries() {
+        Instant startInstant = Instant.now();
         String loggingPrefix = "UnitTest - writeEditAndDeleteTimeseries() -";
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
         CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())

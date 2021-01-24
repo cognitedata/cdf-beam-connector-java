@@ -18,6 +18,7 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.*;
+import com.cognite.client.servicesV1.ConnectorConstants;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
@@ -31,6 +32,8 @@ import com.google.protobuf.Int64Value;
 import com.google.protobuf.StringValue;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -74,6 +77,8 @@ public abstract class DataPoints extends ApiBase {
     private static Builder builder() {
         return new com.cognite.client.AutoValue_DataPoints.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(DataPoints.class);
 
     /**
      * Construct a new {@link DataPoints} object using the provided configuration.
@@ -153,6 +158,7 @@ public abstract class DataPoints extends ApiBase {
     public Iterator<List<TimeseriesPoint>> retrieveComplete(List<Item> items) throws Exception {
         String loggingPrefix = "retrieveComplete() - ";
         List<Map<String, Object>> itemsList = new ArrayList<>();
+        long endTimestamp = Instant.now().toEpochMilli();
         for (Item item : items) {
             if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                 itemsList.add(ImmutableMap.of("externalId", item.getExternalId()));
@@ -165,7 +171,10 @@ public abstract class DataPoints extends ApiBase {
         }
 
         return this.retrieve(RequestParameters.create()
-                .withItems(itemsList));
+                .withItems(itemsList)
+                .withRootParameter(START_KEY, 0L)
+                .withRootParameter(END_KEY, endTimestamp)
+                .withRootParameter("limit", ConnectorConstants.DEFAULT_MAX_BATCH_SIZE_TS_DATAPOINTS));
     }
 
     /**
@@ -486,6 +495,8 @@ public abstract class DataPoints extends ApiBase {
                                                                       ConnectorServiceV1.ItemWriter dataPointsWriter) throws Exception {
         Instant startInstant = Instant.now();
         String loggingPrefix = "splitAndUpsertDataPoints() - ";
+        LOG.debug(loggingPrefix + "Received {} data points to split and upsert.",
+                dataPoints.size());
         Map<String, List<TimeseriesPointPost>> groupedPoints = sortAndGroupById(dataPoints);
 
         Map<CompletableFuture<ResponseItems<String>>, List<List<TimeseriesPointPost>>> responseMap = new HashMap<>();
@@ -658,6 +669,8 @@ public abstract class DataPoints extends ApiBase {
      */
     private Map<String, List<TimeseriesPointPost>> sortAndGroupById(Collection<TimeseriesPointPost> dataPoints) throws Exception {
         String loggingPrefix = "collectById() - ";
+        LOG.debug(loggingPrefix + "Received {} data points to sort and group.",
+                dataPoints.size());
 
         // Sort the data points by timestamp
         List<TimeseriesPointPost> sortedPoints = new ArrayList<>(dataPoints);
@@ -666,7 +679,7 @@ public abstract class DataPoints extends ApiBase {
         // Check all elements for id / externalId + naive deduplication
         Map<String, Map<Long, TimeseriesPointPost>> externalIdInsertMap = new HashMap<>(100);
         Map<Long, Map<Long, TimeseriesPointPost>> internalIdInsertMap = new HashMap<>(100);
-        for (TimeseriesPointPost value : dataPoints) {
+        for (TimeseriesPointPost value : sortedPoints) {
             if (value.getIdTypeCase() == TimeseriesPointPost.IdTypeCase.IDTYPE_NOT_SET) {
                 String message = loggingPrefix + "Neither externalId nor id found. "
                         + "Time series point must specify either externalId or id";
@@ -690,12 +703,12 @@ public abstract class DataPoints extends ApiBase {
         Map<String, List<TimeseriesPointPost>> result = new HashMap<>();
         externalIdInsertMap.forEach((key, value) -> {
             List<TimeseriesPointPost> points = new ArrayList<>(value.size());
-            dataPoints.addAll(value.values());
+            points.addAll(value.values());
             result.put(key, points);
         });
         internalIdInsertMap.forEach((key, value) -> {
             List<TimeseriesPointPost> points = new ArrayList<>(value.size());
-            dataPoints.addAll(value.values());
+            points.addAll(value.values());
             result.put(String.valueOf(key), points);
         });
 
