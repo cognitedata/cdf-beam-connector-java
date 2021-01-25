@@ -82,12 +82,12 @@ class TimeseriesTest {
     @Tag("remoteCDP")
     void writeReadAndDeleteTimeseriesDataPoints() {
         Instant startInstant = Instant.now();
-        final int noTsHeaders = 30;
-        final int noTsPoints = 300000;
+        final int noTsHeaders = 15;
+        final int noTsPoints = 517893;
         final double tsPointsFrequency = 1d;
         ClientConfig config = ClientConfig.create()
-                .withNoWorkers(1)
-                .withNoListPartitions(1);
+                .withNoWorkers(4)
+                .withNoListPartitions(4);
         String loggingPrefix = "UnitTest - writeReadAndDeleteTimeseriesDataPoints() -";
         LOG.info(loggingPrefix + "----------------------------------------------------------------------");
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
