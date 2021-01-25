@@ -20,9 +20,11 @@ import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorConstants;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.client.servicesV1.util.TSIterationUtilities;
+import com.cognite.client.util.Partition;
 import com.cognite.v1.timeseries.proto.*;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
@@ -41,6 +43,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class represents the Cognite timeseries api endpoint.
@@ -201,7 +204,7 @@ public abstract class DataPoints extends ApiBase {
         Preconditions.checkArgument(dataPoints.stream().allMatch(point -> getTimeseriesId(point).isPresent()),
                 batchLogPrefix + "All items must have externalId or id.");
 
-        LOG.debug(batchLogPrefix + "Received {} data points to upsert",
+        LOG.info(batchLogPrefix + "Received {} data points to upsert",
                 dataPoints.size());
 
         // Should not happen--but need to guard against empty input
@@ -311,13 +314,96 @@ public abstract class DataPoints extends ApiBase {
             LOG.error(message);
             throw new Exception(message);
         }
-        LOG.info(batchLogPrefix + "Completed writing {} data points "
-                        + "across {} requests within a duration of {}.",
+        LOG.info(batchLogPrefix + "Completed writing {} data points across {} requests within a duration of {}, "
+                + "{} points/sec",
                 dataPoints.size(),
                 responseMap.size(),
-                Duration.between(startInstant, Instant.now()).toString());
+                Duration.between(startInstant, Instant.now()).toString(),
+                String.format("%d", (dataPoints.size())
+                        / Duration.between(startInstant, Instant.now()).getSeconds()));
 
         return dataPoints;
+    }
+
+    public List<TimeseriesPoint> retrieveLatest(List<Item> items) throws Exception {
+        String loggingPrefix = "retrieveLatest() -";
+        Instant startInstant = Instant.now();
+        if (items.isEmpty()) {
+            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
+            return Collections.emptyList();
+        }
+
+        ItemReader<String> itemReader = getClient().getConnectorService().readTsDatapointsLatest();
+
+        // Check that ids are provided + remove duplicate ids
+        Map<Long, Item> internalIdMap = new HashMap<>(items.size());
+        Map<String, Item> externalIdMap = new HashMap<>(items.size());
+        for (Item value : items) {
+            if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                externalIdMap.put(value.getExternalId(), value);
+            } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                internalIdMap.put(value.getId(), value);
+            } else {
+                String message = loggingPrefix + "Item does not contain id nor externalId: " + value.toString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+        }
+        LOG.info(loggingPrefix + "Received {} items to read.", internalIdMap.size() + externalIdMap.size());
+
+        List<Item> deduplicatedItems = new ArrayList<>(items.size());
+        deduplicatedItems.addAll(externalIdMap.values());
+        deduplicatedItems.addAll(internalIdMap.values());
+        List<List<Item>> itemBatches = Partition.ofSize(deduplicatedItems, 100);
+
+        // Submit all batches
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        for (List<Item> batch : itemBatches) {
+            // build initial request object
+            List<Map<String, Object>> requestItems = new ArrayList<>();
+            for (Item item : batch) {
+                if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                    requestItems.add(ImmutableMap.of("externalId", item.getExternalId()));
+                } else {
+                    requestItems.add(ImmutableMap.of("id", item.getId()));
+                }
+            }
+
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withItems(requestItems)
+                    .withRootParameter("ignoreUnknownIds", true));
+
+            futureList.add(itemReader.getItemsAsync(request));
+        }
+
+        // Wait for all requests futures to complete
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the response items
+        List<String> responseItems = new ArrayList<>(deduplicatedItems.size());
+        for (CompletableFuture<ResponseItems<String>> responseItemsFuture : futureList) {
+            if (!responseItemsFuture.join().isSuccessful()) {
+                // something went wrong with the request
+                String message = loggingPrefix + "Error while reading the results from Cognite Data Fusion: "
+                        + responseItemsFuture.join().getResponseBodyAsString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+            responseItemsFuture.join().getResultsItems().forEach(result -> responseItems.add(result));
+        }
+
+        LOG.info(loggingPrefix + "Successfully retrieved {} items across {} requests within a duration of {}.",
+                responseItems.size(),
+                futureList.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+        return responseItems.stream()
+                .map(this::parseDataPointJsonItem)
+                .collect(Collectors.toList());
+
+
+        return Collections.emptyList();
     }
 
     public List<Item> delete(List<Item> dataPoints) throws Exception {
@@ -447,13 +533,27 @@ public abstract class DataPoints extends ApiBase {
                         + "Will keep the original range/restriction.");
                 return splitsByItems;
             }
+            LOG.debug(loggingPrefix + "Collected basic statistics. "
+                            + "Capacity: {}, No splits by item: {}, Max frequency: {}, No TS items: {}, Time window seconds: {}, "
+                            + "Number of item splits: {}",
+                    maxFrequency,
+                    noTsItems,
+                    Duration.ofMillis(endTimestamp - startTimestamp).getSeconds(),
+                    splitsByItems.size());
 
             // Calculate the number of splits by time window.
             long maxSplitsByCapacity = Math.floorDiv(capacity, splitsByItems.size()); // may result in zero
-            long estimatedNoDataPoints = (long) maxFrequency * noTsItems * Duration.ofMillis(endTimestamp - startTimestamp).getSeconds();
+            long estimatedNoDataPoints = (long) (maxFrequency * noTsItems * Duration.ofMillis(endTimestamp - startTimestamp).getSeconds());
             long minDataPointsPerRequest = 100_000 * 10L;
             long maxSplitsByFrequency = Math.floorDiv(estimatedNoDataPoints, minDataPointsPerRequest); // may result in zero
             long targetNoSplits = Math.min(maxSplitsByCapacity, maxSplitsByFrequency);
+            LOG.debug(loggingPrefix + "Calculating the number of splits by time window. "
+                    + "Max splits by capacity: {}, estimated no data points: {}, max splits by frequency: {}, "
+                    + "target no splits: {}",
+                    maxSplitsByCapacity,
+                    estimatedNoDataPoints,
+                    maxSplitsByCapacity,
+                    targetNoSplits);
 
             if (targetNoSplits <= 1) {
                 // no need to split further
@@ -464,6 +564,7 @@ public abstract class DataPoints extends ApiBase {
             for (int i = 0; i < targetNoSplits; i++) {
                 long deltaStart = previousEnd;
                 long deltaEnd = deltaStart + splitDelta;
+                previousEnd = deltaEnd;
                 if (i == targetNoSplits - 1) {
                     // We are on the final iteration, so make sure we include the rest of the time range.
                     deltaEnd = endTimestamp;
@@ -592,6 +693,12 @@ public abstract class DataPoints extends ApiBase {
      */
     private CompletableFuture<ResponseItems<String>> upsertDataPoints(Collection<List<TimeseriesPointPost>> dataPointsBatch,
                                                                       ConnectorServiceV1.ItemWriter dataPointsWriter) throws Exception {
+        String loggingPrefix = "upsertDataPoints() - ";
+        LOG.debug(loggingPrefix + "Received {} data points to insert across {} TS items",
+                dataPointsBatch.stream()
+                        .mapToInt(list -> list.size())
+                        .sum(),
+                dataPointsBatch.size());
         DataPointInsertionRequest requestPayload = toRequestProto(dataPointsBatch);
 
         // build request object
@@ -828,7 +935,8 @@ public abstract class DataPoints extends ApiBase {
                     .withRootParameter(START_KEY, from)
                     .withRootParameter(END_KEY, to)
                     .withRootParameter(GRANULARITY_KEY, "d")
-                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"));
+                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"))
+                    .withRootParameter("limit", ConnectorConstants.DEFAULT_MAX_BATCH_SIZE_TS_DATAPOINTS_AGG);
 
             double averageCount = this.getMaxAverageCount(statsQuery);
             frequency = averageCount / (Duration.ofDays(1).toMinutes() * 60);
@@ -845,7 +953,8 @@ public abstract class DataPoints extends ApiBase {
                     .withRootParameter(START_KEY, from)
                     .withRootParameter(END_KEY, to)
                     .withRootParameter(GRANULARITY_KEY, "h")
-                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"));
+                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"))
+                    .withRootParameter("limit", ConnectorConstants.DEFAULT_MAX_BATCH_SIZE_TS_DATAPOINTS_AGG);
 
             double averageCount = this.getMaxAverageCount(statsQuery);
             frequency = averageCount / (Duration.ofHours(1).toMinutes() * 60);
@@ -890,7 +999,7 @@ public abstract class DataPoints extends ApiBase {
                 for (DataPointListItem item : responseItems.getResultsItems()) {
                     LOG.debug(loggingPrefix + "Item in results list, Ts id: {}", item.getId());
                     List<TimeseriesPoint> points = TimeseriesParser.parseDataPointListItem(item);
-                    LOG.info(loggingPrefix + "Number of datapoints in TS list item: {}", points.size());
+                    LOG.debug(loggingPrefix + "Number of datapoints in TS list item: {}", points.size());
 
                     double candidate = points.stream()
                             .map(TimeseriesPoint::getValueAggregates)
@@ -941,6 +1050,18 @@ public abstract class DataPoints extends ApiBase {
     private List<TimeseriesPoint> parseDataPointListItem(DataPointListItem listItem) {
         try {
             return TimeseriesParser.parseDataPointListItem(listItem);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
+    private List<TimeseriesPoint> parseDataPointJsonItem(String json) {
+        try {
+            return TimeseriesParser.parseDataPointListItem(json);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
