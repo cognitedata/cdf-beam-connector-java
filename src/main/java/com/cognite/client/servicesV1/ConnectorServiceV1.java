@@ -808,6 +808,26 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Read latest data point from Cognite.
+     *
+     * @return
+     */
+    public ItemReader<String> readTsDatapointsLatest() {
+        LOG.debug(loggingPrefix + "Initiating read latest data point service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("timeseries/data/latest")
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
      * Write time series headers to Cognite.
      *
      * Calling this method will return an <code>ItemWriter</code>
