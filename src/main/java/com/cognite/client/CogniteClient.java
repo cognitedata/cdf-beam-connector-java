@@ -35,12 +35,17 @@ public abstract class CogniteClient implements Serializable {
             .build();
 
     private static final int DEFAULT_CPU_MULTIPLIER = 8;
-    private final static int DEFAULT_MAX_WORKER_THREADS = 12;
+    private final static int DEFAULT_MAX_WORKER_THREADS = 8;
     private static ForkJoinPool executorService = new ForkJoinPool(Math.min(
             Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
             DEFAULT_MAX_WORKER_THREADS));
 
-    protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+    protected final static Logger LOG = LoggerFactory.getLogger(CogniteClient.class);
+
+    static {
+        LOG.info("CogniteClient - setting up default worker pool with {} workers.",
+                executorService.getParallelism());
+    }
 
     @Nullable
     private String cdfProjectCache = null; // Cache attribute for the CDF project
