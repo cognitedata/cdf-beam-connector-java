@@ -325,7 +325,19 @@ public abstract class DataPoints extends ApiBase {
         return dataPoints;
     }
 
-    public List<TimeseriesPoint> retrieveLatest(List<Item> items) throws Exception {
+    /**
+     * Retrieves the latest (newest) data point for a time series.
+     *
+     * The {@link Item} must specify the externalId / id of the time series.
+     *
+     * Optionally, you can specify {@code Item.exclusiveEnd} to set an upper time boundary. That is,
+     * the response will contain the latest data point before the upper time boundary.
+     *
+     * @param items The time series to retrieve data point(s) from.
+     * @return The latest data point(s)
+     * @throws Exception
+     */
+    public List<TimeseriesPoint> retrieveLatest(@NotNull List<Item> items) throws Exception {
         String loggingPrefix = "retrieveLatest() -";
         Instant startInstant = Instant.now();
         if (items.isEmpty()) {
@@ -357,16 +369,26 @@ public abstract class DataPoints extends ApiBase {
         List<List<Item>> itemBatches = Partition.ofSize(deduplicatedItems, 100);
 
         // Submit all batches
+        long defaultBefore = Instant.now().toEpochMilli();
         List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
         for (List<Item> batch : itemBatches) {
             // build initial request object
             List<Map<String, Object>> requestItems = new ArrayList<>();
             for (Item item : batch) {
+                Map<String, Object> requestItem = new HashMap<>();
                 if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
-                    requestItems.add(ImmutableMap.of("externalId", item.getExternalId()));
+                    requestItem.put("externalId", item.getExternalId());
                 } else {
-                    requestItems.add(ImmutableMap.of("id", item.getId()));
+                    requestItem.put("id", item.getId());
                 }
+
+                if (item.hasExclusiveEnd()) {
+                    requestItem.put("before", item.getExclusiveEnd().getValue());
+                } else {
+                    requestItem.put("before", defaultBefore);
+                }
+
+                requestItems.add(requestItem);
             }
 
             RequestParameters request = addAuthInfo(RequestParameters.create()
@@ -398,12 +420,106 @@ public abstract class DataPoints extends ApiBase {
                 responseItems.size(),
                 futureList.size(),
                 Duration.between(startInstant, Instant.now()).toString());
+
         return responseItems.stream()
                 .map(this::parseDataPointJsonItem)
+                .flatMap(List::stream)
                 .collect(Collectors.toList());
+    }
 
+    /**
+     * Retrieve the first (eldest) data point for a time series.
+     *
+     * The {@link Item} must specify the externalId / id of the time series.
+     *
+     * @param items The time series to retrieve data point(s) from.
+     * @return The first data point(s)
+     * @throws Exception
+     */
+    public List<TimeseriesPoint> retrieveFirst(@NotNull List<Item> items) throws Exception {
+        String loggingPrefix = "retrieveFirst() -";
+        Instant startInstant = Instant.now();
+        if (items.isEmpty()) {
+            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
+            return Collections.emptyList();
+        }
 
-        return Collections.emptyList();
+        // Check that ids are provided + remove duplicate ids
+        Map<Long, Item> internalIdMap = new HashMap<>(items.size());
+        Map<String, Item> externalIdMap = new HashMap<>(items.size());
+        for (Item value : items) {
+            if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                externalIdMap.put(value.getExternalId(), value);
+            } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                internalIdMap.put(value.getId(), value);
+            } else {
+                String message = loggingPrefix + "Item does not contain id nor externalId: " + value.toString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+        }
+        LOG.info(loggingPrefix + "Received {} items to read.", internalIdMap.size() + externalIdMap.size());
+
+        List<Item> deduplicatedItems = new ArrayList<>(items.size());
+        deduplicatedItems.addAll(externalIdMap.values());
+        deduplicatedItems.addAll(internalIdMap.values());
+        List<List<Item>> itemBatches = Partition.ofSize(deduplicatedItems, 100);
+
+        // Build request objects
+        long defaultStart = 0L;
+        List<RequestParameters> requestList = new ArrayList<>();
+        for (List<Item> batch : itemBatches) {
+            // build initial request object
+            List<Map<String, Object>> requestItems = new ArrayList<>();
+            for (Item item : batch) {
+                Map<String, Object> requestItem = new HashMap<>();
+                if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                    requestItem.put("externalId", item.getExternalId());
+                } else {
+                    requestItem.put("id", item.getId());
+                }
+
+                requestItems.add(requestItem);
+            }
+
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withItems(requestItems)
+                    .withRootParameter(START_KEY, defaultStart)
+                    .withRootParameter("limit", 1));
+
+            requestList.add(request);
+        }
+
+        // Build the api iterators.
+        List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
+        for (RequestParameters request : requestList) {
+            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
+                    .withExecutorService(getClient().getExecutorService())
+                    .withHttpClient(getClient().getHttpClient()));
+            // todo: move executor service and client spec to connector service config
+        }
+
+        // The iterator that will collect results across multiple results streams
+        FanOutIterator fanOutIterator = FanOutIterator.of(iterators);
+
+        // Add results object parsing
+        AdapterIterator adapterIterator = AdapterIterator.of(fanOutIterator, this::parseDataPointListItem);
+
+        // Un-nest the nested results lists
+        FlatMapIterator<TimeseriesPoint> flatMapIterator = FlatMapIterator.of(adapterIterator);
+
+        List<TimeseriesPoint> results = new ArrayList<>();
+        // Can only read the first result from the iterator in order to capture the first data point per item
+        if (flatMapIterator.hasNext()) {
+            results.addAll(flatMapIterator.next());
+        }
+
+        LOG.info(loggingPrefix + "Successfully retrieved {} data points across {} requests within a duration of {}.",
+                results.size(),
+                requestList.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        return results;
     }
 
     public List<Item> delete(List<Item> dataPoints) throws Exception {
@@ -462,11 +578,11 @@ public abstract class DataPoints extends ApiBase {
             splitsByItems.add(requestParameters);
         }
 
-        // If the split by items will utilize min 50% of available resources (read partitions and workers)
+        // If the split by items will utilize min 60% of available resources (read partitions and workers)
         // then we don't need to split further by time window.
         int capacity = Math.min(getClient().getClientConfig().getNoWorkers(),
                 getClient().getClientConfig().getNoListPartitions());
-        if (splitsByItems.size() / (long) capacity > 0.5) {
+        if (splitsByItems.size() / (long) capacity > 0.6) {
             LOG.info(loggingPrefix + "Splitting by items into {} requests offers good utilization of the available {} "
                     + "capacity units. Will not split further (by time window).",
                     splitsByItems.size(),
@@ -523,7 +639,35 @@ public abstract class DataPoints extends ApiBase {
             // Run the aggregate split
             return splitsByItems; // no splits
         } else {
-            // We have raw data points. Check the max frequency
+            // We have raw data points and the request is "large" enough that we should get statistics to try and
+            // optimize the read requests.
+            // Get start and end of time window based on first and last available data point.
+            List<Item> tsItems = new ArrayList<>();
+            for (Map<String, Object> itemEntry : requestParameters.getItems()) {
+                if (itemEntry.containsKey("externalId")) {
+                    tsItems.add(Item.newBuilder()
+                            .setExternalId((String) itemEntry.get("externalId"))
+                            .build());
+                } else {
+                    tsItems.add(Item.newBuilder()
+                            .setId((long) itemEntry.get("id"))
+                            .build());
+                }
+            }
+            long estimatedEndTimestamp = this.retrieveLatest(tsItems).stream()
+                    .mapToLong(dataPoint -> dataPoint.getTimestamp())
+                    .max()
+                    .orElse(endTimestamp);
+            estimatedEndTimestamp += 10; // add a bit of buffer.
+            long estimatedStartTimestamp = this.retrieveFirst(tsItems).stream()
+                    .mapToLong(dataPoint -> dataPoint.getTimestamp())
+                    .min()
+                    .orElse(startTimestamp);
+            estimatedStartTimestamp -= 10; // add a bit of buffer.
+            startTimestamp = estimatedStartTimestamp > startTimestamp ? estimatedStartTimestamp : startTimestamp;
+            endTimestamp = estimatedEndTimestamp < endTimestamp ? estimatedEndTimestamp : endTimestamp;
+
+            // Check the max frequency
             double maxFrequency = getMaxFrequency(requestParameters,
                     Instant.ofEpochMilli(startTimestamp),
                     Instant.ofEpochMilli(endTimestamp));
@@ -534,12 +678,12 @@ public abstract class DataPoints extends ApiBase {
                 return splitsByItems;
             }
             LOG.debug(loggingPrefix + "Collected basic statistics. "
-                            + "Capacity: {}, No splits by item: {}, Max frequency: {}, No TS items: {}, Time window seconds: {}, "
-                            + "Number of item splits: {}",
-                    maxFrequency,
-                    noTsItems,
-                    Duration.ofMillis(endTimestamp - startTimestamp).getSeconds(),
-                    splitsByItems.size());
+                            + "Capacity: {}, No splits by item: {}, Max frequency: {}, No TS items: {}, Time window seconds: {}",
+                            capacity,
+                            splitsByItems.size(),
+                            maxFrequency,
+                            noTsItems,
+                            Duration.ofMillis(endTimestamp - startTimestamp).getSeconds());
 
             // Calculate the number of splits by time window.
             long maxSplitsByCapacity = Math.floorDiv(capacity, splitsByItems.size()); // may result in zero
@@ -552,7 +696,7 @@ public abstract class DataPoints extends ApiBase {
                     + "target no splits: {}",
                     maxSplitsByCapacity,
                     estimatedNoDataPoints,
-                    maxSplitsByCapacity,
+                    maxSplitsByFrequency,
                     targetNoSplits);
 
             if (targetNoSplits <= 1) {
