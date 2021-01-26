@@ -379,7 +379,7 @@ public class UpsertFileHeaderFn extends UpsertItemBaseFn<FileMetadata> {
     }
 
     protected ConnectorServiceV1.ItemWriter getItemWriterInsert() {
-        return connector.writeFile();
+        return connector.writeFileMetadata();
     }
 
     protected ConnectorServiceV1.ItemWriter getItemWriterUpdate() {

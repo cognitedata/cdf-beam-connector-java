@@ -1149,8 +1149,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      *
      * @return
      */
-    public ItemWriter writeFile() {
-        LOG.debug(loggingPrefix + "Initiating write file service.");
+    public ItemWriter writeFileMetadata() {
+        LOG.debug(loggingPrefix + "Initiating write file header / metadata service.");
         this.validate();
 
         FilesUploadRequestProvider requestProvider = FilesUploadRequestProvider.builder()
