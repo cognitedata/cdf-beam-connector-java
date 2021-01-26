@@ -315,12 +315,16 @@ public abstract class DataPoints extends ApiBase {
             throw new Exception(message);
         }
         LOG.info(batchLogPrefix + "Completed writing {} data points across {} requests within a duration of {}, "
-                + "{} points/sec",
+                + "{} points/sec, avg API latency ms: {}",
                 dataPoints.size(),
                 responseMap.size(),
                 Duration.between(startInstant, Instant.now()).toString(),
                 String.format("%d", (dataPoints.size())
-                        / Duration.between(startInstant, Instant.now()).getSeconds()));
+                        / Duration.between(startInstant, Instant.now()).getSeconds()),
+                String.format("%.2f", responseMap.keySet().stream()
+                        .mapToLong(response -> response.getResponseBinary().getApiLatency())
+                        .average()
+                        .orElse(-0.0d)));
 
         return dataPoints;
     }
