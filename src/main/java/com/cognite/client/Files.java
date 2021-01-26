@@ -17,13 +17,11 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.beam.io.util.internal.MetricsUtil;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.servicesV1.parser.FileParser;
 import com.google.auto.value.AutoValue;
 
@@ -140,6 +138,16 @@ public abstract class Files extends ApiBase {
      * @throws Exception
      */
     public List<FileMetadata> upsert(List<FileMetadata> fileMetadata) throws Exception {
+        String loggingPrefix = "upsert() -";
+        Instant startInstant = Instant.now();
+        if (fileMetadata.isEmpty()) {
+            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
+            return Collections.emptyList();
+        }
+
+        ConnectorServiceV1.ItemWriter updateWriter = getClient().getConnectorService().updateFileHeaders();
+        ConnectorServiceV1.ItemWriter createWriter = getClient().getConnectorService().writeFileHeaders();
+
         // todo: implement a file specific version of this one.
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ItemWriter createItemWriter = connector.writeEvents()
@@ -205,15 +213,15 @@ public abstract class Files extends ApiBase {
                 .enableDeleteTempFile(deleteTempFile);
 
         // naive de-duplication based on ids
-        Map<Long, FileContainer> internalIdMap = new HashMap<>(10);
-        Map<String, FileContainer> externalIdMap = new HashMap<>(10);
+        Map<Long, FileContainer> internalIdMap = new HashMap<>();
+        Map<String, FileContainer> externalIdMap = new HashMap<>();
         for (FileContainer item : files) {
             if (item.getFileMetadata().hasExternalId()) {
                 externalIdMap.put(item.getFileMetadata().getExternalId().getValue(), item);
             } else if (item.getFileMetadata().hasId()) {
                 internalIdMap.put(item.getFileMetadata().getId().getValue(), item);
             } else {
-                String message = loggingPrefix + "Item does not contain id nor externalId: " + item.toString();
+                String message = loggingPrefix + "File item does not contain id nor externalId: " + item.toString();
                 LOG.error(message);
                 throw new Exception(message);
             }
@@ -236,7 +244,9 @@ public abstract class Files extends ApiBase {
             );
             resultFutures.add(future);
         }
-        LOG.info(loggingPrefix + "Dispatched {} files for upload.", fileContainerList.size());
+        LOG.info(loggingPrefix + "Dispatched {} files for upload. Duration: {}",
+                fileContainerList.size(),
+                Duration.between(startInstant, Instant.now()).toString());
 
         // Sync all downloads to a single future. It will complete when all the upstream futures have completed.
         CompletableFuture<Void> allFutures = CompletableFuture.allOf(resultFutures.toArray(
