@@ -2769,13 +2769,14 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
         private final String loggingPrefix = "FileWriter [" + randomIdString + "] -";
         private final ObjectMapper objectMapper = new ObjectMapper();
-        private final int CPU_MULTIPLIER = 10;
+        private final int CPU_MULTIPLIER = 8;
+        private final int MAX_CPU = 20;
 
         private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
                 .withValidResponseCodes(ImmutableList.of(400))
                 .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                .withExecutor(new ForkJoinPool(Runtime.getRuntime().availableProcessors()
-                        * CPU_MULTIPLIER));
+                .withExecutor(new ForkJoinPool(
+                        Math.min(Runtime.getRuntime().availableProcessors() * CPU_MULTIPLIER, MAX_CPU)));
 
         private final FileBinaryRequestExecutor baseFileBinaryRequestExecutor = FileBinaryRequestExecutor.of(DEFAULT_CLIENT)
                 .withMaxRetries(DEFAULT_MAX_RETRIES);
