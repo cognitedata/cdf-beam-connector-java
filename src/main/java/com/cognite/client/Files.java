@@ -23,7 +23,11 @@ import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.FileParser;
+import com.cognite.v1.timeseries.proto.DataPointInsertionRequest;
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -39,9 +43,12 @@ import java.util.stream.Collectors;
 @AutoValue
 public abstract class Files extends ApiBase {
 
+
     private static Builder builder() {
         return new AutoValue_Files.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Files.class);
 
     /**
      * Constructs a new {@link Files} object using the provided client configuration.
@@ -133,20 +140,72 @@ public abstract class Files extends ApiBase {
      * If an {@link FileMetadata} object already exists in Cognite Data Fusion, it will be updated. The update behavior
      * is specified via the update mode in the {@link com.cognite.client.config.ClientConfig} settings.
      *
-     * @param fileMetadata The file headers / metadata to upsert.
+     * @param fileMetadataList The file headers / metadata to upsert.
      * @return The upserted file headers.
      * @throws Exception
      */
-    public List<FileMetadata> upsert(List<FileMetadata> fileMetadata) throws Exception {
+    public List<FileMetadata> upsert(List<FileMetadata> fileMetadataList) throws Exception {
         String loggingPrefix = "upsert() -";
         Instant startInstant = Instant.now();
-        if (fileMetadata.isEmpty()) {
+        if (fileMetadataList.isEmpty()) {
             LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
             return Collections.emptyList();
         }
 
         ConnectorServiceV1.ItemWriter updateWriter = getClient().getConnectorService().updateFileHeaders();
         ConnectorServiceV1.ItemWriter createWriter = getClient().getConnectorService().writeFileHeaders();
+
+        // naive de-duplication based on ids
+        Map<Long, FileMetadata> internalIdInsertMap = new HashMap<>(500);
+        Map<String, FileMetadata> externalIdInsertMap = new HashMap<>(500);
+        Map<Long, FileMetadata> internalIdUpdateMap = new HashMap<>(1000);
+        Map<String, FileMetadata> externalIdUpdateMap = new HashMap<>(1000);
+        Map<Long, FileMetadata> internalIdAssetsMap = new HashMap<>(50);
+        Map<String, FileMetadata> externalIdAssetsMap = new HashMap<>(50);
+        for (FileMetadata value : fileMetadataList) {
+            if (value.hasExternalId()) {
+                externalIdUpdateMap.put(value.getExternalId().getValue(), value);
+            } else if (value.hasId()) {
+                internalIdUpdateMap.put(value.getId().getValue(), value);
+            } else {
+                throw new Exception("File metadata item does not contain id nor externalId: " + value.toString());
+            }
+        }
+
+        // Check for files with >1k assets. Set the extra assets aside so we can add them in separate updates.
+        for (Long key : internalIdUpdateMap.keySet()) {
+            FileMetadata fileMetadata = internalIdUpdateMap.get(key);
+            if (fileMetadata.getAssetIdsCount() > 1000) {
+                internalIdUpdateMap.put(key, fileMetadata.toBuilder()
+                        .clearAssetIds()
+                        .addAllAssetIds(fileMetadata.getAssetIdsList().subList(0,1000))
+                        .build());
+                internalIdAssetsMap.put(key, FileMetadata.newBuilder()
+                        .setId(fileMetadata.getId())
+                        .addAllAssetIds(fileMetadata.getAssetIdsList().subList(1000, fileMetadata.getAssetIdsList().size()))
+                        .build());
+            }
+        }
+        for (String key : externalIdUpdateMap.keySet()) {
+            FileMetadata fileMetadata = externalIdUpdateMap.get(key);
+            if (fileMetadata.getAssetIdsCount() > 1000) {
+                externalIdUpdateMap.put(key, fileMetadata.toBuilder()
+                        .clearAssetIds()
+                        .addAllAssetIds(fileMetadata.getAssetIdsList().subList(0,1000))
+                        .build());
+                externalIdAssetsMap.put(key, FileMetadata.newBuilder()
+                        .setExternalId(fileMetadata.getExternalId())
+                        .addAllAssetIds(fileMetadata.getAssetIdsList().subList(1000, fileMetadata.getAssetIdsList().size()))
+                        .build());
+            }
+        }
+
+        // Combine the input into list
+        List<FileMetadata> elementListUpdate = new ArrayList<>(1000);
+        elementListUpdate.addAll(externalIdUpdateMap.values());
+        elementListUpdate.addAll(internalIdUpdateMap.values());
+
+
 
         // todo: implement a file specific version of this one.
         ConnectorServiceV1 connector = getClient().getConnectorService();
@@ -166,7 +225,7 @@ public abstract class Files extends ApiBase {
             upsertItems = upsertItems.withUpdateMappingFunction(this::toRequestReplaceItem);
         }
 
-        return upsertItems.upsertViaUpdateAndCreate(fileMetadata).stream()
+        return upsertItems.upsertViaUpdateAndCreate(fileMetadataList).stream()
                 .map(this::parseFileMetadata)
                 .collect(Collectors.toList());
     }
@@ -298,6 +357,102 @@ public abstract class Files extends ApiBase {
     }
 
 
+    /**
+     * Post a collection of {@link FileMetadata} create request on a separate thread. The response is wrapped in a
+     * {@link CompletableFuture} that is returned immediately to the caller.
+     *
+     *  This method will send the entire input in a single request. It does not
+     *  split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
+     *  you would like to split across multiple requests, use the {@code splitAndCreateFileMetadata} method.
+     *
+     * @param filesBatch
+     * @param fileWriter
+     * @return
+     * @throws Exception
+     */
+    private CompletableFuture<ResponseItems<String>> createFileMetadata(Collection<FileMetadata> filesBatch,
+                                                                      ConnectorServiceV1.ItemWriter fileWriter) throws Exception {
+        String loggingPrefix = "createFileMetadata() - ";
+        LOG.debug(loggingPrefix + "Received {} file metadata items / headers to create.",
+                filesBatch.size());
+        ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
+        for (FileMetadata fileMetadata : filesBatch) {
+            insertItemsBuilder.add(toRequestInsertItem(fileMetadata));
+        }
+
+        // build request object
+        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+                .withItems(insertItemsBuilder.build()));
+
+        // post write request
+        return fileWriter.writeItemsAsync(postSeqBody);
+    }
+
+    /**
+     * Post a collection of {@link FileMetadata} update request on a separate thread. The response is wrapped in a
+     * {@link CompletableFuture} that is returned immediately to the caller.
+     *
+     *  This method will send the entire input in a single request. It does not
+     *  split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
+     *  you would like to split across multiple requests, use the {@code splitAndUpdateFileMetadata} method.
+     *
+     * @param filesBatch
+     * @param fileWriter
+     * @return
+     * @throws Exception
+     */
+    private CompletableFuture<ResponseItems<String>> updateFileMetadata(Collection<FileMetadata> filesBatch,
+                                                                        ConnectorServiceV1.ItemWriter fileWriter) throws Exception {
+        String loggingPrefix = "updateFileMetadata() - ";
+        LOG.debug(loggingPrefix + "Received {} file metadata items / headers to update.",
+                filesBatch.size());
+        ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
+        for (FileMetadata fileMetadata : filesBatch) {
+            if (getClient().getClientConfig().getUpsertMode() == UpsertMode.REPLACE) {
+                insertItemsBuilder.add(toRequestReplaceItem(fileMetadata));
+            } else {
+                insertItemsBuilder.add(toRequestUpdateItem(fileMetadata));
+            }
+        }
+
+        // build request object
+        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+                .withItems(insertItemsBuilder.build()));
+
+        // post write request
+        return fileWriter.writeItemsAsync(postSeqBody);
+    }
+
+    /**
+     * Patches (adds) a set of assets to a file object. This operation is used when we need to
+     * handle files with more than 1k assets.
+     *
+     *  This method will send the entire input in a single request. It does not
+     *  split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
+     *  you would like to split across multiple requests, use the {@code splitAndUpdateFileMetadata} method.
+     *
+     * @param filesBatch
+     * @param fileWriter
+     * @return
+     * @throws Exception
+     */
+    private CompletableFuture<ResponseItems<String>> patchFileAssets(Collection<FileMetadata> filesBatch,
+                                                                        ConnectorServiceV1.ItemWriter fileWriter) throws Exception {
+        String loggingPrefix = "patchFileAssets() - ";
+        LOG.debug(loggingPrefix + "Received {} file metadata items / headers to update.",
+                filesBatch.size());
+        ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
+        for (FileMetadata fileMetadata : filesBatch) {
+            //todo add asset patch parser
+        }
+
+        // build request object
+        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+                .withItems(insertItemsBuilder.build()));
+
+        // post write request
+        return fileWriter.writeItemsAsync(postSeqBody);
+    }
 
     /*
     Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
