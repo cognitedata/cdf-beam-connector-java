@@ -23,16 +23,23 @@ import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.FileParser;
+import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -146,6 +153,7 @@ public abstract class Files extends ApiBase {
      */
     public List<FileMetadata> upsert(List<FileMetadata> fileMetadataList) throws Exception {
         String loggingPrefix = "upsert() -";
+        final int maxUpsertLoopIterations = 3;
         Instant startInstant = Instant.now();
         if (fileMetadataList.isEmpty()) {
             LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
@@ -201,31 +209,228 @@ public abstract class Files extends ApiBase {
         }
 
         // Combine the input into list
-        List<FileMetadata> elementListUpdate = new ArrayList<>(1000);
+        List<FileMetadata> elementListUpdate = new ArrayList<>();
+        List<FileMetadata> elementListCreate = new ArrayList<>();
+        List<String> elementListCompleted = new ArrayList<>();
+
         elementListUpdate.addAll(externalIdUpdateMap.values());
         elementListUpdate.addAll(internalIdUpdateMap.values());
 
+        /*
+        The upsert loop. If there are items left to insert or update:
+        1. Update elements
+        2. If conflicts move missing items into the insert maps
+        3. Insert elements
+        4. If conflict, remove duplicates into the update maps
+        */
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        String exceptionMessage = "";
+        for (int i = 0; i < maxUpsertLoopIterations && (elementListCreate.size() + elementListUpdate.size()) > 0;
+             i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+            LOG.debug(loggingPrefix + "Start upsert loop {} with {} items to update, {} items to create and "
+                            + "{} completed items at duration {}",
+                    i,
+                    elementListUpdate.size(),
+                    elementListCreate.size(),
+                    elementListCompleted.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
 
+            /*
+            Update items
+             */
+            if (elementListUpdate.isEmpty()) {
+                LOG.debug(loggingPrefix + "Update items list is empty. Skipping update.");
+            } else {
+                Map<ResponseItems<String>, List<FileMetadata>> updateResponseMap =
+                        splitAndUpdateFileMetadata(elementListUpdate, updateWriter);
+                LOG.debug(loggingPrefix + "Completed update items requests for {} items across {} batches at duration {}",
+                        elementListUpdate.size(),
+                        updateResponseMap.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+                elementListUpdate.clear(); // Must prepare the list for possible new entries.
 
-        // todo: implement a file specific version of this one.
-        ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeEvents()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateEvents()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+                for (ResponseItems<String> response : updateResponseMap.keySet()) {
+                    if (response.isSuccessful()) {
+                        elementListCompleted.addAll(response.getResultsItems());
+                        LOG.debug(loggingPrefix + "Update items request success. Adding {} update result items to result collection.",
+                                response.getResultsItems().size());
+                    } else {
+                        exceptionMessage = response.getResponseBodyAsString();
+                        LOG.debug(loggingPrefix + "Update items request failed: {}", response.getResponseBodyAsString());
+                        if (i == maxUpsertLoopIterations - 1) {
+                            // Add the error message to std logging
+                            LOG.error(loggingPrefix + "Update items request failed. {}", response.getResponseBodyAsString());
+                        }
+                        LOG.debug(loggingPrefix + "Converting missing items to create and retrying the request");
+                        List<Item> missing = ItemParser.parseItems(response.getMissingItems());
+                        LOG.debug(loggingPrefix + "Number of missing entries reported by CDF: {}", missing.size());
 
-        UpsertItems<FileMetadata> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
-                .withUpdateItemWriter(updateItemWriter)
-                .withUpdateMappingFunction(this::toRequestUpdateItem)
-                .withIdFunction(this::getFileId);
+                        // Move missing items from update to the create request
+                        Map<String, FileMetadata> itemsMap = mapToId(updateResponseMap.get(response));
+                        for (Item value : missing) {
+                            if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                                elementListCreate.add(itemsMap.get(value.getExternalId()));
+                                itemsMap.remove(value.getExternalId());
+                            } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                                elementListCreate.add(itemsMap.get(value.getId()));
+                                itemsMap.remove(value.getId());
+                            }
+                        }
+                        elementListUpdate.addAll(itemsMap.values()); // Add remaining items to be re-updated
+                    }
+                }
+            }
 
-        if (getClient().getClientConfig().getUpsertMode() == UpsertMode.REPLACE) {
-            upsertItems = upsertItems.withUpdateMappingFunction(this::toRequestReplaceItem);
+            /*
+            Insert / create items
+             */
+            if (elementListCreate.isEmpty()) {
+                LOG.debug(loggingPrefix + "Create items list is empty. Skipping create.");
+            } else {
+                Map<ResponseItems<String>, FileMetadata> createResponseMap =
+                        splitAndCreateFileMetadata(elementListCreate, createWriter);
+                LOG.debug(loggingPrefix + "Completed create items requests for {} items across {} batches at duration {}",
+                        elementListCreate.size(),
+                        createResponseMap.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+                elementListCreate.clear(); // Must prepare the list for possible new entries.
+
+                for (ResponseItems<String> response : createResponseMap.keySet()) {
+                    if (response.isSuccessful()) {
+                        elementListCompleted.addAll(response.getResultsItems());
+                        LOG.debug(loggingPrefix + "Create items request success. Adding {} create result items to result collection.",
+                                response.getResultsItems().size());
+                    } else {
+                        exceptionMessage = response.getResponseBodyAsString();
+                        LOG.debug(loggingPrefix + "Create items request failed: {}", response.getResponseBodyAsString());
+                        if (i == maxUpsertLoopIterations - 1) {
+                            // Add the error message to std logging
+                            LOG.error(loggingPrefix + "Create items request failed. {}", response.getResponseBodyAsString());
+                        }
+                        LOG.debug(loggingPrefix + "Converting duplicates to update and retrying the request");
+                        List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                        LOG.debug(loggingPrefix + "Number of duplicate entries reported by CDF: {}", duplicates.size());
+
+                        // Move duplicates from insert to the update request
+                        Map<String, FileMetadata> itemsMap = mapToId(ImmutableList.of(createResponseMap.get(response)));
+                        for (Item value : duplicates) {
+                            if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                                elementListUpdate.add(itemsMap.get(value.getExternalId()));
+                                itemsMap.remove(value.getExternalId());
+                            } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                                elementListUpdate.add(itemsMap.get(value.getId()));
+                                itemsMap.remove(value.getId());
+                            }
+                        }
+                        elementListCreate.addAll(itemsMap.values()); // Add remaining items to be re-inserted
+                    }
+                }
+            }
         }
 
-        return upsertItems.upsertViaUpdateAndCreate(fileMetadataList).stream()
+        /*
+        Write extra assets id links as separate updates. The api only supports 1k assetId links per file object
+        per api request. If a file contains a large number of assetIds, we need to split them up into an initial
+        file create/update (all the code above) and subsequent update requests which add the remaining
+        assetIds (code below).
+         */
+        Map<Long, FileMetadata> internalIdTempMap = new HashMap<>(internalIdAssetsMap.size());
+        Map<String, FileMetadata> externalIdTempMap = new HashMap<>(externalIdAssetsMap.size());
+        while (internalIdAssetsMap.size() > 0 || externalIdAssetsMap.size() > 0) {
+            LOG.info(loggingPrefix + "Some files have very high assetId cardinality (+1k). Adding assetId to "
+                    + (internalIdAssetsMap.size() + externalIdAssetsMap.size())
+                    + " file(s).");
+            internalIdUpdateMap.clear();
+            externalIdUpdateMap.clear();
+            internalIdTempMap.clear();
+            externalIdTempMap.clear();
+
+            // Check for files with >1k remaining assets
+            for (Long key : internalIdAssetsMap.keySet()) {
+                FileMetadata fileMetadata = internalIdAssetsMap.get(key);
+                if (fileMetadata.getAssetIdsCount() > 1000) {
+                    internalIdUpdateMap.put(key, fileMetadata.toBuilder()
+                            .clearAssetIds()
+                            .addAllAssetIds(fileMetadata.getAssetIdsList().subList(0,1000))
+                            .build());
+                    internalIdTempMap.put(key, FileMetadata.newBuilder()
+                            .setId(fileMetadata.getId())
+                            .addAllAssetIds(fileMetadata.getAssetIdsList().subList(1000, fileMetadata.getAssetIdsList().size()))
+                            .build());
+                } else {
+                    // The entire assetId list can be pushed in a single update
+                    internalIdUpdateMap.put(key, fileMetadata);
+                }
+            }
+            internalIdAssetsMap.clear();
+            internalIdAssetsMap.putAll(internalIdTempMap);
+
+            for (String key : externalIdAssetsMap.keySet()) {
+                FileMetadata fileMetadata = externalIdAssetsMap.get(key);
+                if (fileMetadata.getAssetIdsCount() > 1000) {
+                    externalIdUpdateMap.put(key, fileMetadata.toBuilder()
+                            .clearAssetIds()
+                            .addAllAssetIds(fileMetadata.getAssetIdsList().subList(0,1000))
+                            .build());
+                    externalIdTempMap.put(key, FileMetadata.newBuilder()
+                            .setExternalId(fileMetadata.getExternalId())
+                            .addAllAssetIds(fileMetadata.getAssetIdsList().subList(1000, fileMetadata.getAssetIdsList().size()))
+                            .build());
+                } else {
+                    // The entire assetId list can be pushed in a single update
+                    externalIdUpdateMap.put(key, fileMetadata);
+                }
+            }
+            externalIdAssetsMap.clear();
+            externalIdAssetsMap.putAll(externalIdTempMap);
+
+            // prepare the update and send request
+            LOG.info(loggingPrefix + "Building update request to add assetIds for {} files.",
+                    internalIdUpdateMap.size() + externalIdUpdateMap.size());
+            elementListUpdate.clear();
+            elementListUpdate.addAll(externalIdUpdateMap.values());
+            elementListUpdate.addAll(internalIdUpdateMap.values());
+
+            // should not happen, but need to check
+            if (elementListUpdate.isEmpty()) {
+                String message = loggingPrefix + "Internal error. Not able to send assetId update. The payload is empty.";
+                LOG.error(message);
+                throw new Exception(message);
+            }
+
+            Map<ResponseItems<String>, List<FileMetadata>> responseItemsAssets =
+                    splitAndAddAssets(elementListUpdate, updateWriter);
+            for (ResponseItems<String> responseItems : responseItemsAssets.keySet()) {
+                if (!responseItems.isSuccessful()) {
+                    String message = loggingPrefix
+                            + "Failed to add assetIds. "
+                            + responseItems.getResponseBodyAsString();
+                    LOG.error(message);
+                    throw new Exception(message);
+                }
+            }
+        }
+
+        // Check if all elements completed the upsert requests
+        if (elementListCreate.isEmpty() && elementListUpdate.isEmpty()) {
+            LOG.info(loggingPrefix + "Successfully upserted {} items within a duration of {}.",
+                    elementListCompleted.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
+        } else {
+            LOG.error(loggingPrefix + "Failed to upsert items. {} items remaining. {} items completed upsert."
+                            + System.lineSeparator() + "{}",
+                    elementListCreate.size() + elementListUpdate.size(),
+                    elementListCompleted.size(),
+                    exceptionMessage);
+            throw new Exception(String.format(loggingPrefix + "Failed to upsert items. %d items remaining. "
+                            + " %d items completed upsert. %n " + exceptionMessage,
+                    elementListCreate.size() + elementListUpdate.size(),
+                    elementListCompleted.size()));
+        }
+
+
+
+        return elementListCompleted.stream()
                 .map(this::parseFileMetadata)
                 .collect(Collectors.toList());
     }
@@ -260,7 +465,7 @@ public abstract class Files extends ApiBase {
      * @return The file metadata / headers for the uploaded files.
      * @throws Exception
      */
-    public List<FileMetadata> upload(List<FileContainer> files, boolean deleteTempFile) throws Exception {
+    public List<FileMetadata> upload(@NotNull List<FileContainer> files, boolean deleteTempFile) throws Exception {
         String loggingPrefix = "upload() -";
         Instant startInstant = Instant.now();
         if (files.isEmpty()) {
@@ -333,6 +538,103 @@ public abstract class Files extends ApiBase {
         return responseItems.stream()
                 .map(this::parseFileMetadata)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Downloads file binaries.
+     *
+     * Downloads a set of file binaries based on {@code externalId / id} in the {@link Item} list. The file
+     * binaries can be downloaded as files or byte streams. In case the file is very large (> 200MB) it has to
+     * be streamed directly to the file system (i.e. downloaded as a file).
+     *
+     * Both the file header / metadata and the file binary will be returned. The complete information is encapsulated
+     * int the {@link FileContainer} returned from this method. The {@link FileContainer} will host the file
+     * binary stream if you set {@code preferByteStream} to {@code true} and the file size is < 200 MB. If
+     * {@code preferByteStream} is set to {@code false} or the file size is > 200MB the file binary will be
+     * stored on disk and the {@link FileContainer} will return the {@link URI} reference to the
+     * binary.
+     *
+     * Supported destination file stores for the file binary:
+     * - Local (network) disk. Specify the temp path as {@code file://<host>/<my-path>/}.
+     * Examples: {@code file://localhost/home/files/, file:///home/files/, file:///c:/temp/}
+     * - Google Cloud Storage. Specify the temp path as {@code gs://<my-storage-bucket>/<my-path>/}.
+     *
+     * @param files The list of files to download.
+     * @param downloadPath The URI to the download storage
+     * @param preferByteStream Set to true to return byte streams when possible, set to false to always store
+     *                         binary as file.
+     * @return File containers with file headers and references/byte streams of the binary.
+     */
+    public List<FileContainer> download(List<Item> files, Path downloadPath, boolean preferByteStream) throws Exception {
+        String loggingPrefix = "download() -";
+        Preconditions.checkArgument(java.nio.file.Files.isDirectory(downloadPath),
+                loggingPrefix + "The download path must be a valid directory.");
+
+        final int maxBatchSize = 10;
+        Instant startInstant = Instant.now();
+        if (files.isEmpty()) {
+            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the download request.");
+            return Collections.emptyList();
+        }
+        LOG.info(loggingPrefix + "Received {} items to download.",
+                files.size());
+
+        List<List<Item>> batches = Partition.ofSize(files, maxBatchSize);
+        for (List<Item> batch : batches) {
+            List<FileBinary> fileBinaries = downloadFileBinaries(batch, downloadPath.toUri(), !preferByteStream);
+
+        }
+
+        //todo finish
+
+        return Collections.emptyList();
+    }
+
+    /**
+     * Downloads file binaries.
+     *
+     * This method is intended for advanced use cases, for example when using this SDK as a part of
+     * a distributed system.
+     *
+     * Downloads a set of file binaries based on {@code externalId / id} in the {@link Item} list. The file
+     * binaries can be downloaded as files or byte streams. In case the file is very large (> 200MB) it has to
+     * be streamed directly to the file system (to the temp storage area).
+     *
+     * Supported temp storage for the file binary:
+     * - Local (network) disk. Specify the temp path as {@code file://<host>/<my-path>/}.
+     * Examples: {@code file://localhost/home/files/, file:///home/files/, file:///c:/temp/}
+     * - Google Cloud Storage. Specify the temp path as {@code gs://<my-storage-bucket>/<my-path>/}.
+     *
+     * @param fileItems The list of files to download.
+     * @param tempStoragePath The URI to the download storage
+     * @param forceTempStorage Set to true to always download the binary to temp storage
+     * @return The file binary.
+     * @throws Exception
+     */
+    public List<FileBinary> downloadFileBinaries(List<Item> fileItems,
+                                                                 URI tempStoragePath,
+                                                                 boolean forceTempStorage) throws Exception {
+        String loggingPrefix = "downloadFileBinaries() - ";
+        // do not send empty requests.
+        if (fileItems.isEmpty()) {
+            LOG.warn(loggingPrefix + "Tried to send empty delete request. Will skip this request.");
+            return Collections.emptyList();
+        }
+
+        ConnectorServiceV1.FileBinaryReader reader = getClient().getConnectorService().readFileBinariesByIds()
+                .withTempStoragePath(tempStoragePath)
+                .enableForceTempStorage(forceTempStorage);
+
+        // build initial request object
+        RequestParameters request = addAuthInfo(RequestParameters.create()
+                .withItems(toRequestItems(deDuplicate(fileItems)))
+                .withRootParameter("ignoreUnknownIds", true));
+
+        List<ResponseItems<FileBinary>> response = reader.readFileBinaries(request);
+
+        //todo finish
+
+        return Collections.emptyList();
     }
 
     /**
@@ -556,6 +858,26 @@ public abstract class Files extends ApiBase {
 
         // post write request
         return fileWriter.writeItemsAsync(postSeqBody);
+    }
+
+    /**
+     * Maps the file metadata items to their id by looking up externalId and id.
+     *
+     * @param fileMetadataList
+     * @return
+     */
+    private Map<String, FileMetadata> mapToId(List<FileMetadata> fileMetadataList) {
+        Map<String, FileMetadata> idMap = new HashMap<>();
+        for (FileMetadata fileMetadata : fileMetadataList) {
+            if (fileMetadata.hasExternalId()) {
+                idMap.put(fileMetadata.getExternalId().getValue(), fileMetadata);
+            } else if (fileMetadata.hasId()) {
+                idMap.put(String.valueOf(fileMetadata.getId().getValue()), fileMetadata);
+            } else {
+                idMap.put("", fileMetadata);
+            }
+        }
+        return idMap;
     }
 
     /*

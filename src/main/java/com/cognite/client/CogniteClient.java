@@ -178,6 +178,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Files} representing the Cognite files api endpoints.
+     *
+     * @return The labels api endpoint.
+     */
+    public Files files() {
+        return Files.of(this);
+    }
+
+    /**
      * Returns {@link Relationships} representing the Cognite relationships api endpoint.
      *
      * @return The relationships api object.

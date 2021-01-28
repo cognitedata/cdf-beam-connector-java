@@ -204,17 +204,8 @@ abstract class ApiBase {
         List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
         for (List<Item> batch : itemBatches) {
             // build initial request object
-            List<Map<String, Object>> requestItems = new ArrayList<>();
-            for (Item item : batch) {
-                if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
-                    requestItems.add(ImmutableMap.of("externalId", item.getExternalId()));
-                } else {
-                    requestItems.add(ImmutableMap.of("id", item.getId()));
-                }
-            }
-
             RequestParameters request = addAuthInfo(RequestParameters.create()
-                    .withItems(requestItems)
+                    .withItems(toRequestItems(batch))
                     .withRootParameter("ignoreUnknownIds", true));
 
             futureList.add(itemReader.getItemsAsync(request));
@@ -440,6 +431,46 @@ abstract class ApiBase {
     }
 
     /**
+     * Converts a list of {@link Item} to a request object structure (that can later be parsed to Json).
+     *
+     * @param itemList The items to parse.
+     * @return The items in request item object form.
+     */
+    protected List<Map<String, Object>> toRequestItems(List<Item> itemList) {
+        List<Map<String, Object>> requestItems = new ArrayList<>();
+        for (Item item : itemList) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                requestItems.add(ImmutableMap.of("externalId", item.getExternalId()));
+            } else {
+                requestItems.add(ImmutableMap.of("id", item.getId()));
+            }
+        }
+        return requestItems;
+    }
+
+    /**
+     * De-duplicates a collection of {@link Item}.
+     * @param itemList
+     * @return
+     */
+    protected List<Item> deDuplicate(List<Item> itemList) {
+        Map<String, Item> idMap = new HashMap<>();
+        for (Item item : itemList) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                idMap.put(item.getExternalId(), item);
+            } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+                idMap.put(String.valueOf(item.getId()), item);
+            } else {
+                idMap.put("", item);
+            }
+        }
+        List<Item> deDuplicated = new ArrayList<>(idMap.values());
+
+        return deDuplicated;
+    }
+
+
+    /**
      * An iterator that uses multiple input iterators and combines them into a single stream / collection.
      *
      * It is used to support multiple, parallel read streams from the Cognite api and present them as a single
@@ -617,7 +648,7 @@ abstract class ApiBase {
         private static final int DEFAULT_MAX_BATCH_SIZE = 1000;
         private static final int maxUpsertLoopIterations = 4;
 
-        protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+        protected static final Logger LOG = LoggerFactory.getLogger(UpsertItems.class);
 
         private static <T extends Message> Builder<T> builder() {
             return new AutoValue_ApiBase_UpsertItems.Builder<T>()

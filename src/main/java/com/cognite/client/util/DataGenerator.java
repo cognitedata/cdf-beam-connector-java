@@ -24,6 +24,20 @@ public class DataGenerator {
     private static final long HOUR_MS = 60L * MINUTE_MS;
     private static final long DAY_MS = 24L * HOUR_MS;
 
+    public static List<FileMetadata> generateFileHeaderObjects(int noObjects) {
+        List<FileMetadata> objects = new ArrayList<>(noObjects);
+        for (int i = 0; i < noObjects; i++) {
+            objects.add(FileMetadata.newBuilder()
+                    .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
+                    .setName(StringValue.of("test_file_" + RandomStringUtils.randomAlphanumeric(5)))
+                    .setSource(StringValue.of(sourceValue))
+                    .putMetadata("type", DataGenerator.sourceValue)
+                    .putMetadata(sourceKey, DataGenerator.sourceValue)
+                    .build());
+        }
+        return objects;
+    }
+
     public static List<TimeseriesMetadata> generateTsHeaderObjects(int noObjects) {
         List<TimeseriesMetadata> objects = new ArrayList<>(noObjects);
         for (int i = 0; i < noObjects; i++) {

@@ -2617,6 +2617,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
          *
          * The following storage providers are supported:
          * - Google Cloud Storage. Specify the temp path as {@code gs://<my-storage-bucket>/<my-path>/}.
+         * - Local (network) storage.
          *
          * @param path The URI to the temp storage
          * @return a {@FileBinaryReader} with temp storage configured.
