@@ -23,7 +23,7 @@ import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.FileParser;
-import com.cognite.v1.timeseries.proto.DataPointInsertionRequest;
+import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import org.slf4j.Logger;
@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  */
 @AutoValue
 public abstract class Files extends ApiBase {
-
+    private static final int MAX_WRITE_REQUEST_BATCH_SIZE = 100;
 
     private static Builder builder() {
         return new AutoValue_Files.Builder();
@@ -356,33 +356,137 @@ public abstract class Files extends ApiBase {
         return deleteItems.deleteItems(files);
     }
 
+    /**
+     * Update file metadata items.
+     *
+     * Submits a (large) batch of items by splitting it up into multiple, parallel create / insert requests.
+     * The response from each request is returned along with the items used as input.
+     *
+     * @param fileMetadataList the objects to create/insert.
+     * @param updateWriter the ItemWriter to use for sending update requests
+     * @return a {@link Map} with the responses and request inputs.
+     * @throws Exception
+     */
+    private Map<ResponseItems<String>, List<FileMetadata>> splitAndUpdateFileMetadata(List<FileMetadata> fileMetadataList,
+                                                                                ConnectorServiceV1.ItemWriter updateWriter) throws Exception {
+        Map<CompletableFuture<ResponseItems<String>>, List<FileMetadata>> responseMap = new HashMap<>();
+        List<List<FileMetadata>> batches = Partition.ofSize(fileMetadataList, MAX_WRITE_REQUEST_BATCH_SIZE);
+
+        // Submit all batches
+        for (List<FileMetadata> fileBatch : batches) {
+            responseMap.put(updateFileMetadata(fileBatch, updateWriter), fileBatch);
+        }
+
+        // Wait for all requests futures to complete
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        responseMap.keySet().forEach(future -> futureList.add(future));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the responses from the futures
+        Map<ResponseItems<String>, List<FileMetadata>> resultsMap = new HashMap<>(responseMap.size());
+        for (Map.Entry<CompletableFuture<ResponseItems<String>>, List<FileMetadata>> entry : responseMap.entrySet()) {
+            resultsMap.put(entry.getKey().join(), entry.getValue());
+        }
+
+        return resultsMap;
+    }
+
+    /**
+     * Adds asset ids to existing file metadata objects.
+     *
+     * Submits a (large) batch of items by splitting it up into multiple, parallel create / insert requests.
+     * The response from each request is returned along with the items used as input.
+     *
+     * @param fileMetadataList the objects to create/insert.
+     * @param updateWriter the ItemWriter to use for sending update requests
+     * @return a {@link Map} with the responses and request inputs.
+     * @throws Exception
+     */
+    private Map<ResponseItems<String>, List<FileMetadata>> splitAndAddAssets(List<FileMetadata> fileMetadataList,
+                                                                                      ConnectorServiceV1.ItemWriter updateWriter) throws Exception {
+        Map<CompletableFuture<ResponseItems<String>>, List<FileMetadata>> responseMap = new HashMap<>();
+        List<List<FileMetadata>> batches = Partition.ofSize(fileMetadataList, MAX_WRITE_REQUEST_BATCH_SIZE);
+
+        // Submit all batches
+        for (List<FileMetadata> fileBatch : batches) {
+            responseMap.put(addFileAssets(fileBatch, updateWriter), fileBatch);
+        }
+
+        // Wait for all requests futures to complete
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        responseMap.keySet().forEach(future -> futureList.add(future));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the responses from the futures
+        Map<ResponseItems<String>, List<FileMetadata>> resultsMap = new HashMap<>(responseMap.size());
+        for (Map.Entry<CompletableFuture<ResponseItems<String>>, List<FileMetadata>> entry : responseMap.entrySet()) {
+            resultsMap.put(entry.getKey().join(), entry.getValue());
+        }
+
+        return resultsMap;
+    }
+
+    /**
+     * Create /insert items.
+     *
+     * Submits a (large) batch of items by splitting it up into multiple, parallel create / insert requests.
+     * The response from each request is returned along with the items used as input.
+     *
+     * @param fileMetadataList the objects to create/insert.
+     * @param createWriter the ItemWriter to use for sending create requests.
+     * @return a {@link Map} with the responses and request inputs.
+     * @throws Exception
+     */
+    private Map<ResponseItems<String>, FileMetadata> splitAndCreateFileMetadata(List<FileMetadata> fileMetadataList,
+                                                                               ConnectorServiceV1.ItemWriter createWriter) throws Exception {
+        Map<CompletableFuture<ResponseItems<String>>, FileMetadata> responseMap = new HashMap<>();
+
+        // Submit all batches
+        for (FileMetadata file : fileMetadataList) {
+            responseMap.put(createFileMetadata(file, createWriter), file);
+        }
+
+        // Wait for all requests futures to complete
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        responseMap.keySet().forEach(future -> futureList.add(future));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the responses from the futures
+        Map<ResponseItems<String>, FileMetadata> resultsMap = new HashMap<>(responseMap.size());
+        for (Map.Entry<CompletableFuture<ResponseItems<String>>, FileMetadata> entry : responseMap.entrySet()) {
+            resultsMap.put(entry.getKey().join(), entry.getValue());
+        }
+
+        return resultsMap;
+    }
 
     /**
      * Post a collection of {@link FileMetadata} create request on a separate thread. The response is wrapped in a
      * {@link CompletableFuture} that is returned immediately to the caller.
      *
-     *  This method will send the entire input in a single request. It does not
-     *  split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
-     *  you would like to split across multiple requests, use the {@code splitAndCreateFileMetadata} method.
+     * This method will send the entire input in a single request. It does not
+     * split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
+     * you would like to split across multiple requests, use the {@code splitAndCreateFileMetadata} method.
      *
-     * @param filesBatch
+     * @param fileMetadata
      * @param fileWriter
      * @return
      * @throws Exception
      */
-    private CompletableFuture<ResponseItems<String>> createFileMetadata(Collection<FileMetadata> filesBatch,
+    private CompletableFuture<ResponseItems<String>> createFileMetadata(FileMetadata fileMetadata,
                                                                       ConnectorServiceV1.ItemWriter fileWriter) throws Exception {
         String loggingPrefix = "createFileMetadata() - ";
-        LOG.debug(loggingPrefix + "Received {} file metadata items / headers to create.",
-                filesBatch.size());
-        ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
-        for (FileMetadata fileMetadata : filesBatch) {
-            insertItemsBuilder.add(toRequestInsertItem(fileMetadata));
-        }
+        LOG.debug(loggingPrefix + "Received file metadata item / header to create.");
 
         // build request object
         RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
-                .withItems(insertItemsBuilder.build()));
+                .withRequestParameters(toRequestInsertItem(fileMetadata)));
 
         // post write request
         return fileWriter.writeItemsAsync(postSeqBody);
@@ -392,9 +496,9 @@ public abstract class Files extends ApiBase {
      * Post a collection of {@link FileMetadata} update request on a separate thread. The response is wrapped in a
      * {@link CompletableFuture} that is returned immediately to the caller.
      *
-     *  This method will send the entire input in a single request. It does not
-     *  split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
-     *  you would like to split across multiple requests, use the {@code splitAndUpdateFileMetadata} method.
+     * This method will send the entire input in a single request. It does not
+     * split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
+     * you would like to split across multiple requests, use the {@code splitAndUpdateFileMetadata} method.
      *
      * @param filesBatch
      * @param fileWriter
@@ -427,23 +531,23 @@ public abstract class Files extends ApiBase {
      * Patches (adds) a set of assets to a file object. This operation is used when we need to
      * handle files with more than 1k assets.
      *
-     *  This method will send the entire input in a single request. It does not
-     *  split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
-     *  you would like to split across multiple requests, use the {@code splitAndUpdateFileMetadata} method.
+     * This method will send the entire input in a single request. It does not
+     * split the input into multiple batches. If you have a large batch of {@link FileMetadata} that
+     * you would like to split across multiple requests, use the {@code splitAndUpdateFileMetadata} method.
      *
      * @param filesBatch
      * @param fileWriter
      * @return
      * @throws Exception
      */
-    private CompletableFuture<ResponseItems<String>> patchFileAssets(Collection<FileMetadata> filesBatch,
+    private CompletableFuture<ResponseItems<String>> addFileAssets(Collection<FileMetadata> filesBatch,
                                                                         ConnectorServiceV1.ItemWriter fileWriter) throws Exception {
         String loggingPrefix = "patchFileAssets() - ";
         LOG.debug(loggingPrefix + "Received {} file metadata items / headers to update.",
                 filesBatch.size());
         ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
         for (FileMetadata fileMetadata : filesBatch) {
-            //todo add asset patch parser
+            insertItemsBuilder.add(toRequestAddAssetsItem(fileMetadata));
         }
 
         // build request object
@@ -497,6 +601,18 @@ public abstract class Files extends ApiBase {
     private Map<String, Object> toRequestReplaceItem(FileMetadata item) {
         try {
             return FileParser.toRequestReplaceItem(item);
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
+    private Map<String, Object> toRequestAddAssetsItem(FileMetadata item) {
+        try {
+            return FileParser.toRequestAddAssetIdsItem(item);
         } catch (Exception e)  {
             throw new RuntimeException(e);
         }
