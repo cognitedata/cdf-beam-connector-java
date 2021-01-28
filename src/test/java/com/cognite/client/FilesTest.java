@@ -1,39 +1,60 @@
 package com.cognite.client;
 
-import com.cognite.client.config.UpsertMode;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Asset;
-import com.cognite.client.dto.Event;
-import com.cognite.client.dto.Item;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
+import com.cognite.client.config.UpsertMode;
+import com.cognite.client.dto.*;
 import com.cognite.client.util.DataGenerator;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class EventsTest {
+class FilesTest {
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     @Test
     @Tag("remoteCDP")
-    void writeReadAndDeleteEvents() {
+    void writeReadAndDeleteFiles() {
         Instant startInstant = Instant.now();
+        byte[] fileByteA = new byte[0];
+        byte[] fileByteB = new byte[0];
+        try {
+            fileByteA = java.nio.file.Files.readAllBytes(Paths.get("./src/test/resources/csv-data.txt"));
+            fileByteB = java.nio.file.Files.readAllBytes(Paths.get("./src/test/resources/csv-data-bom.txt"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        List<FileMetadata> fileMetadataList = DataGenerator.generateFileHeaderObjects(2);
+        List<FileContainer> fileContainerInput = new ArrayList<>();
+        for (FileMetadata fileMetadata:  fileMetadataList) {
+            FileContainer fileContainer = FileContainer.newBuilder()
+                    .setFileMetadata(fileMetadata)
+                    .setFileBinary(FileBinary.newBuilder()
+                            .setBinary(ByteString.copyFrom(ThreadLocalRandom.current().nextBoolean() ? fileByteA : fileByteB)))
+                    .build();
+            fileContainerInput.add(fileContainer);
+        }
+
         ClientConfig config = ClientConfig.create()
                 .withNoWorkers(1)
                 .withNoListPartitions(1);
-        String loggingPrefix = "UnitTest - writeReadAndDeleteEvents() -";
+        String loggingPrefix = "UnitTest - writeReadAndDeleteFiles() -";
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
         CogniteClient client = CogniteClient.ofKey(TestConfigProvider.getApiKey())
                 .withBaseUrl(TestConfigProvider.getHost())
@@ -41,24 +62,40 @@ class EventsTest {
                 ;
         LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
                 Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         try {
-            LOG.info(loggingPrefix + "Start upserting events.");
-            List<Event> upsertEventsList = DataGenerator.generateEvents(11800);
-            client.events().upsert(upsertEventsList);
-            LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
+            LOG.info(loggingPrefix + "Start uploading file binaries.");
+            List<FileMetadata> uploadFileList = client.files().upload(fileContainerInput);
+            LOG.info(loggingPrefix + "Finished uploading file binaries. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
-            Thread.sleep(15000); // wait for eventual consistency
+            Thread.sleep(2000); // wait for eventual consistency
 
-            LOG.info(loggingPrefix + "Start reading events.");
-            List<Event> listEventsResults = new ArrayList<>();
-            client.events()
+            LOG.info(loggingPrefix + "Start reading file metadata.");
+            List<FileMetadata> listFilesResults = new ArrayList<>();
+            client.files()
                     .list(RequestParameters.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
-                    .forEachRemaining(events -> listEventsResults.addAll(events));
-            LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
+                    .forEachRemaining(files -> listFilesResults.addAll(files));
+            LOG.info(loggingPrefix + "Finished reading files. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            /*
+            LOG.info(loggingPrefix + "Start downloading file binaries.");
+            List<FileMetadata> listFilesResults = new ArrayList<>();
+            client.files()
+                    .list(RequestParameters.create()
+                            .withFilterParameter("source", DataGenerator.sourceValue))
+                    .forEachRemaining(files -> listFilesResults.addAll(files));
+            LOG.info(loggingPrefix + "Finished reading files. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+
+
 
             LOG.info(loggingPrefix + "Start deleting events.");
             List<Item> deleteItemsInput = new ArrayList<>();
@@ -72,8 +109,11 @@ class EventsTest {
             LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
+
             assertEquals(upsertEventsList.size(), listEventsResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+
+             */
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();
@@ -82,7 +122,7 @@ class EventsTest {
 
     @Test
     @Tag("remoteCDP")
-    void writeEditAndDeleteEvents() {
+    void writeEditAndDeleteFiles() {
         Instant startInstant = Instant.now();
         ClientConfig config = ClientConfig.create()
                 .withNoWorkers(1)
@@ -192,7 +232,7 @@ class EventsTest {
 
     @Test
     @Tag("remoteCDP")
-    void writeRetrieveAndDeleteEvents() {
+    void writeRetrieveAndDeleteFiles() {
         Instant startInstant = Instant.now();
         String loggingPrefix = "UnitTest - writeReadAndDeleteEvents() -";
         LOG.info(loggingPrefix + "Start test. Creating Cognite client.");
@@ -256,7 +296,7 @@ class EventsTest {
 
     @Test
     @Tag("remoteCDP")
-    void writeAggregateAndDeleteEvents() {
+    void writeAggregateAndDeleteFiles() {
         int noItems = 745;
         Instant startInstant = Instant.now();
 
