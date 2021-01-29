@@ -436,7 +436,7 @@ abstract class ApiBase {
      * @param itemList The items to parse.
      * @return The items in request item object form.
      */
-    protected List<Map<String, Object>> toRequestItems(List<Item> itemList) {
+    protected List<Map<String, Object>> toRequestItems(Collection<Item> itemList) {
         List<Map<String, Object>> requestItems = new ArrayList<>();
         for (Item item : itemList) {
             if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
@@ -453,7 +453,7 @@ abstract class ApiBase {
      * @param itemList
      * @return
      */
-    protected List<Item> deDuplicate(List<Item> itemList) {
+    protected List<Item> deDuplicate(Collection<Item> itemList) {
         Map<String, Item> idMap = new HashMap<>();
         for (Item item : itemList) {
             if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
@@ -467,6 +467,50 @@ abstract class ApiBase {
         List<Item> deDuplicated = new ArrayList<>(idMap.values());
 
         return deDuplicated;
+    }
+
+    /**
+     * Returns true if all items contain either an externalId or id.
+     * @param items
+     * @return
+     */
+    protected boolean itemsHaveId(Collection<Item> items) {
+        for (Item item : items) {
+            if (!getItemId(item).isPresent()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Maps all items to their externalId (primary) or id (secondary). If the id function does not return any
+     * identity, the item will be mapped to the empty string.
+     *
+     * Via the identity mapping, this function will also perform deduplication of the input items.
+     *
+     * @param items the items to map to externalId / id.
+     * @return the {@link Map} with all items mapped to externalId / id.
+     */
+    protected Map<String, Item> mapItemToId(Collection<Item> items) {
+        Map<String, Item> resultMap = new HashMap<>((int) (items.size() * 1.35));
+        for (Item item : items) {
+            resultMap.put(getItemId(item).orElse(""), item);
+        }
+        return resultMap;
+    }
+
+    /*
+    Returns the id of an Item.
+     */
+    private Optional<String> getItemId(Item item) {
+        Optional<String> returnValue = Optional.empty();
+        if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+            returnValue = Optional.of(item.getExternalId());
+        } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+            returnValue = Optional.of(String.valueOf(item.getId()));
+        }
+        return returnValue;
     }
 
 

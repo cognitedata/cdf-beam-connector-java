@@ -612,14 +612,21 @@ public abstract class Files extends ApiBase {
      * @throws Exception
      */
     public List<FileBinary> downloadFileBinaries(List<Item> fileItems,
-                                                                 URI tempStoragePath,
-                                                                 boolean forceTempStorage) throws Exception {
+                                                 URI tempStoragePath,
+                                                 boolean forceTempStorage) throws Exception {
+        final int MAX_RETRIES = 2;
         String loggingPrefix = "downloadFileBinaries() - ";
+        Preconditions.checkArgument(itemsHaveId(fileItems),
+                loggingPrefix + "All file items must include a valid externalId or id.");
+
+        Instant startInstant = Instant.now();
         // do not send empty requests.
         if (fileItems.isEmpty()) {
             LOG.warn(loggingPrefix + "Tried to send empty delete request. Will skip this request.");
             return Collections.emptyList();
         }
+        LOG.info(loggingPrefix + "Received request to download {} file binaries.",
+                fileItems.size());
 
         ConnectorServiceV1.FileBinaryReader reader = getClient().getConnectorService().readFileBinariesByIds()
                 .withTempStoragePath(tempStoragePath)
@@ -630,11 +637,64 @@ public abstract class Files extends ApiBase {
                 .withItems(toRequestItems(deDuplicate(fileItems)))
                 .withRootParameter("ignoreUnknownIds", true));
 
-        List<ResponseItems<FileBinary>> response = reader.readFileBinaries(request);
+        List<ResponseItems<FileBinary>> requestResult = reader.readFileBinaries(request);
 
-        //todo finish
+        /*
+        Responses from readFileBinaryById will be a single item in case of an error. Check that item for success,
+        missing items and duplicates.
+         */
+        // if the request result is false, we have duplicates and/or missing items.
+        Map<String, Item> itemMap = mapItemToId(fileItems);
+        int retries = 0;
+        while (!requestResult.isEmpty() && !requestResult.get(0).isSuccessful() && retries <= MAX_RETRIES) {
+            LOG.info(loggingPrefix + "Read file request failed. Removing duplicates and missing items and retrying the request");
+            List<Item> duplicates = ItemParser.parseItems(requestResult.get(0).getDuplicateItems());
+            List<Item> missing = ItemParser.parseItems(requestResult.get(0).getMissingItems());
+            LOG.debug(loggingPrefix + "No of duplicates reported: {}", duplicates.size());
+            LOG.debug(loggingPrefix + "No of missing items reported: {}", missing.size());
 
-        return Collections.emptyList();
+            for (Item value : missing) {
+                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                    itemMap.remove(value.getExternalId());
+                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                    itemMap.remove(String.valueOf(value.getId()));
+                }
+            }
+
+            for (Item value : duplicates) {
+                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                    itemMap.remove(value.getExternalId());
+                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                    itemMap.remove(String.valueOf(value.getId()));
+                }
+            }
+
+            request = addAuthInfo(RequestParameters.create()
+                    .withItems(toRequestItems(deDuplicate(itemMap.values())))
+                    .withRootParameter("ignoreUnknownIds", true));
+
+            requestResult = reader.readFileBinaries(request);
+            retries++;
+        }
+
+        if (!requestResult.isEmpty() && !requestResult.get(0).isSuccessful()) {
+            LOG.error(loggingPrefix + "Failed to read file binaries.", requestResult.get(0).getResponseBodyAsString());
+            throw new Exception(loggingPrefix + "Failed to delete items. " + requestResult.get(0).getResponseBodyAsString());
+        }
+        List<FileBinary> results = new ArrayList<>();
+        for (ResponseItems<FileBinary> responseItems : requestResult) {
+            if (responseItems.isSuccessful()) {
+                for (FileBinary fileBinary: responseItems.getResultsItems()) {
+                   results.add(fileBinary);
+                }
+            }
+        }
+
+        LOG.info(loggingPrefix + "Completed download of {} files within a duration of {}.",
+                requestResult.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        return results;
     }
 
     /**
