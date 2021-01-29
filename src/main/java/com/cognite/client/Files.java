@@ -580,14 +580,48 @@ public abstract class Files extends ApiBase {
                 files.size());
 
         List<List<Item>> batches = Partition.ofSize(files, maxBatchSize);
+        List<FileContainer> results = new ArrayList<>();
         for (List<Item> batch : batches) {
+            // Get the file binaries
             List<FileBinary> fileBinaries = downloadFileBinaries(batch, downloadPath.toUri(), !preferByteStream);
+            // Get the file metadata
+            List<FileMetadata> fileMetadataList = retrieve(batch);
+            // Merge the binary and metadata
+            List<FileContainer> containers = buildFileContainers(fileBinaries, fileMetadataList);
+
+            for (FileContainer container : containers) {
+                if (container.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI) {
+                    // Rename the file from random temp to file name
+
+                }
+            }
 
         }
 
         //todo finish
 
-        return Collections.emptyList();
+        return results;
+    }
+
+    /*
+    Gathers file binaries and metadata into file containers via externalId / id.
+     */
+    private List<FileContainer> buildFileContainers(Collection<FileBinary> inputBinaries,
+                                                    Collection<FileMetadata> inputMetadata) {
+        List<FileContainer> containers = new ArrayList<>();
+        for (FileBinary binary : inputBinaries) {
+            FileContainer.Builder containerBuilder = FileContainer.newBuilder()
+                    .setFileBinary(binary);
+            if (binary.getIdTypeCase() == FileBinary.IdTypeCase.EXTERNAL_ID
+                    && getByExternalId(inputMetadata, binary.getExternalId()).isPresent()) {
+                containerBuilder.setFileMetadata(getByExternalId(inputMetadata, binary.getExternalId()).get());
+            } else if (binary.getIdTypeCase() == FileBinary.IdTypeCase.ID
+                    && getById(inputMetadata, binary.getId()).isPresent()) {
+                containerBuilder.setFileMetadata(getById(inputMetadata, binary.getId()).get());
+            }
+            containers.add(containerBuilder.build());
+        }
+        return containers;
     }
 
     /**
@@ -1026,6 +1060,32 @@ public abstract class Files extends ApiBase {
         } else {
             return Optional.<String>empty();
         }
+    }
+
+    /*
+    Returns the file metadata that matches a given externalId
+     */
+    private Optional<FileMetadata> getByExternalId(Collection<FileMetadata> itemsToSearch, String externalId) {
+        Optional<FileMetadata> returnObject = Optional.empty();
+        for (FileMetadata item : itemsToSearch) {
+            if (item.getExternalId().getValue().equals(externalId)) {
+                return Optional.of(item);
+            }
+        }
+        return returnObject;
+    }
+
+    /*
+    Returns the file metadata that matches a given id
+     */
+    private Optional<FileMetadata> getById(Collection<FileMetadata> itemsToSearch, long id) {
+        Optional<FileMetadata> returnObject = Optional.empty();
+        for (FileMetadata item : itemsToSearch) {
+            if (item.getId().getValue() == id) {
+                return Optional.of(item);
+            }
+        }
+        return returnObject;
     }
 
     @AutoValue.Builder
