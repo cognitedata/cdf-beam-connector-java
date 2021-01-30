@@ -82,9 +82,8 @@ public abstract class FileBinaryRequestExecutor {
             504     // gateway timeout
     );
 
-    private static final int DEFAULT_CPU_MULTIPLIER = 10;
-    private static final ForkJoinPool DEFAULT_POOL = new ForkJoinPool(Runtime.getRuntime().availableProcessors()
-            * DEFAULT_CPU_MULTIPLIER);
+    private static final int DEFAULT_NUM_WORKERS = 10;
+    private static final ForkJoinPool DEFAULT_POOL = new ForkJoinPool(DEFAULT_NUM_WORKERS);
 
     protected final static Logger LOG = LoggerFactory.getLogger(FileBinaryRequestExecutor.class);
 

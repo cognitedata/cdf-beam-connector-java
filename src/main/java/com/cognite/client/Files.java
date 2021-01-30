@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -589,18 +590,70 @@ public abstract class Files extends ApiBase {
             // Merge the binary and metadata
             List<FileContainer> containers = buildFileContainers(fileBinaries, fileMetadataList);
 
+            // Rename the file from random temp name to file name
+            List<FileContainer> resultContainers = new ArrayList<>();
             for (FileContainer container : containers) {
-                if (container.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI) {
-                    // Rename the file from random temp to file name
+                if (container.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI
+                        && container.hasFileMetadata()) {
+                    // Get the temp file name
+                    String fileNameBase = container.getFileMetadata().getName().getValue();
+                    String fileSuffix = "";
+                    if (fileNameBase.lastIndexOf(".") != -1) {
+                        // The file name has a suffix. Let's break it out.
+                        int splitIndex = fileNameBase.lastIndexOf(".");
+                        fileSuffix = fileNameBase.substring(splitIndex);
+                        fileNameBase = fileNameBase.substring(0, splitIndex);
+                    }
+                    Path tempFilePath = Paths.get(new URI(container.getFileBinary().getBinaryUri()));
+                    String destinationFileName = fileNameBase;
+                    int counter = 1;
+                    while (java.nio.file.Files.exists(downloadPath.resolve(destinationFileName + fileSuffix))) {
+                        // The destination file name already exists, so we add an increasing counter to the
+                        // file name base.
+                        destinationFileName = fileNameBase + "_" + counter;
+                        counter++;
+                    }
 
+                    // Rename the file
+                    Path destinationPath = downloadPath.resolve(destinationFileName + fileSuffix);
+                    java.nio.file.Files.move(tempFilePath, destinationPath);
+
+                    // Build a new file container with the new file name
+                    FileContainer updated = container.toBuilder()
+                            .setFileBinary(container.getFileBinary().toBuilder()
+                                    .setBinaryUri(destinationPath.toUri().toString()))
+                            .build();
+
+                    // Swap the old container with the new one
+                    resultContainers.add(updated);
                 }
+                resultContainers.add(container);
             }
-
+            results.addAll(resultContainers);
         }
-
-        //todo finish
-
         return results;
+    }
+
+    /**
+     * Downloads file binaries to a local / network path.
+     *
+     * Downloads a set of file binaries based on {@code externalId / id} in the {@link Item} list.
+     *
+     * Both the file header / metadata and the file binary will be returned. The complete information is encapsulated
+     * int the {@link FileContainer} returned from this method. The {@link FileContainer} will host the
+     * {@link URI} reference to the binary.
+     *
+     * Supported destination file stores for the file binary:
+     * - Local (network) disk. Specify the temp path as {@code file://<host>/<my-path>/}.
+     * Examples: {@code file://localhost/home/files/, file:///home/files/, file:///c:/temp/}
+     * - Google Cloud Storage. Specify the temp path as {@code gs://<my-storage-bucket>/<my-path>/}.
+     *
+     * @param files The list of files to download.
+     * @param downloadPath The URI to the download storage
+     * @return File containers with file headers and references/byte streams of the binary.
+     */
+    public List<FileContainer> downloadToPath(List<Item> files, Path downloadPath) throws Exception {
+        return download(files, downloadPath, false);
     }
 
     /*
@@ -669,7 +722,8 @@ public abstract class Files extends ApiBase {
         // build initial request object
         RequestParameters request = addAuthInfo(RequestParameters.create()
                 .withItems(toRequestItems(deDuplicate(fileItems)))
-                .withRootParameter("ignoreUnknownIds", true));
+                //.withRootParameter("ignoreUnknownIds", true)
+        );
 
         List<ResponseItems<FileBinary>> requestResult = reader.readFileBinaries(request);
 

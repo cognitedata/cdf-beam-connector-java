@@ -29,7 +29,7 @@ public class DataGenerator {
         for (int i = 0; i < noObjects; i++) {
             objects.add(FileMetadata.newBuilder()
                     .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
-                    .setName(StringValue.of("test_file_" + RandomStringUtils.randomAlphanumeric(5)))
+                    .setName(StringValue.of("test_file_" + RandomStringUtils.randomAlphanumeric(5) + ".test"))
                     .setSource(StringValue.of(sourceValue))
                     .putMetadata("type", DataGenerator.sourceValue)
                     .putMetadata(sourceKey, DataGenerator.sourceValue)
