@@ -1034,12 +1034,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
-     * List the Raw tables for a given database..
+     * List the Raw tables for a given database.
      *
      * @param dbName The name of the database to list tables from.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRawTableNames(String dbName, ProjectConfig config) {
+    public ResultFutureIterator<String> readRawTableNames(String dbName, ProjectConfig config) {
         Preconditions.checkNotNull(dbName);
         Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
         LOG.debug(loggingPrefix + "Listing tables for database {}", dbName);
@@ -1057,6 +1057,32 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
                 .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * List the Raw tables for a given database.
+     *
+     * @param dbName The name of the database to list tables from.
+     * @return
+     */
+    public ItemWriter writeRawTableNames(String dbName) {
+        Preconditions.checkNotNull(dbName);
+        Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
+        LOG.debug(loggingPrefix + "Listing tables for database {}", dbName);
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs/" + dbName + "/tables")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
     }
 
     /**

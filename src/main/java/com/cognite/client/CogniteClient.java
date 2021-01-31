@@ -205,6 +205,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Raw} representing the Cognite Raw service.
+     *
+     * @return The raw api object.
+     */
+    public Raw raw() {
+        return Raw.of(this);
+    }
+
+    /**
      * Returns {@link Labels} representing the Cognite labels api endpoints.
      *
      * @return The labels api endpoint.
