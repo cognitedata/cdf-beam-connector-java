@@ -19,7 +19,7 @@ package com.cognite.client;
 import com.google.auto.value.AutoValue;
 
 /**
- * This class represents the Cognite events api endpoint.
+ * This class represents the Cognite raw api endpoint.
  *
  * It provides methods for interacting with the Raw service.
  */
@@ -46,6 +46,15 @@ public abstract class Raw extends ApiBase {
     }
 
     /**
+     * Returns {@link RawDatabases} representing the Cognite Raw Tables api endpoint.
+     *
+     * @return The raw tables api object.
+     */
+    public RawDatabases databases() {
+        return RawDatabases.of(getClient());
+    }
+
+    /**
      * Returns {@link RawTables} representing the Cognite Raw Tables api endpoint.
      *
      * @return The raw tables api object.
@@ -53,6 +62,7 @@ public abstract class Raw extends ApiBase {
     public RawTables tables() {
         return RawTables.of(getClient());
     }
+
 
     @AutoValue.Builder
     abstract static class Builder extends ApiBase.Builder<Builder> {

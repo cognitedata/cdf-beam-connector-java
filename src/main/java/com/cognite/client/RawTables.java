@@ -17,8 +17,6 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.dto.Event;
-import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.util.Partition;
@@ -34,9 +32,9 @@ import java.time.Instant;
 import java.util.*;
 
 /**
- * This class represents the Cognite events api endpoint.
+ * This class represents the Cognite Raw tables endpoint.
  *
- * It provides methods for reading and writing {@link Event}.
+ * It provides methods for interacting with the Raw service.
  */
 @AutoValue
 public abstract class RawTables extends ApiBase {
