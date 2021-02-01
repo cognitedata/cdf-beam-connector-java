@@ -23,6 +23,8 @@ import com.cognite.client.dto.Relationship;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.RelationshipParser;
 import com.google.auto.value.AutoValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.List;
@@ -41,6 +43,8 @@ public abstract class Relationships extends ApiBase {
     private static Builder builder() {
         return new AutoValue_Relationships.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Relationships.class);
 
     /**
      * Constructs a new {@link Relationships} object using the provided client configuration.

@@ -25,6 +25,8 @@ import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.config.UpsertMode;
 import com.google.auto.value.AutoValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,6 +42,8 @@ public abstract class Events extends ApiBase {
     private static Builder builder() {
         return new AutoValue_Events.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Events.class);
 
     /**
      * Constructs a new {@link Events} object using the provided client configuration.

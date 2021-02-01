@@ -26,6 +26,8 @@ import com.cognite.client.dto.TimeseriesMetadata;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.LabelParser;
 import com.google.auto.value.AutoValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.List;
@@ -44,6 +46,8 @@ public abstract class Labels extends ApiBase {
     private static Builder builder() {
         return new AutoValue_Labels.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Labels.class);
 
     /**
      * Construct a new {@link Labels} object using the provided configuration.

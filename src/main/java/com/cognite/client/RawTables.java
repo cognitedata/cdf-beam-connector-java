@@ -17,17 +17,19 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.parser.EventParser;
+import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import jdk.nashorn.internal.ir.annotations.Immutable;
+import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * This class represents the Cognite events api endpoint.
@@ -40,6 +42,8 @@ public abstract class RawTables extends ApiBase {
     private static Builder builder() {
         return new AutoValue_RawTables.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(RawTables.class);
 
     /**
      * Constructs a new {@link RawTables} object using the provided client configuration.
@@ -79,18 +83,43 @@ public abstract class RawTables extends ApiBase {
      * @param dbName The Raw database to create tables in.
      * @param tables The tables to create.
      * @param ensureParent If set to true, will create the database if it doesn't exist from before.
-     * @return The upserted events.
+     * @return The created table names.
      * @throws Exception
      */
     public List<String> create(String dbName, List<String> tables, boolean ensureParent) throws Exception {
+        String loggingPrefix = "create() - ";
+        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
+                "Database name cannot be empty.");
+        LOG.info(loggingPrefix + "Received {} tables to create in database {}.",
+                tables.size(),
+                dbName);
+
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawTableNames(dbName)
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
+        List<List<String>> batches = Partition.ofSize(tables, 100);
+        for (List<String> batch : batches) {
+            List<Map<String, Object>> items = new ArrayList<>();
+            for (String table : batch) {
+                items.add(ImmutableMap.of("name", table));
+            }
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withItems(items)
+                    .withRootParameter("ensureParent", ensureParent));
+            ResponseItems<String> response = createItemWriter.writeItems(request);
+            if (!response.isSuccessful()) {
+                throw new Exception(String.format(loggingPrefix + "Create table request failed: %s",
+                        response.getResponseBodyAsString()));
+            }
+        }
 
-        //todo implement
-        return Collections.emptyList();
+        LOG.info(loggingPrefix + "Successfully created {} tables in database {}.",
+                tables.size(),
+                dbName);
+
+        return tables;
     }
 
     /**
@@ -98,21 +127,42 @@ public abstract class RawTables extends ApiBase {
      *
      * @param dbName The Raw database to create tables in.
      * @param tables The tables to delete.
-     * @return The deleted events via {@link Item}
+     * @return The deleted tables
      * @throws Exception
      */
-    public List<Item> delete(String dbName, List<String> tables) throws Exception {
+    public List<String> delete(String dbName, List<String> tables) throws Exception {
+        String loggingPrefix = "delete() - ";
+        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
+                "Database name cannot be empty.");
+        LOG.info(loggingPrefix + "Received {} tables to delete from database {}.",
+                tables.size(),
+                dbName);
+
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEvents()
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawTableNames(dbName)
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .addParameter("ignoreUnknownIds", true);
+        List<List<String>> batches = Partition.ofSize(tables, 100);
+        for (List<String> batch : batches) {
+            List<Map<String, Object>> items = new ArrayList<>();
+            for (String table : batch) {
+                items.add(ImmutableMap.of("name", table));
+            }
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withItems(items));
+            ResponseItems<String> response = deleteItemWriter.writeItems(request);
+            if (!response.isSuccessful()) {
+                throw new Exception(String.format(loggingPrefix + "Create table request failed: %s",
+                        response.getResponseBodyAsString()));
+            }
+        }
 
-        // todo implement
+        LOG.info(loggingPrefix + "Successfully deleted {} tables from database {}.",
+                tables.size(),
+                dbName);
 
-        return Collections.emptyList();
+        return tables;
     }
 
     @AutoValue.Builder

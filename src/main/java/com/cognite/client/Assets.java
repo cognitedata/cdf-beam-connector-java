@@ -31,6 +31,8 @@ import org.jgrapht.Graph;
 import org.jgrapht.alg.cycle.CycleDetector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleDirectedGraph;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -49,6 +51,8 @@ public abstract class Assets extends ApiBase {
     private static Builder builder() {
         return new AutoValue_Assets.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Assets.class);
 
     /**
      * Constructs a new {@link Assets} object using the provided client configuration.
