@@ -1015,7 +1015,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      *
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRawDbNames(ProjectConfig config) {
+    public ResultFutureIterator<String> readRawDbNames(ProjectConfig config) {
         LOG.debug(loggingPrefix + "Initiating read raw database names service.");
         this.validate();
 
@@ -1031,6 +1031,52 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
                 .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * Create Raw tables in a given database.
+     *
+     * @return
+     */
+    public ItemWriter writeRawDbNames() {
+        LOG.debug(loggingPrefix + "Creating databases");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Create Raw tables in a given database.
+     *
+     * @return
+     */
+    public ItemWriter deleteRawDbNames() {
+        LOG.debug(loggingPrefix + "Deleting databases");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs/delete")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
     }
 
     /**

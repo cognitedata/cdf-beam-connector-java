@@ -18,7 +18,6 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.Event;
-import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.util.Partition;
@@ -39,16 +38,16 @@ import java.util.*;
  * It provides methods for reading and writing {@link Event}.
  */
 @AutoValue
-public abstract class RawTables extends ApiBase {
+public abstract class RawDatabases extends ApiBase {
 
     private static Builder builder() {
-        return new AutoValue_RawTables.Builder();
+        return new AutoValue_RawDatabases.Builder();
     }
 
-    protected static final Logger LOG = LoggerFactory.getLogger(RawTables.class);
+    protected static final Logger LOG = LoggerFactory.getLogger(RawDatabases.class);
 
     /**
-     * Constructs a new {@link RawTables} object using the provided client configuration.
+     * Constructs a new {@link RawDatabases} object using the provided client configuration.
      *
      * This method is intended for internal use--SDK clients should always use {@link CogniteClient}
      * as the entry point to this class.
@@ -56,23 +55,22 @@ public abstract class RawTables extends ApiBase {
      * @param client The {@link CogniteClient} to use for configuration settings.
      * @return the assets api object.
      */
-    public static RawTables of(CogniteClient client) {
-        return RawTables.builder()
+    public static RawDatabases of(CogniteClient client) {
+        return RawDatabases.builder()
                 .setClient(client)
                 .build();
     }
 
     /**
-     * Returns all tables (names) in a database.
+     * Returns all database names.
      *
-     * @param dbName the data base to list tables for.
-     * @return an {@link Iterator} to page through the table names.
+     * @return an {@link Iterator} to page through the db names.
      * @throws Exception
      */
-    public Iterator<List<String>> list(String dbName) throws Exception {
+    public Iterator<List<String>> list() throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ResultFutureIterator<String> futureIterator =
-                connector.readRawTableNames(dbName, getClient().buildProjectConfig())
+                connector.readRawDbNames(getClient().buildProjectConfig())
                         .withExecutorService(getClient().getExecutorService())
                         .withHttpClient(getClient().getHttpClient());
 
@@ -80,27 +78,22 @@ public abstract class RawTables extends ApiBase {
     }
 
     /**
-     * Creates tables in a Raw database.
+     * Creates Raw databases.
      *
-     * @param dbName The Raw database to create tables in.
-     * @param tables The tables to create.
-     * @param ensureParent If set to true, will create the database if it doesn't exist from before.
+     * @param databases The databases to create.
      * @return The created table names.
      * @throws Exception
      */
-    public List<String> create(String dbName, List<String> tables, boolean ensureParent) throws Exception {
+    public List<String> create(List<String> databases) throws Exception {
         String loggingPrefix = "create() - ";
         Instant startInstant = Instant.now();
-        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
-                "Database name cannot be empty.");
-        LOG.info(loggingPrefix + "Received {} tables to create in database {}.",
-                tables.size(),
-                dbName);
+        LOG.info(loggingPrefix + "Received {} databases to create.",
+                databases.size());
 
-        List<String> deduplicated = new ArrayList<>(new HashSet<>(tables));
+        List<String> deduplicated = new ArrayList<>(new HashSet<>(databases));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawTableNames(dbName)
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawDbNames()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
@@ -111,44 +104,38 @@ public abstract class RawTables extends ApiBase {
                 items.add(ImmutableMap.of("name", table));
             }
             RequestParameters request = addAuthInfo(RequestParameters.create()
-                    .withItems(items)
-                    .withRootParameter("ensureParent", ensureParent));
+                    .withItems(items));
             ResponseItems<String> response = createItemWriter.writeItems(request);
             if (!response.isSuccessful()) {
-                throw new Exception(String.format(loggingPrefix + "Create table request failed: %s",
+                throw new Exception(String.format(loggingPrefix + "Create database request failed: %s",
                         response.getResponseBodyAsString()));
             }
         }
 
-        LOG.info(loggingPrefix + "Successfully created {} tables in database {}. Duration: {}",
-                tables.size(),
-                dbName,
+        LOG.info(loggingPrefix + "Successfully created {} databases. Duration: {}.",
+                databases.size(),
                 Duration.between(startInstant, Instant.now()));
 
         return deduplicated;
     }
 
     /**
-     * Deletes a set of tables from a Raw database.
+     * Deletes a set of Raw database.
      *
-     * @param dbName The Raw database to create tables in.
-     * @param tables The tables to delete.
-     * @return The deleted tables
+     * @param databases The Raw database to delete.
+     * @return The deleted databases.
      * @throws Exception
      */
-    public List<String> delete(String dbName, List<String> tables) throws Exception {
+    public List<String> delete(List<String> databases) throws Exception {
         String loggingPrefix = "delete() - ";
         Instant startInstant = Instant.now();
-        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
-                "Database name cannot be empty.");
-        LOG.info(loggingPrefix + "Received {} tables to delete from database {}.",
-                tables.size(),
-                dbName);
+        LOG.info(loggingPrefix + "Received {} databases to delete.",
+                databases.size());
 
-        List<String> deduplicated = new ArrayList<>(new HashSet<>(tables));
+        List<String> deduplicated = new ArrayList<>(new HashSet<>(databases));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawTableNames(dbName)
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawDbNames()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
@@ -162,14 +149,13 @@ public abstract class RawTables extends ApiBase {
                     .withItems(items));
             ResponseItems<String> response = deleteItemWriter.writeItems(request);
             if (!response.isSuccessful()) {
-                throw new Exception(String.format(loggingPrefix + "Delete table request failed: %s",
+                throw new Exception(String.format(loggingPrefix + "Delete database request failed: %s",
                         response.getResponseBodyAsString()));
             }
         }
 
-        LOG.info(loggingPrefix + "Successfully deleted {} tables from database {}. Duration: {}",
-                tables.size(),
-                dbName,
+        LOG.info(loggingPrefix + "Successfully deleted {} databases. Duration: {}.",
+                databases.size(),
                 Duration.between(startInstant, Instant.now()));
 
         return deduplicated;
@@ -177,6 +163,6 @@ public abstract class RawTables extends ApiBase {
 
     @AutoValue.Builder
     abstract static class Builder extends ApiBase.Builder<Builder> {
-        abstract RawTables build();
+        abstract RawDatabases build();
     }
 }
