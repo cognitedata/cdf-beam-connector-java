@@ -17,6 +17,7 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.dto.RawRow;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.util.Partition;
@@ -61,20 +62,28 @@ public abstract class RawRows extends ApiBase {
     }
 
     /**
-     * Returns all tables (names) in a database.
+     * Returns a set of rows from a table.
      *
-     * @param dbName the data base to list tables for.
-     * @return an {@link Iterator} to page through the table names.
+     * @param dbName the database to list rows from.
+     * @param tableName the table to list rows from.
+     * @param requestParameters the column and filter specification for the rows.
+     * @return an {@link Iterator} to page through the rows.
      * @throws Exception
      */
-    public Iterator<List<String>> list(String dbName) throws Exception {
+    public Iterator<List<RawRow>> list(String dbName,
+                                       String tableName,
+                                       RequestParameters requestParameters) throws Exception {
+
+
+
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ResultFutureIterator<String> futureIterator =
                 connector.readRawTableNames(dbName, getClient().buildProjectConfig())
                         .withExecutorService(getClient().getExecutorService())
                         .withHttpClient(getClient().getHttpClient());
 
-        return FanOutIterator.of(ImmutableList.of(futureIterator));
+        //return FanOutIterator.of(ImmutableList.of(futureIterator));
+        return Collections.emptyIterator();
     }
 
     /**

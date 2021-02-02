@@ -63,6 +63,15 @@ public abstract class Raw extends ApiBase {
         return RawTables.of(getClient());
     }
 
+    /**
+     * Returns {@link RawRows} representing the Cognite Raw rows api endpoint.
+     *
+     * @return The raw rows api object.
+     */
+    public RawRows rows() {
+        return RawRows.of(getClient());
+    }
+
 
     @AutoValue.Builder
     abstract static class Builder extends ApiBase.Builder<Builder> {
