@@ -1648,6 +1648,76 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Read security categories from Cognite.
+     *
+     * @param queryParameters The parameters for the security categories query.
+     * @return
+     */
+    public ResultFutureIterator<String> readSecurityCategories(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read security categories service.");
+        this.validate();
+
+        GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
+                .setEndpoint("securitycategories")
+                .setRequestParameters(queryParameters)
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * Write security categories to Cognite.
+     *
+     * Calling this method will return an <code>ItemWriter</code>
+     * @return
+     */
+    public ItemWriter writeSecurityCategories() {
+        LOG.debug(loggingPrefix + "Initiating write security categories service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("securitycategories")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Delete security categories in Cognite.
+     *
+     * Calling this method will return an <code>ItemWriter</code>
+     * @return
+     */
+    public ItemWriter deleteSecurityCategories() {
+        LOG.debug(loggingPrefix + "Initiating delete security categories service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("securitycategories/delete")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
      * Detect references to assets and files in a P&ID and annotate the references with bounding boxes.
      * Finds entities in the P&ID that match a list of entity names,
      * for instance asset names. The P&ID must be a single-page PDF file.

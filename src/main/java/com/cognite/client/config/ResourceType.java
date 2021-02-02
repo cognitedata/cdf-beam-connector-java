@@ -42,5 +42,6 @@ public enum ResourceType {
   DATA_SET,
   RELATIONSHIP,
   RELATIONSHIP_BY_ID,
-  LABEL
+  LABEL,
+  SECURITY_CATEGORY
 }

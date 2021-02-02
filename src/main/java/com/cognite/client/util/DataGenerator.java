@@ -243,6 +243,16 @@ public class DataGenerator {
         return objects;
     }
 
+    public static List<SecurityCategory> generateSecurityGroups(int noObjects) {
+        List<SecurityCategory> objects = new ArrayList<>(noObjects);
+        for (int i = 0; i < noObjects; i++) {
+            objects.add(SecurityCategory.newBuilder()
+                    .setName(RandomStringUtils.randomAlphanumeric(10))
+                    .build());
+        }
+        return objects;
+    }
+
     private static double customLog(double base, double logNumber) {
         return Math.log(logNumber) / Math.log(base);
     }

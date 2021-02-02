@@ -408,6 +408,12 @@ abstract class ApiBase {
                         .withHttpClient(getClient().getHttpClient());
                 // TODO move the executor and client spec up to the connector
                 break;
+            case SECURITY_CATEGORY:
+                results = connector.readSecurityCategories(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
+                break;
             default:
                 throw new Exception("Not a supported resource type: " + resourceType);
         }
@@ -1305,6 +1311,115 @@ abstract class ApiBase {
                 throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
                                 + " %d items completed upsert. %n " + exceptionMessage,
                         elementListCreate.size() + elementListDelete.size(),
+                        elementListCompleted.size()));
+            }
+
+            return elementListCompleted;
+        }
+
+        /**
+         * Upserts a set of items via create.
+         *
+         * This function will first try to write the items as new items.
+         *
+         * @param items The items to be created.
+         * @return The created items.
+         * @throws Exception
+         */
+        public List<String> create(List<T> items) throws Exception {
+            Instant startInstant = Instant.now();
+            String batchLogPrefix =
+                    "create() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+            /*
+            In the case of Security Categories this checks if the items have a name, as security categories do not have
+            external ids, and the id is assigned by the api on creation and accepted as input the api.
+             */
+            Preconditions.checkArgument(itemsHaveId(items),
+                    batchLogPrefix + "All items must have externalId or id.");
+
+            // Should not happen--but need to guard against empty input
+            if (items.isEmpty()) {
+                LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+                return Collections.<String>emptyList();
+            }
+
+            // Insert, completed lists
+            List<T> elementListCreate = deduplicate(items);
+            List<String> elementListCompleted = new ArrayList<>(elementListCreate.size());
+
+            if (elementListCreate.size() != items.size()) {
+                LOG.debug(batchLogPrefix + "Identified {} duplicate items in the input.",
+                        items.size() - elementListCreate.size());
+            }
+
+            /*
+            The upsert loop. If there are items left to insert or update:
+            1. Insert elements
+            2. If conflict, report to client
+
+            PS: This will only run once. The elementListCreate is cleared, but not filled again.
+            */
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            String exceptionMessage = "";
+            for (int i = 0; i < maxUpsertLoopIterations && (elementListCreate.size()) > 0;
+                 i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+                LOG.debug(batchLogPrefix + "Start create loop {} with {} items to create and "
+                                + "{} completed items at duration {}",
+                        i,
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+
+                /*
+                Insert / create items
+                 */
+                if (elementListCreate.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Create items list is empty. Skipping create.");
+                } else {
+                    Map<ResponseItems<String>, List<T>> createResponseMap = splitAndCreateItems(elementListCreate);
+                    LOG.debug(batchLogPrefix + "Completed create items requests for {} items across {} batches at duration {}",
+                            elementListCreate.size(),
+                            createResponseMap.size(),
+                            Duration.between(startInstant, Instant.now()).toString());
+                    elementListCreate.clear(); // Must prepare the list for possible new entries.
+
+                    for (ResponseItems<String> response : createResponseMap.keySet()) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                            LOG.debug(batchLogPrefix + "Create items request success. Adding {} create result items to result collection.",
+                                    response.getResultsItems().size());
+                        } else {
+                            exceptionMessage = response.getResponseBodyAsString();
+                            LOG.debug(batchLogPrefix + "Create items request failed: {}", response.getResponseBodyAsString());
+                            if (i == maxUpsertLoopIterations - 1) {
+                                // Add the error message to std logging
+                                LOG.error(batchLogPrefix + "Create items request failed. {}", response.getResponseBodyAsString());
+                            }
+                            LOG.debug(batchLogPrefix + "Converting duplicates to update and retrying the request");
+                            List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                            LOG.debug(batchLogPrefix + "Number of duplicate entries reported by CDF: {}", duplicates.size());
+                            throw new Exception(String.format(batchLogPrefix + "Failed to create items. "
+                                            + "Number of duplicate entries reported by CDF: %d. %n" + exceptionMessage,
+                                    duplicates.size()));
+                        }
+                    }
+                }
+            }
+
+            // Check if all elements completed the upsert requests
+            if (elementListCreate.isEmpty()) {
+                LOG.info(batchLogPrefix + "Successfully created {} items within a duration of {}.",
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+            } else {
+                LOG.error(batchLogPrefix + "Failed to create items. {} items remaining. {} items completed upsert."
+                                + System.lineSeparator() + "{}",
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        exceptionMessage);
+                throw new Exception(String.format(batchLogPrefix + "Failed to create items. %d items remaining. "
+                                + " %d items completed upsert. %n " + exceptionMessage,
+                        elementListCreate.size(),
                         elementListCompleted.size()));
             }
 
