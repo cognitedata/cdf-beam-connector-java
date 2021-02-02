@@ -21,13 +21,16 @@ import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.SecurityCategory;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.SecurityCategoryParser;
+import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -81,15 +84,42 @@ public abstract class SecurityCategories extends ApiBase {
                 .collect(Collectors.toList());
     }
 
-    public List<Item> delete(List<Item> securityCategories) throws Exception {
+    public List<SecurityCategory> delete(List<SecurityCategory> securityCategories) throws Exception {
+        String loggingPrefix = "delete() - ";
+        Instant startInstant = Instant.now();
+        LOG.info(loggingPrefix + "Received {} security categories to delete.",
+                securityCategories.size());
+
+        List<List<SecurityCategory>> batches = Partition.ofSize(securityCategories, 100);
+
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSecurityCategories()
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig());
+        for (List<SecurityCategory> batch : batches) {
+            List<Long> items = new ArrayList<>();
+            for (SecurityCategory item : batch) {
+                if (!item.hasId()) {
+                    throw new Exception(String.format(loggingPrefix + "Security category must contain an id: %s",
+                            item));
+                }
+                items.add(item.getId().getValue());
+            }
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withRootParameter("items", items));
+            ResponseItems<String> response = deleteItemWriter.writeItems(request);
+            if (!response.isSuccessful()) {
+                throw new Exception(String.format(loggingPrefix + "Delete security categories request failed: %s",
+                        response.getResponseBodyAsString()));
+            }
+        }
 
-        return deleteItems.deleteItems(securityCategories);
+        LOG.info(loggingPrefix + "Successfully deleted {} security categories. Duration: {}",
+                securityCategories.size(),
+                Duration.between(startInstant, Instant.now()));
+
+        return securityCategories;
     }
 
     private SecurityCategory parseSecurityCategories(String json) {
