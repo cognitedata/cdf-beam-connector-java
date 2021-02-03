@@ -17,12 +17,15 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.RawParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -75,12 +78,26 @@ public abstract class RawRows extends ApiBase {
                                        String tableName,
                                        RequestParameters requestParameters) throws Exception {
 
-
-
-
-
         //return FanOutIterator.of(ImmutableList.of(futureIterator));
         return Collections.emptyIterator();
+    }
+
+    /**
+     * Returns a set of rows from a table.
+     *
+     * @param dbName the database to list rows from.
+     * @param tableName the table to list rows from.
+     * @param requestParameters the column and filter specification for the rows.
+     * @return an {@link Iterator} to page through the rows.
+     * @throws Exception
+     */
+    public Iterator<List<RawRow>> list(String dbName,
+                                       String tableName,
+                                       RequestParameters requestParameters,
+                                       String... cursors) throws Exception {
+
+        return AdapterIterator.of(listJson(ResourceType.RAW_ROW, requestParameters, "cursor", cursors),
+                RawRowParser.of(dbName, tableName));
     }
 
     /**
@@ -218,6 +235,45 @@ public abstract class RawRows extends ApiBase {
                 Duration.between(startInstant, Instant.now()));
 
         return deduplicated;
+    }
+
+    /*
+    Helper class to parse raw rows.
+     */
+    @AutoValue
+    abstract static class RawRowParser implements Function<String, RawRow> {
+
+        private static Builder builder() {
+            return new AutoValue_RawRows_RawRowParser.Builder();
+        }
+
+        public static RawRowParser of(String dbName, String tableName) {
+            return RawRowParser.builder()
+                    .setDbName(dbName)
+                    .setTableName(tableName)
+                    .build();
+        }
+
+        abstract String getDbName();
+        abstract String getTableName();
+
+        @Override
+        public RawRow apply(String json) {
+            try {
+                return RawParser.parseRawRow(getDbName(), getTableName(), json);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+        }
+
+        @AutoValue.Builder
+        abstract static class Builder {
+            abstract Builder setDbName(String value);
+            abstract Builder setTableName(String value);
+
+            abstract RawRowParser build();
+        }
     }
 
     @AutoValue.Builder

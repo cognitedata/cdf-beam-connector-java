@@ -46,8 +46,8 @@ public class RawParser {
      */
     public static RawRow parseRawRow(String dbName, String dbTable, String rowJson) throws Exception {
         Preconditions.checkNotNull(dbName, "dbName cannot be null");
-        Preconditions.checkNotNull(dbTable, "dbName cannot be null");
-        Preconditions.checkNotNull(rowJson, "dbName cannot be null");
+        Preconditions.checkNotNull(dbTable, "dbTable cannot be null");
+        Preconditions.checkNotNull(rowJson, "rowJson cannot be null");
         String logItemExerpt = rowJson.substring(0, Math.min(rowJson.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
 
         JsonNode root = objectMapper.readTree(rowJson);
