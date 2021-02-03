@@ -100,6 +100,32 @@ abstract class ApiBase {
     protected Iterator<List<String>> listJson(ResourceType resourceType,
                                         RequestParameters requestParameters,
                                         String... partitions) throws Exception {
+        return listJson(resourceType, requestParameters, "partition", partitions);
+    }
+
+    /**
+     * Will return the results from a {@code list / filter} api endpoint. For example, the {@code filter assets}
+     * endpoint.
+     *
+     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into your own data structure.
+     *
+     * This method support parallel retrieval via a set of {@code partition} specifications. The specified partitions
+     * will be collected and merged together before being returned via the {@link Iterator}.
+     *
+     * @param resourceType The resource type to query / filter / list. Ex. {@code event, asset, time series}.
+     * @param requestParameters The query / filter specification. Follows the Cognite api request parameters.
+     * @param partitionKey The key to use for the partitions in the read request. For example {@code partition}
+     *                     or {@code cursor}.
+     * @param partitions An optional set of partitions to read via.
+     * @return an {@link Iterator} over the results set.
+     * @throws Exception
+     */
+    protected Iterator<List<String>> listJson(ResourceType resourceType,
+                                              RequestParameters requestParameters,
+                                              String partitionKey,
+                                              String... partitions) throws Exception {
         // Check constraints
         if (partitions.length > 0 && !resourcesSupportingPartitions.contains(resourceType)) {
             LOG.warn(String.format("The resource type %s does not support partitions. Will ignore the partitions.",
@@ -122,7 +148,7 @@ abstract class ApiBase {
                     partitions.length));
             for (String partition : partitions) {
                 iterators.add(getListResponseIterator(resourceType,
-                        requestParams.withRootParameter("partition", partition)));
+                        requestParams.withRootParameter(partitionKey, partition)));
             }
         }
 
