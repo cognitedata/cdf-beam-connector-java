@@ -927,7 +927,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the raw query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRawRows(RequestParameters queryParameters) {
+    public ResultFutureIterator<String> readRawRows(RequestParameters queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read raw rows service.");
         this.validate();
 
@@ -2167,6 +2167,34 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
+         * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
+         * the setting applied.
+         *
+         * @param client The {@link OkHttpClient} to use.
+         * @return a {@link ItemWriter} object with the configuration applied.
+         */
+        public SingleRequestItemReader<T> withHttpClient(OkHttpClient client) {
+            Preconditions.checkNotNull(client, "The http client cannot be null.");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
+                    .build();
+        }
+
+        /**
+         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
+         * a {@link SingleRequestItemReader} with the setting applied.
+         *
+         * @param executorService The {@link ExecutorService} to use.
+         * @return a {@link ItemWriter} object with the configuration applied.
+         */
+        public SingleRequestItemReader<T> withExecutorService(ExecutorService executorService) {
+            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
+                    .build();
+        }
+
+        /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
          *
          *
@@ -2660,7 +2688,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
-         * Sets the http client to use for api requests. Returns a {@link ResultFutureIterator} with
+         * Sets the http client to use for api requests. Returns a {@link ItemWriter} with
          * the setting applied.
          *
          * @param client The {@link OkHttpClient} to use.
@@ -2675,7 +2703,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         /**
          * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
-         * a {@link ResultFutureIterator} with the setting applied.
+         * a {@link ItemWriter} with the setting applied.
          *
          * @param executorService The {@link ExecutorService} to use.
          * @return a {@link ItemWriter} object with the configuration applied.

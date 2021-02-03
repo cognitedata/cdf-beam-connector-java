@@ -19,6 +19,7 @@ package com.cognite.client;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
@@ -76,14 +77,51 @@ public abstract class RawRows extends ApiBase {
 
 
 
-        ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ResultFutureIterator<String> futureIterator =
-                connector.readRawTableNames(dbName, getClient().buildProjectConfig())
-                        .withExecutorService(getClient().getExecutorService())
-                        .withHttpClient(getClient().getHttpClient());
+
 
         //return FanOutIterator.of(ImmutableList.of(futureIterator));
         return Collections.emptyIterator();
+    }
+
+    /**
+     * Retrieves cursors for parallel retrieval of rows from Raw.
+     *
+     * This is intended for advanced use cases where you need granular control of the parallel retrieval from
+     * Raw--for example in distributed processing frameworks. Most scenarios should just use
+     * {@code list} directly as that will automatically handle parallelization for you.
+     *
+     * @param dbName The database to retrieve row cursors from.
+     * @param tableName The table to retrieve row cursors from.
+     * @param requestParameters Hosts query parameters like max and min time stamps and number of cursors to request.
+     * @return A list of cursors.
+     * @throws Exception
+     */
+    public List<String> retrieveCursors(String dbName,
+                                        String tableName,
+                                        RequestParameters requestParameters) throws Exception {
+        String loggingPrefix = "retrieveCursors() - ";
+        Instant startInstant = Instant.now();
+        Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
+                "You must specify a data base name.");
+        Preconditions.checkArgument(tableName != null && !tableName.isEmpty(),
+                "You must specify a table name.");
+
+        // Build request
+        RequestParameters request = requestParameters
+                .withRootParameter("dbName", dbName)
+                .withRootParameter("tableName", tableName);
+
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ItemReader<String> cursorItemReader = connector.readCursorsRawRows();
+        List<String> results = cursorItemReader
+                .getItems(addAuthInfo(request))
+                .getResultsItems();
+
+        LOG.info(loggingPrefix + "Retrieved {} cursors. Duration: {}",
+                results.size(),
+                Duration.between(startInstant, Instant.now()));
+
+        return results;
     }
 
     /**

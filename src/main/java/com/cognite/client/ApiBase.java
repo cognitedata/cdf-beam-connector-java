@@ -440,6 +440,12 @@ abstract class ApiBase {
                         .withHttpClient(getClient().getHttpClient());
                 // TODO move the executor and client spec up to the connector
                 break;
+            case RAW_ROW:
+                results = connector.readRawRows(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
+                break;
             default:
                 throw new Exception("Not a supported resource type: " + resourceType);
         }
