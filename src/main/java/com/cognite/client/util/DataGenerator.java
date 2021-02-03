@@ -253,6 +253,14 @@ public class DataGenerator {
         return objects;
     }
 
+    public static List<String> generateListString(int noObjects) {
+        List<String> objects = new ArrayList<>(noObjects);
+        for (int i = 0; i < noObjects; i++) {
+            objects.add(StringValue.of(RandomStringUtils.randomAlphanumeric(10)).getValue());
+        }
+        return objects;
+    }
+
     private static double customLog(double base, double logNumber) {
         return Math.log(logNumber) / Math.log(base);
     }

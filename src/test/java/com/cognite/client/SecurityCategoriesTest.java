@@ -60,19 +60,14 @@ class SecurityCategoriesTest {
                     Duration.between(startInstant, Instant.now()));
 
             LOG.info(loggingPrefix + "Start deleting labels.");
-            List<Item> deleteItemsInput = new ArrayList<>();
-            listSecurityCategoriesResults.stream()
-                    .map(securityCategories -> Item.newBuilder()
-                            .setId(securityCategories.getId().getValue())
-                            .build())
-                    .forEach(item -> deleteItemsInput.add(item));
 
-            List<Item> deleteItemsResults = client.securityCategories().delete(deleteItemsInput);
+            List<SecurityCategory> deleteItemsResults =
+                    client.securityCategories().delete(listSecurityCategoriesResults);
             LOG.info(loggingPrefix + "Finished deleting security categories. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
             assertEquals(createSecurityCategoriesList.size(), listSecurityCategoriesResults.size());
-            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+            assertEquals(listSecurityCategoriesResults.size(), deleteItemsResults.size());
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();

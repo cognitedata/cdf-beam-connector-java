@@ -223,6 +223,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link SecurityCategories} representing the Cognite labels api endpoints.
+     *
+     * @return The security categories api endpoint.
+     */
+    public SecurityCategories securityCategories() {
+        return SecurityCategories.of(this);
+    }
+
+    /**
      * Returns the services layer mirroring the Cognite Data Fusion API.
      * @return
      */

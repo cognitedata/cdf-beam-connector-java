@@ -25,8 +25,6 @@ import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.SecurityCategoryParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -60,16 +58,50 @@ public abstract class SecurityCategories extends ApiBase {
                 .build();
     }
 
+    /**
+     * Return all {@link SecurityCategory} object that matches the filters set in the {@link SecurityCategory}.
+     *
+     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into yout own data structure.
+     *
+     * The security categories are retrieved using multiple, parallel request streams towards the Cognite api. The
+     * number of parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
+     * @param requestParameters
+     * @return an {@link Iterator} to page through the results set.
+     * @throws Exception
+     */
     public Iterator<List<SecurityCategory>> list(RequestParameters requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
+    /**
+     * Returns all {@link SecurityCategory} objects that matches the filters set in the {@link RequestParameters} for
+     * the specified partitions. This method is intended for advanced use cases you need direct control over the
+     * individual partitions. For example, when using the SDK in a distributed environment.
+     *
+     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into your own data structure.
+     *
+     * @param requestParameters The filters to use for retrieving the timeseries.
+     * @param partitions The partitions to include
+     * @return an {@link Iterator} to page through the results set.
+     * @throws Exception
+     */
     public Iterator<List<SecurityCategory>> list(RequestParameters requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.SECURITY_CATEGORY, requestParameters, partitions), this::parseSecurityCategories);
     }
 
+    /**
+     * Creates a set of {@link SecurityCategory} objects.
+     *
+     * @param securityCategories The security categories to upsert
+     * @return The upserted security categories
+     * @throws Exception
+     */
     public List<SecurityCategory> create(List<SecurityCategory> securityCategories) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSecurityCategories()
@@ -84,6 +116,16 @@ public abstract class SecurityCategories extends ApiBase {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Deletes a set of Security Categories.
+     *
+     * The security categories to delete are identified via their {@code id} by submitting a list of
+     * {@link SecurityCategory}.
+     *
+     * @param securityCategories A list of {@link SecurityCategory} representing the security categories (id) to be deleted
+     * @return The deleted security categories via {@link Item}
+     * @throws Exception
+     */
     public List<SecurityCategory> delete(List<SecurityCategory> securityCategories) throws Exception {
         String loggingPrefix = "delete() - ";
         Instant startInstant = Instant.now();
@@ -122,6 +164,10 @@ public abstract class SecurityCategories extends ApiBase {
         return securityCategories;
     }
 
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exception.
+     */
     private SecurityCategory parseSecurityCategories(String json) {
         try {
             return SecurityCategoryParser.parseSecurityCategory(json);
@@ -130,6 +176,10 @@ public abstract class SecurityCategories extends ApiBase {
         }
     }
 
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exception.
+     */
     private Map<String, Object> toRequestInsertItem(SecurityCategory item) {
         try {
             return SecurityCategoryParser.toRequestInsertItem(item);
@@ -138,6 +188,10 @@ public abstract class SecurityCategories extends ApiBase {
         }
     }
 
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exception.
+     */
     private Optional<String> getSecurityCategoryName(SecurityCategory item) {
         try {
             return Optional.of(item.getName());

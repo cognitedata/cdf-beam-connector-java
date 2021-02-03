@@ -403,5 +403,4 @@ class SequencesTest {
             e.printStackTrace();
         }
     }
-
 }
