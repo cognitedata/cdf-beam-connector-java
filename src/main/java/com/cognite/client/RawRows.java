@@ -155,71 +155,47 @@ public abstract class RawRows extends ApiBase {
     }
 
     /**
-     * Creates tables in a Raw database.
+     * Creates rows in raw tables.
      *
-     * @param dbName The Raw database to create tables in.
-     * @param tables The tables to create.
-     * @param ensureParent If set to true, will create the database if it doesn't exist from before.
+     * @param rows The rows to upsert.
      * @return The created table names.
      * @throws Exception
      */
-    public List<String> create(String dbName, List<String> tables, boolean ensureParent) throws Exception {
-        String loggingPrefix = "create() - ";
+    public List<RawRow> upsert(List<RawRow> rows) throws Exception {
+        String loggingPrefix = "upsert() - ";
         Instant startInstant = Instant.now();
-        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
-                "Database name cannot be empty.");
-        LOG.info(loggingPrefix + "Received {} tables to create in database {}.",
-                tables.size(),
-                dbName);
+        Preconditions.checkArgument(null!= rows,
+                "Rows list cannot be empty.");
+        LOG.info(loggingPrefix + "Received {} rows to upsert.",
+                rows.size());
 
-        List<String> deduplicated = new ArrayList<>(new HashSet<>(tables));
-
-        ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawTableNames(dbName)
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-
-        List<List<String>> batches = Partition.ofSize(deduplicated, 100);
-        for (List<String> batch : batches) {
-            List<Map<String, Object>> items = new ArrayList<>();
-            for (String table : batch) {
-                items.add(ImmutableMap.of("name", table));
-            }
-            RequestParameters request = addAuthInfo(RequestParameters.create()
-                    .withItems(items)
-                    .withRootParameter("ensureParent", ensureParent));
-            ResponseItems<String> response = createItemWriter.writeItems(request);
-            if (!response.isSuccessful()) {
-                throw new Exception(String.format(loggingPrefix + "Create table request failed: %s",
-                        response.getResponseBodyAsString()));
-            }
-        }
-
+/*
         LOG.info(loggingPrefix + "Successfully created {} tables in database {}. Duration: {}",
                 tables.size(),
                 dbName,
                 Duration.between(startInstant, Instant.now()));
 
-        return deduplicated;
+ */
+
+        return Collections.emptyList();
     }
 
     /**
-     * Deletes a set of tables from a Raw database.
+     * Deletes a set of rows from a Raw database.
      *
-     * @param dbName The Raw database to create tables in.
-     * @param tables The tables to delete.
+     * @param rows The row keys to delete.
      * @return The deleted tables
      * @throws Exception
      */
-    public List<String> delete(String dbName, List<String> tables) throws Exception {
+    public List<String> delete(List<RawRow> rows) throws Exception {
         String loggingPrefix = "delete() - ";
         Instant startInstant = Instant.now();
-        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
-                "Database name cannot be empty.");
-        LOG.info(loggingPrefix + "Received {} tables to delete from database {}.",
-                tables.size(),
-                dbName);
+        Preconditions.checkArgument(null!= rows,
+                "Rows list cannot be empty.");
+        LOG.info(loggingPrefix + "Received {} rows to upsert.",
+                rows.size());
 
+        /*
         List<String> deduplicated = new ArrayList<>(new HashSet<>(tables));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
@@ -248,6 +224,9 @@ public abstract class RawRows extends ApiBase {
                 Duration.between(startInstant, Instant.now()));
 
         return deduplicated;
+
+         */
+        return Collections.emptyList();
     }
 
     /*
