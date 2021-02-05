@@ -77,9 +77,18 @@ public abstract class RawRows extends ApiBase {
     public Iterator<List<RawRow>> list(String dbName,
                                        String tableName,
                                        RequestParameters requestParameters) throws Exception {
+        Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
+                "You must specify a data base name.");
+        Preconditions.checkArgument(tableName != null && !tableName.isEmpty(),
+                "You must specify a table name.");
+
+        // Get the cursors for parallel retrieval
+        int noCursors = getClient().getClientConfig().getNoListPartitions();
+        List<String> cursors = retrieveCursors(dbName, tableName,
+                requestParameters.withRootParameter("numberOfCursors", noCursors));
 
         //return FanOutIterator.of(ImmutableList.of(futureIterator));
-        return Collections.emptyIterator();
+        return list(dbName, tableName, requestParameters, cursors.toArray(new String[cursors.size()]));
     }
 
     /**
@@ -95,6 +104,10 @@ public abstract class RawRows extends ApiBase {
                                        String tableName,
                                        RequestParameters requestParameters,
                                        String... cursors) throws Exception {
+        Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
+                "You must specify a data base name.");
+        Preconditions.checkArgument(tableName != null && !tableName.isEmpty(),
+                "You must specify a table name.");
 
         return AdapterIterator.of(listJson(ResourceType.RAW_ROW, requestParameters, "cursor", cursors),
                 RawRowParser.of(dbName, tableName));
