@@ -1,6 +1,7 @@
 package com.cognite.client;
 
 import com.cognite.client.config.ClientConfig;
+import com.cognite.client.dto.RawRow;
 import com.cognite.client.util.DataGenerator;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ class RawTest {
                 ;
         LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
                 Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         try {
             LOG.info(loggingPrefix + "Start creating raw databases.");
@@ -42,6 +44,7 @@ class RawTest {
             client.raw().databases().create(createDatabasesList);
             LOG.info(loggingPrefix + "Finished creating raw databases. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start creating raw tables.");
             Map<String, List<String>> createTablesLists = new HashMap<>();
@@ -52,6 +55,16 @@ class RawTest {
             }
             LOG.info(loggingPrefix + "Finished creating raw tables. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "Start creating raw rows.");
+            String rowDbName = createDatabasesList.get(0);
+            String rowTableName = createTablesLists.get(rowDbName).get(0);
+            List<RawRow> createRowsList = DataGenerator.generateRawRows(rowDbName, rowTableName, 12983);
+            List<RawRow> createRowsResults = client.raw().rows().upsert(createRowsList, false);
+            LOG.info(loggingPrefix + "Finished creating raw rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             Thread.sleep(10000); // wait for eventual consistency
 
@@ -62,6 +75,7 @@ class RawTest {
                     .forEachRemaining(databases -> listDatabaseResults.addAll(databases));
             LOG.info(loggingPrefix + "Finished reading databases. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start reading raw tables.");
             Map<String, List<String>> listTablesResults = new HashMap<>();
@@ -74,6 +88,15 @@ class RawTest {
             }
             LOG.info(loggingPrefix + "Finished reading databases. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "Start reading raw rows.");
+            List<RawRow> listRowsResults = new ArrayList<>();
+            client.raw().rows().list(rowDbName, rowTableName)
+                    .forEachRemaining(results -> listRowsResults.addAll(results));
+            LOG.info(loggingPrefix + "Finished reading raw rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start deleting raw tables.");
             Map<String, List<String>> deleteTablesResults = new HashMap<>();
@@ -85,6 +108,7 @@ class RawTest {
             }
             LOG.info(loggingPrefix + "Finished deleting raw tables. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start deleting raw databases.");
             List<String> deleteItemsInput = new ArrayList<>();
@@ -93,6 +117,7 @@ class RawTest {
             List<String> deleteItemsResults = client.raw().databases().delete(deleteItemsInput);
             LOG.info(loggingPrefix + "Finished deleting raw databases. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             // assertEquals(createDatabasesList.size(), listDatabaseResults.size());
             for (String dbName : createDatabasesList) {
@@ -105,5 +130,4 @@ class RawTest {
             e.printStackTrace();
         }
     }
-
 }

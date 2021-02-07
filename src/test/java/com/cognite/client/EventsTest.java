@@ -41,6 +41,7 @@ class EventsTest {
                 ;
         LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
                 Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         try {
             LOG.info(loggingPrefix + "Start upserting events.");
@@ -48,6 +49,7 @@ class EventsTest {
             client.events().upsert(upsertEventsList);
             LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             Thread.sleep(15000); // wait for eventual consistency
 
@@ -59,6 +61,7 @@ class EventsTest {
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start deleting events.");
             List<Item> deleteItemsInput = new ArrayList<>();
@@ -71,6 +74,7 @@ class EventsTest {
             List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
             LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             assertEquals(upsertEventsList.size(), listEventsResults.size());
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
@@ -95,6 +99,7 @@ class EventsTest {
                 ;
         LOG.info(loggingPrefix + "Finished creating the Cognite client. Duration : {}",
                 Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         try {
             LOG.info(loggingPrefix + "Start upserting events.");
@@ -102,6 +107,7 @@ class EventsTest {
             List<Event> upsertedEvents = client.events().upsert(upsertEventsList);
             LOG.info(loggingPrefix + "Finished upserting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             Thread.sleep(3000); // wait for eventual consistency
 
@@ -118,6 +124,7 @@ class EventsTest {
             List<Event> eventUpdateResults = client.events().upsert(editedEventsInput);
             LOG.info(loggingPrefix + "Finished updating events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start update replace events.");
             client = client
@@ -127,6 +134,7 @@ class EventsTest {
             List<Event> eventReplaceResults = client.events().upsert(editedEventsInput);
             LOG.info(loggingPrefix + "Finished update replace events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             Thread.sleep(3000); // wait for eventual consistency
 
@@ -138,6 +146,7 @@ class EventsTest {
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start deleting events.");
             List<Item> deleteItemsInput = new ArrayList<>();
@@ -150,6 +159,7 @@ class EventsTest {
             List<Item> deleteItemsResults = client.events().delete(deleteItemsInput);
             LOG.info(loggingPrefix + "Finished deleting events. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             BooleanSupplier updateCondition = () -> {
                 for (Event event : eventUpdateResults)  {
