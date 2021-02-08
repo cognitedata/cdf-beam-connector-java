@@ -125,8 +125,10 @@ public abstract class RawRows extends ApiBase {
         Preconditions.checkArgument(tableName != null && !tableName.isEmpty(),
                 "You must specify a table name.");
 
-        // Add default limit
+        // Add db name, table name and default limit
         RequestParameters request = requestParameters
+                .withRootParameter("dbName", dbName)
+                .withRootParameter("tableName", tableName)
                 .withRootParameter("limit", requestParameters.getRequestParameters()
                         .getOrDefault("limit", ConnectorConstants.DEFAULT_MAX_BATCH_SIZE_RAW));
 

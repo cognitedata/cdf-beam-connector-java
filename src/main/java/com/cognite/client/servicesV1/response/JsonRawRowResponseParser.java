@@ -52,7 +52,7 @@ public abstract class JsonRawRowResponseParser extends DefaultResponseParser {
 
         JsonNode node = objectMapper.readTree(json).path("items");
         if (node.isArray()) {
-            LOG.info("Found items array in json response payload.");
+            LOG.debug("Found items array in json response payload.");
             for (JsonNode child : node) {
                 if (child.isObject()) {
                     tempList.add(child.toString());
@@ -66,7 +66,7 @@ public abstract class JsonRawRowResponseParser extends DefaultResponseParser {
         // the payload is not an items list. Check if it is a single row item.
         node = objectMapper.readTree(json);
         if (node.isObject() && node.has("key") && node.has("columns")) {
-            LOG.info("Single raw item found in json response payload.");
+            LOG.debug("Single raw item found in json response payload.");
             tempList.add(node.toString());
             return ImmutableList.copyOf(tempList);
         }

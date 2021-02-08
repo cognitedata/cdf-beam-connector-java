@@ -60,7 +60,7 @@ class RawTest {
             LOG.info(loggingPrefix + "Start creating raw rows.");
             String rowDbName = createDatabasesList.get(0);
             String rowTableName = createTablesLists.get(rowDbName).get(0);
-            List<RawRow> createRowsList = DataGenerator.generateRawRows(rowDbName, rowTableName, 12983);
+            List<RawRow> createRowsList = DataGenerator.generateRawRows(rowDbName, rowTableName, 32983);
             List<RawRow> createRowsResults = client.raw().rows().upsert(createRowsList, false);
             LOG.info(loggingPrefix + "Finished creating raw rows. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
@@ -125,6 +125,7 @@ class RawTest {
                 assertEquals(createTablesLists.get(dbName).size(), deleteTablesResults.get(dbName).size());
             }
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+            assertEquals(createRowsList.size(), listRowsResults.size());
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();
