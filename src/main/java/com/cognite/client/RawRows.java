@@ -306,7 +306,7 @@ public abstract class RawRows extends ApiBase {
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(null!= rows,
                 "Rows list cannot be empty.");
-        LOG.info(loggingPrefix + "Received {} rows to upsert.",
+        LOG.info(loggingPrefix + "Received {} rows to delete.",
                 rows.size());
 
         final int maxDeleteLoopIterations = 2;

@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -98,6 +100,15 @@ class RawTest {
                     Duration.between(startInstant, Instant.now()));
             LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
+            LOG.info(loggingPrefix + "Start deleting raw rows.");
+            List<RawRow> rowsToDelete = createRowsList.stream()
+                    .filter(row -> ThreadLocalRandom.current().nextBoolean())
+                    .collect(Collectors.toList());
+            List<RawRow> deleteRowResults = client.raw().rows().delete(rowsToDelete);
+            LOG.info(loggingPrefix + "Finished deleting raw rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
             LOG.info(loggingPrefix + "Start deleting raw tables.");
             Map<String, List<String>> deleteTablesResults = new HashMap<>();
             for (String dbName : createDatabasesList) {
@@ -126,6 +137,8 @@ class RawTest {
             }
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
             assertEquals(createRowsList.size(), listRowsResults.size());
+            assertEquals(createRowsList.size(), createRowsResults.size());
+            assertEquals(rowsToDelete.size(), deleteRowResults.size());
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();
