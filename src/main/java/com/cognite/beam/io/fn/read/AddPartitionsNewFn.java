@@ -86,13 +86,13 @@ public class AddPartitionsNewFn extends IOBaseFn<RequestParameters, RequestParam
             Aggregate aggregateResult;
             switch (resourceType) {
                 case ASSET:
-                    aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
+                    aggregateResult = getClient(projectConfig, readerConfig).assets().aggregate(requestParameters);
                     break;
                 case EVENT:
                     aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
                     break;
                 case TIMESERIES_HEADER:
-                    aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
+                    aggregateResult = getClient(projectConfig, readerConfig).timeseries().aggregate(requestParameters);
                     break;
                 default:
                     LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);

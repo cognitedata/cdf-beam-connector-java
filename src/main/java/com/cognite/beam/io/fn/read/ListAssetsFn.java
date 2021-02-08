@@ -14,33 +14,34 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn.write;
+package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.client.dto.Event;
+import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.Asset;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
- * Writes events to CDF.Clean.
- *
- * This function will first try to write the events as new events. In case the events already exists (based on externalId
- * or Id), the events will be updated. Effectively this results in an upsert.
+ * Lists / reads events from Cognite Data Fusion
  *
  */
-public class UpsertEventFnNew extends UpsertItemBaseNewFn<Event> {
-    public UpsertEventFnNew(Hints hints,
-                            WriterConfig writerConfig,
-                            PCollectionView<List<ProjectConfig>> projectConfigView) {
-        super(hints, writerConfig, projectConfigView);
+public class ListAssetsFn extends ListItemsBaseFn<Asset> {
+    public ListAssetsFn(Hints hints,
+                        ReaderConfig readerConfig,
+                        PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<Event> upsertItems(CogniteClient client, List<Event> inputItems) throws Exception {
-        return client.events().upsert(inputItems);
+    protected Iterator<List<Asset>> listItems(CogniteClient client,
+                                              RequestParameters requestParameters,
+                                              String... partitions) throws Exception {
+        return client.assets().list(requestParameters, partitions);
     }
 }

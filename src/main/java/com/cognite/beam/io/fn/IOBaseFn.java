@@ -19,7 +19,6 @@ package com.cognite.beam.io.fn;
 import com.cognite.beam.io.config.ConfigBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.config.ClientConfig;
 import com.google.common.base.Preconditions;

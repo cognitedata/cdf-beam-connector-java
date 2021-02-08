@@ -28,7 +28,7 @@ import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseEventFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
-import com.cognite.beam.io.fn.write.UpsertEventFnNew;
+import com.cognite.beam.io.fn.write.UpsertEventFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.common.base.Preconditions;
@@ -220,24 +220,13 @@ public abstract class Events {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    //.apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(), ResourceType.EVENT,
-                    //        getReaderConfig().enableMetrics(false))))
                     .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
                             getReaderConfig().enableMetrics(false), ResourceType.EVENT,
                             projectConfigView))
                             .withSideInputs(projectConfigView))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(new ListEventsFn(getHints(), getReaderConfig(),projectConfigView))
-                            .withSideInputs(projectConfigView))
-
-                    ;
-
-                    /*
-                    .apply("Read results", ParDo.of(
-                            new ReadItemsIteratorFn(getHints(), ResourceType.EVENT, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseEventFn()));
-
-                     */
+                            .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -577,7 +566,7 @@ public abstract class Events {
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Event>>create())
                     .apply("Upsert items", ParDo.of(
-                            new UpsertEventFnNew(getHints(), getWriterConfig(), projectConfigView))
+                            new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
                     /*
                     .apply("Upsert items", ParDo.of(
