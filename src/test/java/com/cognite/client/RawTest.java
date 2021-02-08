@@ -92,11 +92,22 @@ class RawTest {
                     Duration.between(startInstant, Instant.now()));
             LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
-            LOG.info(loggingPrefix + "Start reading raw rows.");
+            LOG.info(loggingPrefix + "Start listing raw rows.");
             List<RawRow> listRowsResults = new ArrayList<>();
             client.raw().rows().list(rowDbName, rowTableName)
                     .forEachRemaining(results -> listRowsResults.addAll(results));
-            LOG.info(loggingPrefix + "Finished reading raw rows. Duration: {}",
+            LOG.info(loggingPrefix + "Finished listing raw rows. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            LOG.info(loggingPrefix + "Start retrieving raw rows.");
+            List<String> rowsToRetrieve = createRowsList.stream()
+                    .filter(row -> ThreadLocalRandom.current().nextBoolean())
+                    .limit(20)
+                    .map(row -> row.getKey())
+                    .collect(Collectors.toList());
+            List<RawRow> rowsRetrieved = client.raw().rows().retrieve(rowDbName, rowTableName, rowsToRetrieve);
+            LOG.info(loggingPrefix + "Finished retrieving raw rows. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
             LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
@@ -138,6 +149,7 @@ class RawTest {
             assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
             assertEquals(createRowsList.size(), listRowsResults.size());
             assertEquals(createRowsList.size(), createRowsResults.size());
+            assertEquals(rowsToRetrieve.size(), rowsRetrieved.size());
             assertEquals(rowsToDelete.size(), deleteRowResults.size());
         } catch (Exception e) {
             LOG.error(e.toString());

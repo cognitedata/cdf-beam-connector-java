@@ -922,7 +922,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
-     * Fetch Raw rows from Cognite.
+     * Fetch Raw rows from Cognite. This service can handle both single rows and
+     * large collection of rows.
      *
      * @param queryParameters The parameters for the raw query.
      * @return
@@ -940,6 +941,27 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .build();
 
         return ResultFutureIterator.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * Fetch a single row by row key.
+     *
+     * @return
+     */
+    public ItemReader<String> readRawRow() {
+        LOG.debug(loggingPrefix + "Initiating read single row service.");
+        this.validate();
+
+        RawReadRowsRequestProvider requestProvider = RawReadRowsRequestProvider.builder()
+                .setEndpoint("raw/dbs")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
                 .withMaxRetries(getMaxRetries().get());
     }
 

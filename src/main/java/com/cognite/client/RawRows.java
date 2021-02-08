@@ -16,6 +16,7 @@
 
 package com.cognite.client;
 
+import autovalue.shaded.com.google$.common.collect.$ForwardingList;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.RawRow;
@@ -36,6 +37,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * This class represents the Cognite Raw rows endpoint.
@@ -135,6 +137,80 @@ public abstract class RawRows extends ApiBase {
 
         return AdapterIterator.of(listJson(ResourceType.RAW_ROW, request, "cursor", cursors),
                 RawRowParser.of(dbName, tableName));
+    }
+
+    /**
+     * Retrieves a set of rows based on row key.
+     *
+     * @param dbName The database to read rows from.
+     * @param tableName The table to read rows from.
+     * @param rowKeys The set of row keys to retrieve.
+     * @return The rows from Raw
+     * @throws Exception
+     */
+    public List<RawRow> retrieve(String dbName,
+                                 String tableName,
+                                 Collection<String> rowKeys) throws Exception {
+        String loggingPrefix = "retrieve() - ";
+        Instant startInstant = Instant.now();
+        Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
+                "Database cannot be null or empty.");
+        Preconditions.checkArgument(null!= tableName && !tableName.isEmpty(),
+                "Table name cannot be null or empty.");
+        Preconditions.checkNotNull(rowKeys,
+                "Row keys cannot be null.");
+        LOG.info(loggingPrefix + "Received {} rows to retrieve.",
+                rowKeys.size());
+
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ItemReader<String> rowReader = connector.readRawRow();
+        List<String> completedBatches = new ArrayList<>();
+
+        // Submit all batches
+        Map<CompletableFuture<ResponseItems<String>>, String> responseMap = new HashMap<>();
+        for (String rowKey : rowKeys) {
+            RequestParameters request = RequestParameters.create()
+                    .withRootParameter("dbName", dbName)
+                    .withRootParameter("tableName", tableName)
+                    .withRootParameter("rowKey", rowKey);
+
+            responseMap.put(rowReader.getItemsAsync(addAuthInfo(request)), rowKey);
+        }
+
+        // Wait for all requests futures to complete
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        responseMap.keySet().forEach(future -> futureList.add(future));
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the responses from the futures
+        Map<ResponseItems<String>, String> resultsMap = new HashMap<>(responseMap.size());
+        for (Map.Entry<CompletableFuture<ResponseItems<String>>, String> entry : responseMap.entrySet()) {
+            resultsMap.put(entry.getKey().join(), entry.getValue());
+        }
+
+        // Check the responses
+        for (ResponseItems<String> response : resultsMap.keySet()) {
+            if (response.isSuccessful()) {
+                completedBatches.addAll(response.getResultsItems());
+                LOG.debug(loggingPrefix + "Retrieve row request success. Adding row to result collection.");
+            } else {
+                LOG.error(loggingPrefix + "Retrieve row request failed: {}", response.getResponseBodyAsString());
+                throw new Exception(String.format(loggingPrefix + "Retrieve row request failed: %s",
+                        response.getResponseBodyAsString()));
+            }
+        }
+
+        LOG.info(loggingPrefix + "Successfully retrieve {} rows within a duration of {}.",
+                rowKeys.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        RawRowParser parser = RawRowParser.of(dbName, tableName);
+
+        return completedBatches.stream()
+                .map(json -> parser.apply(json))
+                .collect(Collectors.toList());
     }
 
     /**
