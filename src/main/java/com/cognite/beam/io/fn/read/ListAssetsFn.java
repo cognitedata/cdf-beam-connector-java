@@ -28,7 +28,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Lists / reads events from Cognite Data Fusion
+ * Lists / reads assets from Cognite Data Fusion
  *
  */
 public class ListAssetsFn extends ListItemsBaseFn<Asset> {

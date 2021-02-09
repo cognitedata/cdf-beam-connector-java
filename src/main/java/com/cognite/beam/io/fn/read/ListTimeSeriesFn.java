@@ -14,35 +14,34 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn.write;
+package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.TimeseriesMetadata;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
- * Writes time series headers to CDF.Clean.
- *
- * This function will first try to write the TS headers as new items.
- * In case the items already exists (based on externalId
- * or Id), the headers will be updated. Effectively this results in an upsert.
+ * Lists / reads time series headers from Cognite Data Fusion
  *
  */
-public class UpsertTsHeaderFn extends UpsertItemBaseNewFn<TimeseriesMetadata> {
-    public UpsertTsHeaderFn(Hints hints,
-                         WriterConfig writerConfig,
-                         PCollectionView<List<ProjectConfig>> projectConfigView) {
-        super(hints, writerConfig, projectConfigView);
+public class ListTimeSeriesFn extends ListItemsBaseFn<TimeseriesMetadata> {
+    public ListTimeSeriesFn(Hints hints,
+                            ReaderConfig readerConfig,
+                            PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<TimeseriesMetadata> upsertItems(CogniteClient client,
-                                                   List<TimeseriesMetadata> inputItems) throws Exception {
-        return client.timeseries().upsert(inputItems);
+    protected Iterator<List<TimeseriesMetadata>> listItems(CogniteClient client,
+                                          RequestParameters requestParameters,
+                                          String... partitions) throws Exception {
+        return client.timeseries().list(requestParameters, partitions);
     }
 }

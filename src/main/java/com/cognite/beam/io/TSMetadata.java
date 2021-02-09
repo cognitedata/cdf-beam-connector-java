@@ -20,15 +20,12 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.read.*;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.read.AddPartitionsFn;
-import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
-import com.cognite.beam.io.fn.read.ReadItemsFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertTsHeaderFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -187,6 +184,15 @@ public abstract class TSMetadata {
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
 
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
             // main input
             PCollection<RequestParameters> requestParametersPCollection;
 
@@ -211,12 +217,13 @@ public abstract class TSMetadata {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(), ResourceType.TIMESERIES_HEADER,
-                            getReaderConfig().enableMetrics(false))))
+                    .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
+                            getReaderConfig().enableMetrics(false), ResourceType.TIMESERIES_HEADER,
+                            projectConfigView))
+                            .withSideInputs(projectConfigView))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
-                    .apply("Read results", ParDo.of(new ReadItemsIteratorFn(getHints(), ResourceType.TIMESERIES_HEADER,
-                            getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseTimeseriesMetaFn()));
+                    .apply("Read results", ParDo.of(new ListTimeSeriesFn(getHints(), getReaderConfig(),projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -476,7 +483,7 @@ public abstract class TSMetadata {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<TimeseriesMetadata>, PCollection<TimeseriesMetadata>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 1000;
+        private static final int MAX_WRITE_BATCH_SIZE = 4000;
 
         public static TSMetadata.Write.Builder builder() {
             return new com.cognite.beam.io.AutoValue_TSMetadata_Write.Builder()
@@ -553,8 +560,7 @@ public abstract class TSMetadata {
                     .apply("Remove key", Values.<Iterable<TimeseriesMetadata>>create())
                     .apply("Upsert items", ParDo.of(
                             new UpsertTsHeaderFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseTimeseriesMetaFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
