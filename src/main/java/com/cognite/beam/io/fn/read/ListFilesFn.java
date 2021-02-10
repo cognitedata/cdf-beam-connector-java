@@ -14,33 +14,34 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn.write;
+package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.FileMetadata;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
- * Writes file headers to CDF.Clean.
- *
- * This function will first try to write the file headers as updates. In case the headers don't exist in CDF,
- * they will be created via the files upload endpoint. Effectively this results in an upsert.
+ * Lists / reads file (headers) from Cognite Data Fusion
  *
  */
-public class UpsertFileHeaderFn extends UpsertItemBaseNewFn<FileMetadata> {
-    public UpsertFileHeaderFn(Hints hints,
-                         WriterConfig writerConfig,
-                         PCollectionView<List<ProjectConfig>> projectConfigView) {
-        super(hints, writerConfig, projectConfigView);
+public class ListFilesFn extends ListItemsBaseFn<FileMetadata> {
+    public ListFilesFn(Hints hints,
+                       ReaderConfig readerConfig,
+                       PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<FileMetadata> upsertItems(CogniteClient client, List<FileMetadata> inputItems) throws Exception {
-        return client.files().upsert(inputItems);
+    protected Iterator<List<FileMetadata>> listItems(CogniteClient client,
+                                          RequestParameters requestParameters,
+                                          String... partitions) throws Exception {
+        return client.files().list(requestParameters, partitions);
     }
 }

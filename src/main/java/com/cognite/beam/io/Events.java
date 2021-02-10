@@ -568,13 +568,6 @@ public abstract class Events {
                     .apply("Upsert items", ParDo.of(
                             new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
-                    /*
-                    .apply("Upsert items", ParDo.of(
-                            new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseEventFn()));
-
-                     */
 
             return outputCollection;
         }
