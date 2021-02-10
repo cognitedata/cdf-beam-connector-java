@@ -166,7 +166,7 @@ abstract class ApiBase {
      * @return The items in Json representation.
      * @throws Exception
      */
-    protected List<String> retrieveJson(ResourceType resourceType, List<Item> items) throws Exception {
+    protected List<String> retrieveJson(ResourceType resourceType, Collection<Item> items) throws Exception {
         String batchLogPrefix =
                 "retrieveJson() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();

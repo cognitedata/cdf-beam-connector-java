@@ -29,6 +29,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -692,16 +693,18 @@ public abstract class Files extends ApiBase {
      * - Google Cloud Storage. Specify the temp path as {@code gs://<my-storage-bucket>/<my-path>/}.
      *
      * @param fileItems The list of files to download.
-     * @param tempStoragePath The URI to the download storage
+     * @param tempStoragePath The URI to the download storage. Set to null to only perform in-memory download.
      * @param forceTempStorage Set to true to always download the binary to temp storage
      * @return The file binary.
      * @throws Exception
      */
     public List<FileBinary> downloadFileBinaries(List<Item> fileItems,
-                                                 URI tempStoragePath,
+                                                 @Nullable URI tempStoragePath,
                                                  boolean forceTempStorage) throws Exception {
         final int MAX_RETRIES = 2;
         String loggingPrefix = "downloadFileBinaries() - ";
+        Preconditions.checkArgument(!(null == tempStoragePath && forceTempStorage),
+                "Illegal parameter combination. You must specify a URI in order to force temp storage.");
         Preconditions.checkArgument(itemsHaveId(fileItems),
                 loggingPrefix + "All file items must include a valid externalId or id.");
 
@@ -715,8 +718,11 @@ public abstract class Files extends ApiBase {
                 fileItems.size());
 
         ConnectorServiceV1.FileBinaryReader reader = getClient().getConnectorService().readFileBinariesByIds()
-                .withTempStoragePath(tempStoragePath)
                 .enableForceTempStorage(forceTempStorage);
+
+        if (null != tempStoragePath) {
+            reader = reader.withTempStoragePath(tempStoragePath);
+        }
 
         // build initial request object
         RequestParameters request = addAuthInfo(RequestParameters.create()
