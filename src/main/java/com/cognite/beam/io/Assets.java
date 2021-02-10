@@ -298,7 +298,6 @@ public abstract class Assets {
 
         @Override
         public PCollection<Asset> expand(PCollection<Item> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all asset by id composite transform.");
 
             // project config side input
@@ -312,14 +311,13 @@ public abstract class Assets {
 
             PCollection<Asset> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(1000)
+                            .setMaxBatchSize(4000)
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsByIdFn(getHints(), ResourceType.ASSETS_BY_ID, getReaderConfig(),
-                                    projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseAssetFn()));
+                            new RetrieveAssetsFn(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }

@@ -19,14 +19,11 @@ package com.cognite.beam.io.fn.write;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.SequenceMetadata;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.parser.SequenceParser;
-import com.google.common.collect.ImmutableList;
 import org.apache.beam.sdk.values.PCollectionView;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Writes sequence headers to CDF.Clean.
@@ -36,60 +33,15 @@ import java.util.Map;
  * or Id), the headers will be updated. Effectively this results in an upsert.
  *
  */
-public class UpsertSeqHeaderFn extends UpsertItemBaseFn<SequenceMetadata> {
-    public UpsertSeqHeaderFn(Hints hints, WriterConfig writerConfig,
-                             PCollectionView<List<ProjectConfig>> projectConfig) {
-        super(hints, writerConfig, projectConfig);
+public class UpsertSeqHeaderFn extends UpsertItemBaseNewFn<SequenceMetadata> {
+    public UpsertSeqHeaderFn(Hints hints,
+                         WriterConfig writerConfig,
+                         PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, writerConfig, projectConfigView);
     }
 
     @Override
-    protected void populateMaps(Iterable<SequenceMetadata> element, Map<Long, SequenceMetadata> internalIdInsertMap,
-                      Map<String, SequenceMetadata> externalIdInsertMap) throws Exception {
-        for (SequenceMetadata value : element) {
-            if (value.hasExternalId()) {
-                externalIdInsertMap.put(value.getExternalId().getValue(), value);
-            } else if (value.hasId()) {
-                internalIdInsertMap.put(value.getId().getValue(), value);
-            } else {
-                throw new Exception("Item does not contain id nor externalId: " + value.toString());
-            }
-        }
-    }
-
-    @Override
-    protected ConnectorServiceV1.ItemWriter getItemWriterInsert() {
-        return connector.writeSequencesHeaders();
-    }
-
-    @Override
-    protected ConnectorServiceV1.ItemWriter getItemWriterUpdate() {
-        return connector.updateSequencesHeaders();
-    }
-
-    @Override
-    protected List<Map<String, Object>> toRequestInsertItems(Iterable<SequenceMetadata> input) throws Exception {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (SequenceMetadata element : input) {
-            listBuilder.add(SequenceParser.toRequestInsertItem(element));
-        }
-        return listBuilder.build();
-    }
-
-    @Override
-    protected List<Map<String, Object>> toRequestUpdateItems(Iterable<SequenceMetadata> input) throws Exception {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (SequenceMetadata element : input) {
-            listBuilder.add(SequenceParser.toRequestUpdateItem(element));
-        }
-        return listBuilder.build();
-    }
-
-    @Override
-    protected List<Map<String, Object>> toRequestReplaceItems(Iterable<SequenceMetadata> input) throws Exception {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (SequenceMetadata element : input) {
-            listBuilder.add(SequenceParser.toRequestReplaceItem(element));
-        }
-        return listBuilder.build();
+    protected List<SequenceMetadata> upsertItems(CogniteClient client, List<SequenceMetadata> inputItems) throws Exception {
+        return client.sequences().upsert(inputItems);
     }
 }

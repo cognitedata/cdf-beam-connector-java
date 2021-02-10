@@ -20,48 +20,27 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
-import com.cognite.client.dto.FileBinary;
+import com.cognite.client.dto.Asset;
 import com.cognite.client.dto.Item;
-import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.values.PCollectionView;
 
-import javax.annotation.Nullable;
-import java.net.URI;
 import java.util.List;
 
 /**
- * Lists / reads file (headers) from Cognite Data Fusion
+ * Lists / reads assets from Cognite Data Fusion
  *
  */
-public class RetrieveFileBinariesFn extends RetrieveItemsBaseFn<FileBinary> {
-    private final ValueProvider<String> tempStorageURI;
-    private final boolean forceTempStorage;
+public class RetrieveAssetsFn extends RetrieveItemsBaseFn<Asset> {
 
-    public RetrieveFileBinariesFn(Hints hints,
-                                  ReaderConfig readerConfig,
-                                  @Nullable ValueProvider<String> tempStorageURI,
-                                  boolean forceTempStorage,
-                                  PCollectionView<List<ProjectConfig>> projectConfigView) {
+    public RetrieveAssetsFn(Hints hints,
+                            ReaderConfig readerConfig,
+                            PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints, readerConfig, projectConfigView);
-        this.tempStorageURI = tempStorageURI;
-        this.forceTempStorage = forceTempStorage;
-    }
-
-    @Setup
-    public void setup() {
-        LOG.info("Setting up ReadFileBinaryByIdFn. Temp storage URI: {}, Force temp storage: {}",
-                null != tempStorageURI ? tempStorageURI.get() : "null",
-                forceTempStorage);
     }
 
     @Override
-    protected List<FileBinary> retrieveItems(CogniteClient client,
+    protected List<Asset> retrieveItems(CogniteClient client,
                                              List<Item> items) throws Exception {
-        URI tempStorage = null;
-        if (null != tempStorageURI && tempStorageURI.isAccessible()) {
-            tempStorage = new URI(tempStorageURI.get());
-        }
-
-        return client.files().downloadFileBinaries(items, tempStorage, forceTempStorage);
+        return client.assets().retrieve(items);
     }
 }

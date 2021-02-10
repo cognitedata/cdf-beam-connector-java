@@ -20,27 +20,27 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
+import com.cognite.client.dto.TimeseriesMetadata;
 import org.apache.beam.sdk.values.PCollectionView;
 
 import java.util.List;
 
 /**
- * Lists / reads events from Cognite Data Fusion
+ * Lists / reads time series from Cognite Data Fusion
  *
  */
-public class RetrieveEventsFn extends RetrieveItemsBaseFn<Event> {
+public class RetrieveTimeseriesFn extends RetrieveItemsBaseFn<TimeseriesMetadata> {
 
-    public RetrieveEventsFn(Hints hints,
-                            ReaderConfig readerConfig,
-                            PCollectionView<List<ProjectConfig>> projectConfigView) {
+    public RetrieveTimeseriesFn(Hints hints,
+                                ReaderConfig readerConfig,
+                                PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<Event> retrieveItems(CogniteClient client,
+    protected List<TimeseriesMetadata> retrieveItems(CogniteClient client,
                                         List<Item> items) throws Exception {
-        return client.events().retrieve(items);
+        return client.timeseries().retrieve(items);
     }
 }

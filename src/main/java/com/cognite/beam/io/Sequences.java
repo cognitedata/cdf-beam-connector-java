@@ -20,15 +20,13 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.read.*;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.SequenceMetadata;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
-import com.cognite.beam.io.fn.read.ReadItemsFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.write.UpsertSeqHeaderFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
@@ -186,9 +184,16 @@ public abstract class Sequences {
 
         @Override
         public PCollection<SequenceMetadata> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all sequence metadata composite transform.");
 
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<SequenceMetadata> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
@@ -200,9 +205,8 @@ public abstract class Sequences {
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
-                    .apply("Read results", ParDo.of(new ReadItemsIteratorFn(getHints(), ResourceType.SEQUENCE_HEADER,
-                            getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseSequenceMetaFn()));
+                    .apply("Read results", ParDo.of(new ListSequencesFn(getHints(), getReaderConfig(),
+                            projectConfigView)).withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -284,14 +288,13 @@ public abstract class Sequences {
 
             PCollection<SequenceMetadata> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(1000)
+                            .setMaxBatchSize(4000)
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsByIdFn(getHints(), ResourceType.SEQUENCE_BY_ID, getReaderConfig(),
-                                    projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseSequenceMetaFn()));
+                            new RetrieveSequencesFn(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -466,7 +469,7 @@ public abstract class Sequences {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<SequenceMetadata>, PCollection<SequenceMetadata>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 1000;
+        private static final int MAX_WRITE_BATCH_SIZE = 4000;
 
         public static Sequences.Write.Builder builder() {
             return new com.cognite.beam.io.AutoValue_Sequences_Write.Builder()
@@ -545,8 +548,7 @@ public abstract class Sequences {
                     .apply("Remove key", Values.<Iterable<SequenceMetadata>>create())
                     .apply("Upsert sequences", ParDo.of(
                             new UpsertSeqHeaderFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseSequenceMetaFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }

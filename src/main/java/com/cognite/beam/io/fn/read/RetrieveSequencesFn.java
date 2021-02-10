@@ -21,26 +21,26 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.Item;
-import com.cognite.client.dto.TimeseriesMetadata;
+import com.cognite.client.dto.SequenceMetadata;
 import org.apache.beam.sdk.values.PCollectionView;
 
 import java.util.List;
 
 /**
- * Lists / reads time series from Cognite Data Fusion
+ * Lists / reads sequences from Cognite Data Fusion
  *
  */
-public class RetrieveTimeseriesFn extends RetrieveItemsBaseFn<TimeseriesMetadata> {
+public class RetrieveSequencesFn extends RetrieveItemsBaseFn<SequenceMetadata> {
 
-    public RetrieveTimeseriesFn(Hints hints,
-                                ReaderConfig readerConfig,
-                                PCollectionView<List<ProjectConfig>> projectConfigView) {
+    public RetrieveSequencesFn(Hints hints,
+                               ReaderConfig readerConfig,
+                               PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<TimeseriesMetadata> retrieveItems(CogniteClient client,
+    protected List<SequenceMetadata> retrieveItems(CogniteClient client,
                                         List<Item> items) throws Exception {
-        return client.timeseries().retrieve(items);
+        return client.sequences().retrieve(items);
     }
 }

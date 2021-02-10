@@ -30,7 +30,7 @@ import java.net.URI;
 import java.util.List;
 
 /**
- * Lists / reads file (headers) from Cognite Data Fusion
+ * Lists / reads file binaries from Cognite Data Fusion
  *
  */
 public class RetrieveFileBinariesFn extends RetrieveItemsBaseFn<FileBinary> {

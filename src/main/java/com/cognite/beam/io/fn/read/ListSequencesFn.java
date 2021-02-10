@@ -17,11 +17,13 @@
 package com.cognite.beam.io.fn.read;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.beam.io.Sequences;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.Event;
+import com.cognite.client.dto.SequenceMetadata;
 import org.apache.beam.sdk.values.PCollectionView;
 
 import java.util.Iterator;
@@ -31,17 +33,17 @@ import java.util.List;
  * Lists / reads events from Cognite Data Fusion
  *
  */
-public class ListEventsFn extends ListItemsBaseFn<Event> {
-    public ListEventsFn(Hints hints,
-                        ReaderConfig readerConfig,
-                        PCollectionView<List<ProjectConfig>> projectConfigView) {
+public class ListSequencesFn extends ListItemsBaseFn<SequenceMetadata> {
+    public ListSequencesFn(Hints hints,
+                           ReaderConfig readerConfig,
+                           PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected Iterator<List<Event>> listItems(CogniteClient client,
+    protected Iterator<List<SequenceMetadata>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.events().list(requestParameters, partitions);
+        return client.sequences().list(requestParameters, partitions);
     }
 }

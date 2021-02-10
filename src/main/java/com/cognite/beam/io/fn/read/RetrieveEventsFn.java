@@ -20,29 +20,27 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
-import com.cognite.client.dto.Asset;
+import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
-import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.values.PCollectionView;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Lists / reads assets from Cognite Data Fusion
+ * Lists / reads events from Cognite Data Fusion
  *
  */
-public class RetrieveAssetsFn extends RetrieveItemsBaseFn<Asset> {
+public class RetrieveEventsFn extends RetrieveItemsBaseFn<Event> {
 
-    public RetrieveAssetsFn(Hints hints,
+    public RetrieveEventsFn(Hints hints,
                             ReaderConfig readerConfig,
                             PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<Asset> retrieveItems(CogniteClient client,
-                                             List<Item> items) throws Exception {
-        return client.assets().retrieve(items);
+    protected List<Event> retrieveItems(CogniteClient client,
+                                        List<Item> items) throws Exception {
+        return client.events().retrieve(items);
     }
 }
