@@ -21,6 +21,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.ListRelationshipsFn;
+import com.cognite.beam.io.fn.read.RetrieveRelationshipsFn;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
 import com.cognite.client.config.ResourceType;
@@ -283,14 +284,13 @@ public abstract class Relationships {
 
             PCollection<Relationship> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(1000)
+                            .setMaxBatchSize(4000)
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsByIdFn(getHints(), ResourceType.RELATIONSHIP_BY_ID, getReaderConfig(),
-                                    projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseRelationshipFn()));
+                            new RetrieveRelationshipsFn(getHints(), getReaderConfig(),
+                                    projectConfigView)).withSideInputs(projectConfigView));
 
             return outputCollection;
         }
