@@ -257,6 +257,15 @@ public abstract class TSPoints {
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
 
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
             // main input
             PCollection<RequestParameters> requestParametersPCollection;
 
@@ -287,7 +296,8 @@ public abstract class TSPoints {
             } else {
                 LOG.info("Using old codepath for reader");
                 outputCollection = requestParametersWithConfig
-                        .apply("Read results", ParDo.of(new ReadTsPointProto(getHints(), getReaderConfig())));
+                        .apply("Read results", ParDo.of(new ReadTsPointProto(getHints(), getReaderConfig(),
+                                projectConfigView)).withSideInputs(projectConfigView));
             }
 
             return outputCollection;

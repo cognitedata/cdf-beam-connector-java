@@ -89,6 +89,17 @@ public abstract class ListItemsBaseFn<T> extends IOBaseFn<RequestParameters, T> 
                 pageStartInstant = Instant.now();
             }
 
+            /*
+            if (isStreaming) {
+                // output with timestamps in streaming mode--need that for windowing
+                out.outputWithTimestamp(pointsOutput, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+            } else {
+                // no timestamping in batch mode--just leads to lots of complications
+                out.output(pointsOutput);
+            }
+
+             */
+
             LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
                     totalNoItems,
                     Duration.between(batchStartInstant, Instant.now()).toString());
