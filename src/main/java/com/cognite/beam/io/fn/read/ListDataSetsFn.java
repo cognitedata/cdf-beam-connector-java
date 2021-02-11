@@ -14,30 +14,34 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn.write;
+package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.DataSet;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
- * Writes data sets to CDF.Clean.
+ * Lists / reads data sets from Cognite Data Fusion
  *
  */
-public class UpsertDataSetFn extends UpsertItemBaseNewFn<DataSet> {
-    public UpsertDataSetFn(Hints hints,
-                           WriterConfig writerConfig,
-                           PCollectionView<List<ProjectConfig>> projectConfigView) {
-        super(hints, writerConfig, projectConfigView);
+public class ListDataSetsFn extends ListItemsBaseFn<DataSet> {
+    public ListDataSetsFn(Hints hints,
+                          ReaderConfig readerConfig,
+                          PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<DataSet> upsertItems(CogniteClient client, List<DataSet> inputItems) throws Exception {
-        return client.datasets().upsert(inputItems);
+    protected Iterator<List<DataSet>> listItems(CogniteClient client,
+                                          RequestParameters requestParameters,
+                                          String... partitions) throws Exception {
+        return client.datasets().list(requestParameters, partitions);
     }
 }

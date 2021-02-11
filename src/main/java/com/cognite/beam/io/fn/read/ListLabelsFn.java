@@ -14,32 +14,34 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn.write;
+package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.Label;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
- * Function for upserting {@link Label} to CDF.
+ * Lists / reads data sets from Cognite Data Fusion
  *
- * This function will first try to write the items as new items. In case the items already exists (based on externalId),
- * the item will be deleted and then created. Effectively this results in an upsert.
  */
-public class UpsertLabelFn extends UpsertItemBaseNewFn<Label> {
-    public UpsertLabelFn(Hints hints,
-            WriterConfig writerConfig,
-            PCollectionView<List<ProjectConfig>> projectConfigView) {
-            super(hints, writerConfig, projectConfigView);
+public class ListLabelsFn extends ListItemsBaseFn<Label> {
+    public ListLabelsFn(Hints hints,
+                        ReaderConfig readerConfig,
+                        PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, readerConfig, projectConfigView);
     }
 
     @Override
-    protected List<Label> upsertItems(CogniteClient client, List<Label> inputItems) throws Exception {
-        return client.labels().upsert(inputItems);
+    protected Iterator<List<Label>> listItems(CogniteClient client,
+                                          RequestParameters requestParameters,
+                                          String... partitions) throws Exception {
+        return client.labels().list(requestParameters, partitions);
     }
 }

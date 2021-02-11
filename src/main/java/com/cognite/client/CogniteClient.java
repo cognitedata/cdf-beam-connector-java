@@ -223,6 +223,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Datasets} representing the Cognite dats sets api endpoint.
+     *
+     * @return The data sets api object.
+     */
+    public Datasets datasets() {
+        return Datasets.of(this);
+    }
+
+    /**
      * Returns {@link SecurityCategories} representing the Cognite labels api endpoints.
      *
      * @return The security categories api endpoint.

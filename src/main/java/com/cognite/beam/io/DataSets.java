@@ -20,6 +20,7 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.read.ListDataSetsFn;
 import com.cognite.client.dto.DataSet;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.parse.ParseDataSetFn;
@@ -161,18 +162,24 @@ public abstract class DataSets {
 
         @Override
         public PCollection<DataSet> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all data sets composite transform.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<DataSet> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
                             .withProjectConfigParameters(getProjectConfig())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Read results", ParDo.of(
-                            new ReadItemsIteratorFn(getHints(), ResourceType.DATA_SET, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseDataSetFn()));
-
+                    .apply("Read results", ParDo.of(new ListDataSetsFn(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -265,8 +272,7 @@ public abstract class DataSets {
                     .apply("Remove key", Values.<Iterable<DataSet>>create())
                     .apply("Upsert items", ParDo.of(
                             new UpsertDataSetFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseDataSetFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
