@@ -44,4 +44,9 @@ public class ListDataSetsFn extends ListItemsBaseFn<DataSet> {
                                           String... partitions) throws Exception {
         return client.datasets().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(DataSet item) {
+        return item.getLastUpdatedTime().getValue();
+    }
 }

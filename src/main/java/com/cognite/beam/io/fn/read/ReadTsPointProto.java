@@ -46,9 +46,6 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
     final ReaderConfig readerConfig;
     final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    private final Distribution tsPointsBatch = Metrics.distribution("cognite", "tsPointsBatchSize");
-    private final Distribution tsBatch = Metrics.distribution("cognite", "numberOfTS");
-
     public ReadTsPointProto(Hints hints,
                             ReaderConfig readerConfig,
                             PCollectionView<List<ProjectConfig>> projectConfigView) {
@@ -90,21 +87,22 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
                     apiBatchSize.update(results.size());
                     apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
                 }
-                outputReceiver.output(results);
+                if (readerConfig.isStreamingEnabled()) {
+                    // output with timestamps in streaming mode--need that for windowing
+                    long minTimestampMs = results.stream()
+                            .mapToLong(point -> point.getTimestamp())
+                            .min()
+                            .orElse(1L);
+
+                    outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                } else {
+                    // no timestamping in batch mode--just leads to lots of complications
+                    outputReceiver.output(results);
+                }
+
                 totalNoItems += results.size();
                 pageStartInstant = Instant.now();
             }
-
-            /*
-            if (isStreaming) {
-                // output with timestamps in streaming mode--need that for windowing
-                out.outputWithTimestamp(pointsOutput, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
-            } else {
-                // no timestamping in batch mode--just leads to lots of complications
-                out.output(pointsOutput);
-            }
-
-             */
 
             LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
                     totalNoItems,

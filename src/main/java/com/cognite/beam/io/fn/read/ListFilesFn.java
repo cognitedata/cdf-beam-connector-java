@@ -44,4 +44,9 @@ public class ListFilesFn extends ListItemsBaseFn<FileMetadata> {
                                           String... partitions) throws Exception {
         return client.files().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(FileMetadata item) {
+        return item.getLastUpdatedTime().getValue();
+    }
 }

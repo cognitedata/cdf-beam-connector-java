@@ -44,4 +44,9 @@ public class ListEventsFn extends ListItemsBaseFn<Event> {
                                           String... partitions) throws Exception {
         return client.events().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(Event item) {
+        return item.getLastUpdatedTime().getValue();
+    }
 }

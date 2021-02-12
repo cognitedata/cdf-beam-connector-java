@@ -44,4 +44,9 @@ public class ListLabelsFn extends ListItemsBaseFn<Label> {
                                           String... partitions) throws Exception {
         return client.labels().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(Label item) {
+        return item.getCreatedTime().getValue();
+    }
 }

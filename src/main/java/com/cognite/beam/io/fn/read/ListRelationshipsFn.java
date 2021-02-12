@@ -44,4 +44,9 @@ public class ListRelationshipsFn extends ListItemsBaseFn<Relationship> {
                                           String... partitions) throws Exception {
         return client.relationships().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(Relationship item) {
+        return item.getLastUpdatedTime().getValue();
+    }
 }

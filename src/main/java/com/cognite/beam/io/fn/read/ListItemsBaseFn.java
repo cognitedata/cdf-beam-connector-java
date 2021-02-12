@@ -84,21 +84,19 @@ public abstract class ListItemsBaseFn<T> extends IOBaseFn<RequestParameters, T> 
                     apiBatchSize.update(results.size());
                     apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
                 }
-                results.forEach(item -> outputReceiver.output(item));
+                if (readerConfig.isStreamingEnabled()) {
+                    // output with timestamps in streaming mode--need that for windowing
+                    results.forEach(item ->
+                            outputReceiver.outputWithTimestamp(item, org.joda.time.Instant.ofEpochMilli(getTimestamp(item)))
+                    );
+                } else {
+                    // no timestamping in batch mode--just leads to lots of complications
+                    results.forEach(item -> outputReceiver.output(item));
+                }
+
                 totalNoItems += results.size();
                 pageStartInstant = Instant.now();
             }
-
-            /*
-            if (isStreaming) {
-                // output with timestamps in streaming mode--need that for windowing
-                out.outputWithTimestamp(pointsOutput, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
-            } else {
-                // no timestamping in batch mode--just leads to lots of complications
-                out.output(pointsOutput);
-            }
-
-             */
 
             LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
                     totalNoItems,
@@ -122,4 +120,13 @@ public abstract class ListItemsBaseFn<T> extends IOBaseFn<RequestParameters, T> 
     protected abstract Iterator<List<T>> listItems(CogniteClient client,
                                                    RequestParameters requestParameters,
                                                    String... partitions) throws Exception;
+
+    /**
+     * Gets the timestamp associated with a data item. This timestamp will be used in streaming mode as the
+     * basis for time windows. It would normally be the object's create or updated timestamp.
+     *
+     * @param item The item to get the timestamp for.
+     * @return The timestamp.
+     */
+    protected abstract long getTimestamp(T item);
 }

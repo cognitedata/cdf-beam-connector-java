@@ -44,4 +44,9 @@ public class ListTimeSeriesFn extends ListItemsBaseFn<TimeseriesMetadata> {
                                           String... partitions) throws Exception {
         return client.timeseries().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(TimeseriesMetadata item) {
+        return item.getLastUpdatedTime().getValue();
+    }
 }

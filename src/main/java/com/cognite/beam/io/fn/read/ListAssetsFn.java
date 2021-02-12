@@ -44,4 +44,9 @@ public class ListAssetsFn extends ListItemsBaseFn<Asset> {
                                               String... partitions) throws Exception {
         return client.assets().list(requestParameters, partitions);
     }
+
+    @Override
+    protected long getTimestamp(Asset item) {
+        return item.getLastUpdatedTime().getValue();
+    }
 }

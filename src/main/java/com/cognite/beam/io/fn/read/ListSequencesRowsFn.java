@@ -47,4 +47,10 @@ public class ListSequencesRowsFn extends ListItemsBaseFn<SequenceBody> {
                 "Partitions is not supported for Sequence rows");
         return client.sequences().rows().retrieve(requestParameters);
     }
+
+    @Override
+    protected long getTimestamp(SequenceBody item) {
+        // No timestamp in sequences rows.
+        return 1L;
+    }
 }

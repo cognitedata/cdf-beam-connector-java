@@ -17,12 +17,10 @@
 package com.cognite.beam.io.fn.read;
 
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.beam.io.Sequences;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.SequenceMetadata;
 import org.apache.beam.sdk.values.PCollectionView;
 
@@ -45,5 +43,10 @@ public class ListSequencesFn extends ListItemsBaseFn<SequenceMetadata> {
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
         return client.sequences().list(requestParameters, partitions);
+    }
+
+    @Override
+    protected long getTimestamp(SequenceMetadata item) {
+        return item.getLastUpdatedTime().getValue();
     }
 }
