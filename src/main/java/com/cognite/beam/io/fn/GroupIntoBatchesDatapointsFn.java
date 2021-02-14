@@ -45,7 +45,7 @@ import static org.apache.commons.lang3.ObjectUtils.firstNonNull;
 public class GroupIntoBatchesDatapointsFn
         extends DoFn<KV<String, TimeseriesPointPost>, KV<String, Iterable<TimeseriesPointPost>>> {
     private static final int MAX_DISTINCT_IDS = 10000;
-    private static final int MAX_BATCH_SIZE = 100000;
+    private static final int MAX_BATCH_SIZE = 200000;
 
     private static final Duration MIN_MAX_LATENCY = Duration.ofMillis(10);
     private static final Duration MAX_MAX_LATENCY = Duration.ofDays(10);
