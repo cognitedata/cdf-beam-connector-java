@@ -20,13 +20,10 @@ import com.cognite.beam.io.config.*;
 import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.client.dto.TimeseriesPointPost;
 import com.cognite.client.config.ResourceType;
-import com.cognite.beam.io.fn.parse.ParseTimeseriesPointFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.read.ReadTsPointProto;
 import com.cognite.beam.io.fn.read.ReadTsPointProtoSdf;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertTsPointsProtoFn;
-import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.Coder;
@@ -308,66 +305,6 @@ public abstract class TSPoints {
             public abstract Builder setReaderConfig(ReaderConfig value);
             public abstract Builder setNewCodePath(boolean value);
             public abstract ReadAllDirect build();
-        }
-    }
-
-    @AutoValue
-    public abstract static class ReadAllJson
-            extends ConnectorBase<PCollection<RequestParameters>, PCollection<TimeseriesPoint>> {
-
-        public static ReadAllJson.Builder builder() {
-            return new com.cognite.beam.io.AutoValue_TSPoints_ReadAllJson.Builder()
-                    .setProjectConfig(ProjectConfig.create())
-                    .setHints(CogniteIO.defaultHints)
-                    .setReaderConfig(ReaderConfig.create())
-                    .setProjectConfigFile(invalidProjectConfigFile);
-        }
-        public abstract ReaderConfig getReaderConfig();
-        public abstract ReadAllJson.Builder toBuilder();
-
-        public ReadAllJson withProjectConfig(ProjectConfig config) {
-            return toBuilder().setProjectConfig(config).build();
-        }
-
-        public ReadAllJson withHints(Hints hints) {
-            return toBuilder().setHints(hints).build();
-        }
-
-        public ReadAllJson withReaderConfig(ReaderConfig config) {
-            return toBuilder().setReaderConfig(config).build();
-        }
-
-        public ReadAllJson withProjectConfigFile(ValueProvider<String> filePath) {
-            return toBuilder().setProjectConfigFile(filePath).build();
-        }
-
-        public ReadAllJson withProjectConfigFile(String filePath) {
-            Preconditions.checkNotNull(filePath, "File path cannot be null");
-            Preconditions.checkArgument(!filePath.isEmpty(), "File path cannot be empty");
-            return withProjectConfigFile(ValueProvider.StaticValueProvider.of(filePath));
-        }
-
-        @Override
-        public PCollection<TimeseriesPoint> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
-
-            PCollection<TimeseriesPoint> outputCollection = input
-                    .apply("Apply project config", ApplyProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
-                    .apply("Read results", ParDo.of(new ReadItemsIteratorFn(getHints(), ResourceType.TIMESERIES_DATAPOINTS,
-                                    getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseTimeseriesPointFn()))
-                    .apply("Break fusion", BreakFusion.<TimeseriesPoint>create());
-
-            return outputCollection;
-        }
-
-        @AutoValue.Builder
-        public abstract static class Builder extends ConnectorBase.Builder<Builder> {
-            public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract ReadAllJson build();
         }
     }
 
