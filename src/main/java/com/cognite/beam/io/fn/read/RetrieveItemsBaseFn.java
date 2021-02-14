@@ -78,10 +78,9 @@ public abstract class RetrieveItemsBaseFn<T> extends IOBaseFn<Iterable<Item>, T>
         items.forEach(item -> itemsList.add(item));
         try {
             List<T> resultsItems = retrieveItems(getClient(projectConfig, readerConfig), itemsList);
-            Instant pageStartInstant = Instant.now();
             if (readerConfig.isMetricsEnabled()) {
                 apiBatchSize.update(resultsItems.size());
-                apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
+                apiLatency.update(Duration.between(batchStartInstant, Instant.now()).toMillis());
             }
             LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
                     resultsItems.size(),

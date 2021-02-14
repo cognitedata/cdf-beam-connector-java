@@ -631,9 +631,7 @@ public abstract class Sequences {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete sequences", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.SEQUENCE_HEADER,
-                                    getWriterConfig().getAppIdentifier(), getWriterConfig().getSessionIdentifier(),
-                                    projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.SEQUENCE_HEADER, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

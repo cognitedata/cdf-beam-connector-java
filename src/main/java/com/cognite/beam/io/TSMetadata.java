@@ -640,9 +640,7 @@ public abstract class TSMetadata {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete time series", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.TIMESERIES_HEADER,
-                                    getWriterConfig().getAppIdentifier(), getWriterConfig().getSessionIdentifier(),
-                                    projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.TIMESERIES_HEADER, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

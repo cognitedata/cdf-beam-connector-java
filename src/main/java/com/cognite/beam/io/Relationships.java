@@ -455,8 +455,7 @@ public abstract class Relationships {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.RELATIONSHIP, getWriterConfig().getAppIdentifier(),
-                                    getWriterConfig().getSessionIdentifier(), projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.RELATIONSHIP, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

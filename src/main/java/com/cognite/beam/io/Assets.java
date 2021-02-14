@@ -941,8 +941,7 @@ public abstract class Assets {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.ASSET, getWriterConfig().getAppIdentifier(),
-                                    getWriterConfig().getSessionIdentifier(), projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.ASSET, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

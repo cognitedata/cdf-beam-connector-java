@@ -339,8 +339,7 @@ public abstract class Labels {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.LABEL, getWriterConfig().getAppIdentifier(),
-                                    getWriterConfig().getSessionIdentifier(), projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.LABEL, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

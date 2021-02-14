@@ -646,8 +646,7 @@ public abstract class Events {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.EVENT, getWriterConfig().getAppIdentifier(),
-                                    getWriterConfig().getSessionIdentifier(), projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.EVENT, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

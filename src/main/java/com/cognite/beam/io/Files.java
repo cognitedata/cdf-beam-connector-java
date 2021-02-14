@@ -642,9 +642,7 @@ public abstract class Files {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.FILE,
-                                    getWriterConfig().getAppIdentifier(), getWriterConfig().getSessionIdentifier(),
-                                    projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.FILE, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;
