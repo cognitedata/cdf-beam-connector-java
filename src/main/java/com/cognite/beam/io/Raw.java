@@ -563,8 +563,6 @@ public class Raw {
 
         @Override
         public PCollection<String> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
-
             LOG.debug("Building read raw database names composite transform.");
 
             // main input
@@ -575,8 +573,7 @@ public class Raw {
                             .withAppIdentifier(getReaderConfig().getAppIdentifier())
                             .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
                     .apply("Read database names", ParDo.of(
-                            new ReadRawDatabase(getHints(), getReaderConfig().getAppIdentifier(),
-                                    getReaderConfig().getSessionIdentifier()))
+                            new ReadRawDatabase(getHints(), getReaderConfig()))
                             );
 
             return outputCollection;

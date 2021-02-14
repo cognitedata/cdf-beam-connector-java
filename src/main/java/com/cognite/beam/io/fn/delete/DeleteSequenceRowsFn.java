@@ -20,17 +20,8 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
-import com.cognite.client.dto.Item;
-import com.cognite.client.dto.RawRow;
 import com.cognite.client.dto.SequenceBody;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.ItemParser;
-import com.cognite.client.servicesV1.parser.SequenceParser;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
@@ -39,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Deletes rows from {@code Sequences}.
