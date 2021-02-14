@@ -394,8 +394,7 @@ public abstract class SequenceRows {
                     .apply("Remove key", Values.<Iterable<SequenceBody>>create())
                     .apply("Delete sequence rows", ParDo.of(
                             new DeleteSequenceRowsFn(getHints(),
-                                                    getWriterConfig().getAppIdentifier(),
-                                                    getWriterConfig().getSessionIdentifier(),
+                                                    getWriterConfig(),
                                                     projectConfigView))
                             .withSideInputs(projectConfigView));
 
