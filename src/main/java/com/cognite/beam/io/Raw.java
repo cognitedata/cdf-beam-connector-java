@@ -715,8 +715,7 @@ public class Raw {
             // main input
             PCollection<RawTable> outputCollection = input
                     .apply("Read table names", ParDo.of(
-                            new ReadRawTable(getHints(), getReaderConfig().getAppIdentifier(),
-                                    getReaderConfig().getSessionIdentifier(), projectConfigView))
+                            new ReadRawTable(getHints(), getReaderConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;
