@@ -377,7 +377,7 @@ public abstract class RawRows extends ApiBase {
      * @return The deleted rows
      * @throws Exception
      */
-    public List<RawRow> delete(List<RawRow> rows) throws Exception {
+    public List<RawRow> delete(Collection<RawRow> rows) throws Exception {
         String loggingPrefix = "delete() - ";
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(null!= rows,
@@ -468,7 +468,7 @@ public abstract class RawRows extends ApiBase {
                     completedBatches.size()));
         }
 
-        return rows;
+        return new ArrayList(rows);
     }
 
     /**

@@ -19,6 +19,8 @@ package com.cognite.beam.io.fn.delete;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.dto.Item;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
@@ -36,6 +38,9 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,130 +53,61 @@ import java.util.Map;
  * The input collection of rows must all belong to the same db and table. That is, each {@code Iterable<RawRow>}
  * must contain rows for the same raw destination table.
  */
-public class DeleteRawRowFn extends DoFn<Iterable<RawRow>, RawRow> {
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
+public class DeleteRawRowFn extends IOBaseFn<Iterable<RawRow>, RawRow> {
+    private final static Logger LOG = LoggerFactory.getLogger(DeleteRawRowFn.class);
 
-    final Distribution apiLatency = Metrics.distribution("cognite", "apiLatency");
-    final Counter apiRetryCounter = Metrics.counter("cognite", "apiRetries");
-
-    private final ConnectorServiceV1 connector;
     private final WriterConfig writerConfig;
-    private ConnectorServiceV1.ItemWriter itemWriterDelete;
     private final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    public DeleteRawRowFn(Hints hints, WriterConfig writerConfig,
+    public DeleteRawRowFn(Hints hints,
+                          WriterConfig writerConfig,
                           PCollectionView<List<ProjectConfig>> projectConfigView) {
-        Preconditions.checkNotNull(hints, "Hints cannot be null");
+        super(hints);
+        Preconditions.checkNotNull(writerConfig, "Writer config cannot be null.");
+        Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
 
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(writerConfig.getAppIdentifier())
-                .setSessionIdentifier(writerConfig.getSessionIdentifier())
-                .build();
         this.writerConfig = writerConfig;
         this.projectConfigView = projectConfigView;
     }
 
-    @Setup
-    public void setup() {
-        LOG.info("Setting up DeleteRawRowFn.");
-        LOG.debug("Opening writer");
-        itemWriterDelete = connector.deleteRawRows();
-    }
-
     @ProcessElement
-    public void processElement(@Element Iterable<RawRow> element, OutputReceiver<RawRow> outputReceiver,
+    public void processElement(@Element Iterable<RawRow> items,
+                               OutputReceiver<RawRow> outputReceiver,
                                ProcessContext context) throws Exception {
-        final String batchIdentifier = RandomStringUtils.randomAlphanumeric(6);
+        final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+        final Instant batchStartInstant = Instant.now();
+
         // Identify the project config to use
         ProjectConfig projectConfig;
         if (context.sideInput(projectConfigView).size() > 0) {
             projectConfig = context.sideInput(projectConfigView).get(0);
         } else {
-            String message = batchIdentifier + "Cannot identify project config. Empty side input.";
+            String message = batchLogPrefix + "Cannot identify project config. Empty side input.";
             LOG.error(message);
             throw new Exception(message);
         }
 
-        // naive de-duplication based on ids
-        Map<String, RawRow> deleteMap = new HashMap<>(10000);
+        // Delete the items
+        List<RawRow> itemsList = new ArrayList<>();
+        items.forEach(item -> itemsList.add(item));
+        try {
+            List<RawRow> resultsItems = getClient(projectConfig, writerConfig).raw().rows().delete(itemsList);
 
-        // all rows must reference the same db and table
-        String dbName = "";
-        String tableName = "";
-
-        for (RawRow value : element) {
-            if (value.getDbName().isEmpty() || value.getTableName().isEmpty() || value.getKey().isEmpty()) {
-                String message = "Batch identifier: " + batchIdentifier
-                        + "- Row must specify dbName, tableName and row key: " + value.toString();
-                LOG.error(message);
-                throw new Exception(message);
-            }
-            if (dbName.isEmpty() || tableName.isEmpty()) {
-                // Sampling the first element's db and table name
-                dbName = value.getDbName();
-                tableName = value.getTableName();
-            }
-            if (!dbName.equals(value.getDbName()) || !tableName.equals(value.getTableName())) {
-                String message = "Batch identifier: " + batchIdentifier
-                        + "- All rows in the same batch must belong to the same table." + System.lineSeparator()
-                        + "This error may be caused by a bug in the SDK.";
-                LOG.error(message);
-                throw new Exception(message);
-            }
-            deleteMap.put(value.getKey(), value);
-        }
-        LOG.info("Batch identifier: " + batchIdentifier + "- Received items to delete:{}", deleteMap.size());
-
-        // Should not happen--but need to guard against empty input
-        if (deleteMap.isEmpty()) {
-            LOG.warn("Batch identifier: " + batchIdentifier + "- No input elements received.");
-            return;
-        }
-
-        // build initial request object
-        RequestParameters request = RequestParameters.create()
-                .withItems(toRequestDeleteItems(deleteMap.values()))
-                .withRootParameter("dbName", dbName)
-                .withRootParameter("tableName", tableName)
-                .withProjectConfig(projectConfig);
-        LOG.debug("Batch identifier: " + batchIdentifier + "- Built delete request for {} elements", deleteMap.size());
-
-        ResponseItems<String> responseItems = itemWriterDelete.writeItems(request);
-        LOG.info("Batch identifier: " + batchIdentifier + "- Delete request sent. Result returned: {}"
-                , responseItems.isSuccessful());
-
-        if (responseItems.isSuccessful()) {
             if (writerConfig.isMetricsEnabled()) {
-                MetricsUtil.recordApiRetryCounter(responseItems, apiRetryCounter);
-                MetricsUtil.recordApiLatency(responseItems, apiLatency);
+                apiBatchSize.update(resultsItems.size());
+                apiLatency.update(Duration.between(batchStartInstant, Instant.now()).toMillis());
             }
-        } else {
-            String message = "Batch identifier: " + batchIdentifier
-                    + "- Failed to delete rows in raw. Writer returned "
-                    + responseItems.getResponseBodyAsString();
-            LOG.error(message);
-            throw new Exception(message);
+            LOG.info(batchLogPrefix + "Deleted {} items in {}}.",
+                    resultsItems.size(),
+                    Duration.between(batchStartInstant, Instant.now()).toString());
+
+            resultsItems.forEach(item -> outputReceiver.output(item));
+        } catch (Exception e) {
+            LOG.error(batchLogPrefix + "Error when deleting rows in Cognite Data Fusion: {}",
+                    e.toString());
+            throw new Exception(batchLogPrefix + "Error when deleting rows in Cognite Data Fusion.", e);
         }
 
-        // output the deleted items (excluding duplicates)
-        for (RawRow outputElement : deleteMap.values()) {
-            outputReceiver.output(outputElement);
-        }
-    }
 
-    private List<Map<String, Object>> toRequestDeleteItems(Iterable<RawRow> input) {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (RawRow element : input) {
-            listBuilder.add(this.toRequestDeleteItem(element));
-        }
-        return listBuilder.build();
-    }
-
-    private Map<String, Object> toRequestDeleteItem(RawRow element) {
-        ImmutableMap.Builder<String, Object> mapBuilder = ImmutableMap.builder();
-        mapBuilder.put("key", element.getKey());
-
-        return mapBuilder.build();
     }
 }
