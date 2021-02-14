@@ -16,139 +16,132 @@
 
 package com.cognite.beam.io.fn.read;
 
-import com.cognite.beam.io.config.Hints;
-import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.client.config.ResourceType;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.beam.io.config.Hints;
+import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.config.ResourceType;
+import com.cognite.client.dto.Aggregate;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
-import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Reads cursors for assets and events, and adds them to the request parameters.
+ * Splits a list / read items request into multiple partitioned requests.
+ *
+ * This function will first query Cognite Data Fusion for a total count of items via
+ * the aggregates endpoints. Based on the total count, it will partition the request.
  */
-public class AddPartitionsFn extends DoFn<RequestParameters, RequestParameters> {
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
-    private final int MAX_RESULTS_SET_SIZE_LIMIT = 20000;
-    private final List<ResourceType> supportedResourceTypes = ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT,
-            ResourceType.TIMESERIES_HEADER);
+public class AddPartitionsFn extends IOBaseFn<RequestParameters, RequestParameters> {
+    private static final long ITEMS_PER_PARTITION = 10000;
+    private static final long MAX_PARTITIONS = 100;
 
-    private final Hints hints;
+    private final ReaderConfig readerConfig;
+    private final PCollectionView<List<ProjectConfig>> projectConfigView;
     private final ResourceType resourceType;
-    private final ConnectorServiceV1 connector;
 
-    public AddPartitionsFn(Hints hints, ResourceType resourceType, ReaderConfig readerConfig) {
-        Preconditions.checkNotNull(hints, "Hints cannot be null");
-        Preconditions.checkNotNull(resourceType, "ResourceType cannot be null");
-        Preconditions.checkNotNull(readerConfig, "ReaderConfig cannot be null");
-        Preconditions.checkArgument(supportedResourceTypes.contains(resourceType),
-                "Resource type is not supported: " + resourceType);
+    public AddPartitionsFn(Hints hints,
+                           ReaderConfig readerConfig,
+                           ResourceType resourceType,
+                           PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints);
+        Preconditions.checkNotNull(readerConfig, "Reader config cannot be null.");
+        Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
+        Preconditions.checkNotNull(resourceType, "Resource type cannot be null");
 
-        this.hints = hints;
+        this.projectConfigView = projectConfigView;
+        this.readerConfig = readerConfig;
         this.resourceType = resourceType;
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(readerConfig.getAppIdentifier())
-                .setSessionIdentifier(readerConfig.getSessionIdentifier())
-                .build();
     }
 
     @Setup
     public void setup() {
-        LOG.info("Setting up AddPartitionsFn.");
-        LOG.debug("Validating the hints");
-        hints.validate();
     }
 
     @ProcessElement
-    public void processElement(@Element RequestParameters query,
-                               OutputReceiver<RequestParameters> outputReceiver) throws Exception {
-        final String batchIdentifierPrefix = "Batch id: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+    public void processElement(@Element RequestParameters requestParameters,
+                               OutputReceiver<RequestParameters> outputReceiver,
+                               ProcessContext context) throws Exception {
+        final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+        final Instant batchStartInstant = Instant.now();
 
-        // if readShards = 1, then skip fetching cursors
-        LOG.debug(batchIdentifierPrefix + "Checking hints for readShards: {}", hints.getReadShards().get());
-
-        if (hints.getReadShards().get() < 2) {
-            LOG.debug(batchIdentifierPrefix + "readShards < 2, skipping partitions");
-            outputReceiver.output(query);
-            return;
+        // Identify the project config to use
+        ProjectConfig projectConfig;
+        if (context.sideInput(projectConfigView).size() > 0) {
+            projectConfig = context.sideInput(projectConfigView).get(0);
+        } else {
+            String message = batchLogPrefix + "Cannot identify project config. Empty side input.";
+            LOG.error(message);
+            throw new Exception(message);
         }
 
-        LOG.debug("Received query to process {}", query.toString());
-
-        // set a reasonably low prefetch limit.
-        int prefetchResultsSetSizeLimit = Math.min(MAX_RESULTS_SET_SIZE_LIMIT,
-                (int) Math.round(Math.pow(hints.getReadShards().get(), 2)));
-        LOG.debug(batchIdentifierPrefix + "cursor prefetch results set size target set to {}", prefetchResultsSetSizeLimit);
-
-        // based on the prefetch limit, adjust the results set batch size so that we don't ask for more results than we need.
-        int prefetchResultsSetPageLimit = Math.min(prefetchResultsSetSizeLimit + 1, 1000);
-        if (query.getRequestParameters().containsKey("limit")
-                && query.getRequestParameters().get("limit") instanceof Integer) {
-            prefetchResultsSetPageLimit = Math.min(prefetchResultsSetSizeLimit, (Integer) query.getRequestParameters().get("limit"));
-        }
-        LOG.debug(batchIdentifierPrefix + "cursor prefetch request batch/page limit set to {}", prefetchResultsSetPageLimit);
-        RequestParameters cursorQuery = query.withRootParameter("limit", prefetchResultsSetPageLimit);
-
-        LOG.debug(batchIdentifierPrefix + "Sending query to the Cognite data platform: {}", cursorQuery.toString());
-        // Check that the results set is large enough for it to warrant the use of cursors.
-        Iterator<CompletableFuture<ResponseItems<String>>> results;
-        switch (resourceType) {
-            case ASSET:
-                results = connector.readAssets(cursorQuery);
-                break;
-            case EVENT:
-                results = connector.readEvents(cursorQuery);
-                break;
-            case TIMESERIES_HEADER:
-                results = connector.readTsHeaders(cursorQuery);
-                break;
-            default:
-                LOG.error(batchIdentifierPrefix + "Not a supported resource type: " + resourceType);
-                throw new Exception(batchIdentifierPrefix + "Not a supported resource type: " + resourceType);
-        }
-
+        // Count the expected number of results.
         try {
-            LOG.info(batchIdentifierPrefix + "Probing the results set size of {}.", resourceType);
-            int resultsSetCounter = 0;
-            ResponseItems<String> responseItems;
-            while (results.hasNext() && resultsSetCounter <= prefetchResultsSetSizeLimit) {
-                responseItems = results.next().join();
-                if (!responseItems.isSuccessful()) {
-                    throw new Exception(batchIdentifierPrefix + "An error occurred while prefetching items.");
-                }
-                resultsSetCounter += responseItems.getResultsItems().size();
+            Aggregate aggregateResult;
+            switch (resourceType) {
+                case ASSET:
+                    aggregateResult = getClient(projectConfig, readerConfig).assets().aggregate(requestParameters);
+                    break;
+                case EVENT:
+                    aggregateResult = getClient(projectConfig, readerConfig).events().aggregate(requestParameters);
+                    break;
+                case TIMESERIES_HEADER:
+                    aggregateResult = getClient(projectConfig, readerConfig).timeseries().aggregate(requestParameters);
+                    break;
+                case FILE_HEADER:
+                    aggregateResult = getClient(projectConfig, readerConfig).files().aggregate(requestParameters);
+                    break;
+                default:
+                    LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
+                    throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
             }
-            LOG.debug(batchIdentifierPrefix + "Results set size: {}.", resultsSetCounter);
 
-            if (resultsSetCounter >= prefetchResultsSetSizeLimit && hints.getReadShards().get() > 1) {
-                LOG.info(batchIdentifierPrefix + "Building partitioned requests for {}.", resourceType);
-                int noPartitions = hints.getReadShards().get();
-                for (int i = 1; i <= noPartitions; i++) {
-                    String partitionValue = i + "/" + noPartitions;
-                    LOG.debug(batchIdentifierPrefix + "Partition value set to: [{}]", partitionValue);
+            // Check the aggregate result
+            if (aggregateResult.getAggregatesCount() != 1
+                    || aggregateResult.getAggregates(0).hasValue()) {
+                String message = String.format(batchLogPrefix + "Could not find item count in aggregate: %s",
+                        aggregateResult.toString());
+                LOG.error(message);
+                throw new Exception(message);
+            }
 
-                    outputReceiver.output(query.withRootParameter("partition", partitionValue));
+            long itemCount = aggregateResult.getAggregates(0).getCount();
+            long totalNoPartitions = Math.min(
+                    Math.max(Math.floorDiv(itemCount, ITEMS_PER_PARTITION), 1), // Must have min 1 partition
+                    MAX_PARTITIONS);
+
+
+            LOG.info(batchLogPrefix + "Counted {} items in total. Will split into {} total partitions "
+                    + "with {} (parallel) partitions per worker. Duration: {}",
+                    itemCount,
+                    totalNoPartitions,
+                    hints.getReadShardsPerWorker(),
+                    Duration.between(batchStartInstant, Instant.now()).toString());
+
+            List<String> partitions = new ArrayList<>(hints.getReadShardsPerWorker());
+            for (int i = 1; i <= totalNoPartitions; i++) {
+                // Build the partitions list in the format "m/n" where m = partition no and n = total no partitions
+                partitions.add(String.format("%1$d/%2$d", i, totalNoPartitions));
+                if (partitions.size() >= hints.getReadShardsPerWorker()) {
+                    outputReceiver.output(requestParameters.withPartitions(partitions));
+                    partitions = new ArrayList<>(hints.getReadShardsPerWorker());
                 }
-            } else {
-                LOG.info(batchIdentifierPrefix + "Skipping partitions--results set size too small or hints specify split = 1.");
-                outputReceiver.output(query);
+            }
+            if (partitions.size() > 0) {
+                outputReceiver.output(requestParameters.withPartitions(partitions));
             }
 
         } catch (Exception e) {
-            LOG.error(batchIdentifierPrefix + "Error reading results from the Cognite connector.", e);
-            throw e;
+            LOG.error(batchLogPrefix + "Error when reading from Cognite Data Fusion: {}",
+                    e.toString());
+            throw new Exception(batchLogPrefix + "Error when reading from Cognite Data Fusion.", e);
         }
+
     }
 }

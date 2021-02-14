@@ -29,7 +29,6 @@ import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.ResourceType;
-import com.cognite.beam.io.fn.parse.ParseFileMetaFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertFileHeaderFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -215,7 +214,7 @@ public abstract class FilesMetadata {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
+                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
                             getReaderConfig().enableMetrics(false), ResourceType.FILE_HEADER,
                             projectConfigView))
                             .withSideInputs(projectConfigView))

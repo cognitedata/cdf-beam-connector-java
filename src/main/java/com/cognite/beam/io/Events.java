@@ -26,7 +26,6 @@ import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
-import com.cognite.beam.io.fn.parse.ParseEventFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertEventFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -220,7 +219,7 @@ public abstract class Events {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
+                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
                             getReaderConfig().enableMetrics(false), ResourceType.EVENT,
                             projectConfigView))
                             .withSideInputs(projectConfigView))

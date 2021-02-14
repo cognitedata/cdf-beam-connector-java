@@ -42,7 +42,6 @@ import org.apache.beam.sdk.values.*;
 
 import com.cognite.client.dto.TimeseriesMetadata;
 import com.cognite.beam.io.transform.BreakFusion;
-import com.cognite.beam.io.fn.parse.ParseTimeseriesMetaFn;
 import com.google.auto.value.AutoValue;
 
 import java.util.List;
@@ -217,7 +216,7 @@ public abstract class TSMetadata {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
+                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
                             getReaderConfig().enableMetrics(false), ResourceType.TIMESERIES_HEADER,
                             projectConfigView))
                             .withSideInputs(projectConfigView))

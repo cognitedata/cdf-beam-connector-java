@@ -44,7 +44,6 @@ import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
 import org.apache.beam.sdk.values.*;
 
 import com.cognite.client.dto.Asset;
-import com.cognite.beam.io.fn.parse.ParseAssetFn;
 import com.google.auto.value.AutoValue;
 
 import java.util.List;
@@ -223,7 +222,7 @@ public abstract class Assets {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsNewFn(getHints(),
+                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
                             getReaderConfig().enableMetrics(false), ResourceType.ASSET,
                             projectConfigView))
                             .withSideInputs(projectConfigView))
