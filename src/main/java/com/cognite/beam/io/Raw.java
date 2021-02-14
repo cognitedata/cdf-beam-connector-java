@@ -216,11 +216,19 @@ public class Raw {
 
         @Override
         public PCollection<RawRow> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all rows composite transform.");
 
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             // conditional streaming
             PCollection<RequestParameters> requestParametersPCollection;
@@ -237,32 +245,27 @@ public class Raw {
                 requestParametersPCollection = input;
             }
 
-            // add project config / authenticate
-            PCollection<RequestParameters> projectConfig = requestParametersPCollection
-                    .apply("Apply project config", ApplyProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()));
-
             // Add delta and cursors for batch reads
             PCollection<RequestParameters> finalizedConfig;
             if (getReaderConfig().isStreamingEnabled()) {
-                finalizedConfig = projectConfig;
+                finalizedConfig = requestParametersPCollection;
             } else {
-                finalizedConfig = projectConfig
+                finalizedConfig = requestParametersPCollection
                         .apply("Apply delta timestamp", ApplyDeltaTimestamp.to(ResourceType.RAW_ROW)
                                 .withProjectConfig(getProjectConfig())
                                 .withProjectConfigFile(getProjectConfigFile())
                                 .withReaderConfig(getReaderConfig()))
-                        .apply("Read cursors", ParDo.of(new ReadCursorsFn(getHints(), ResourceType.RAW_ROW,
-                                getReaderConfig().enableMetrics(false))))
+                        .apply("Read cursors", ParDo.of(new ReadCursorsFn(getHints(),
+                                getReaderConfig().enableMetrics(false), projectConfigView))
+                                .withSideInputs(projectConfigView))
                         .apply("Break fusion", BreakFusion.<RequestParameters>create());
             }
 
             // Read from Raw
             PCollection<RawRow> outputCollection = finalizedConfig
                     .apply("Read results", ParDo.of(
-                            new ReadRawRow(getHints(), getReaderConfig())));
+                            new ReadRawRow(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -324,7 +327,6 @@ public class Raw {
 
         @Override
         public PCollection<RawRow> expand(PCollection<RawRow> input) {
-            LOG.info("Starting Cognite raw writer.");
             LOG.debug("Building write raw row composite transform.");
 
             final Coder<String> utf8Coder = StringUtf8Coder.of();
@@ -338,7 +340,7 @@ public class Raw {
                             + "-" + String.valueOf(ThreadLocalRandom.current().nextInt(getHints().getWriteShards()))
                     )).setCoder(keyValueCoder)
                     .apply("Batch rows", GroupIntoBatches.<String, RawRow>of(keyValueCoder)
-                            .withMaxBatchSize(getHints().getWriteRawMaxBatchSize())
+                            .withMaxBatchSize(4000)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<RawRow>>create())
                     .apply("Write rows", CogniteIO.writeRawRowDirect()

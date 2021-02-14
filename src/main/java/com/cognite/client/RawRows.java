@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import autovalue.shaded.com.google$.common.collect.$ForwardingList;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.RawRow;
@@ -86,6 +85,13 @@ public abstract class RawRows extends ApiBase {
     /**
      * Returns a set of rows from a table.
      *
+     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into your own data structure.
+     *
+     * The rows are retrieved using multiple, parallel request streams towards the Cognite api. The number of
+     * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
+     *
      * @param dbName the database to list rows from.
      * @param tableName the table to list rows from.
      * @param requestParameters the column and filter specification for the rows.
@@ -102,8 +108,7 @@ public abstract class RawRows extends ApiBase {
 
         // Get the cursors for parallel retrieval
         int noCursors = getClient().getClientConfig().getNoListPartitions();
-        List<String> cursors = retrieveCursors(dbName, tableName,
-                requestParameters.withRootParameter("numberOfCursors", noCursors));
+        List<String> cursors = retrieveCursors(dbName, tableName, noCursors, requestParameters);
 
         //return FanOutIterator.of(ImmutableList.of(futureIterator));
         return list(dbName, tableName, requestParameters, cursors.toArray(new String[cursors.size()]));
@@ -111,6 +116,13 @@ public abstract class RawRows extends ApiBase {
 
     /**
      * Returns a set of rows from a table.
+     * The rows are returned for the specified partitions. This is method is intended for advanced use
+     * cases where you need direct control over
+     * the individual partitions. For example, when using the SDK in a distributed computing environment.
+     *
+     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into your own data structure.
      *
      * @param dbName the database to list rows from.
      * @param tableName the table to list rows from.
@@ -229,6 +241,30 @@ public abstract class RawRows extends ApiBase {
     public List<String> retrieveCursors(String dbName,
                                         String tableName,
                                         RequestParameters requestParameters) throws Exception {
+        return retrieveCursors(dbName,
+                tableName,
+                getClient().getClientConfig().getNoListPartitions(),
+                requestParameters);
+    }
+
+    /**
+     * Retrieves cursors for parallel retrieval of rows from Raw.
+     *
+     * This is intended for advanced use cases where you need granular control of the parallel retrieval from
+     * Raw--for example in distributed processing frameworks. Most scenarios should just use
+     * {@code list} directly as that will automatically handle parallelization for you.
+     *
+     * @param dbName The database to retrieve row cursors from.
+     * @param tableName The table to retrieve row cursors from.
+     * @param noCursors The number of cursors.
+     * @param requestParameters Hosts query parameters like max and min time stamps and number of cursors to request.
+     * @return A list of cursors.
+     * @throws Exception
+     */
+    public List<String> retrieveCursors(String dbName,
+                                        String tableName,
+                                        int noCursors,
+                                        RequestParameters requestParameters) throws Exception {
         String loggingPrefix = "retrieveCursors() - ";
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
@@ -239,7 +275,8 @@ public abstract class RawRows extends ApiBase {
         // Build request
         RequestParameters request = requestParameters
                 .withRootParameter("dbName", dbName)
-                .withRootParameter("tableName", tableName);
+                .withRootParameter("tableName", tableName)
+                .withRootParameter("numberOfCursors", noCursors);
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ItemReader<String> cursorItemReader = connector.readCursorsRawRows();

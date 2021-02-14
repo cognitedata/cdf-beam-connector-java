@@ -20,6 +20,7 @@ import com.cognite.beam.io.ConnectorBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.beam.io.transform.internal.BuildProjectConfig;
 import com.cognite.client.dto.RawRow;
 import com.cognite.beam.io.fn.read.ReadRawRow;
 import com.cognite.beam.io.RequestParameters;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * Utility transform for writing a Unix style timestamp (ms since epoch) to Raw.
@@ -130,7 +132,16 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
 
     @Override
     public PCollection<Long> expand(PBegin input) {
-        LOG.info("Starting ReadTimestamp transform.");
+        LOG.debug("Starting ReadTimestamp transform.");
+
+        // project config side input
+        PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                .apply("Build project config", BuildProjectConfig.create()
+                        .withProjectConfigFile(getProjectConfigFile())
+                        .withProjectConfigParameters(getProjectConfig())
+                        .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                        .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                .apply("To list view", View.<ProjectConfig>asList());
 
         // In case there are no qualified rows from Raw, we need a default value
         PCollection<RawRow> defaultRow = input.getPipeline()
@@ -164,11 +175,11 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
                                     .withTableName(getRawTableName().get().split("\\.")[1]);
                                 }
                         ))
-                .apply("Apply project config", ApplyProjectConfig.create()
-                        .withProjectConfigFile(getProjectConfigFile())
-                        .withProjectConfigParameters(getProjectConfig()))
                 .apply("Read results", ParDo.of(
-                        new ReadRawRow(getHints().withReadShards(1), getReaderConfig().withFullReadOverride(true))))
+                        new ReadRawRow(getHints().withReadShards(1),
+                                getReaderConfig().withFullReadOverride(true),
+                                projectConfigView))
+                        .withSideInputs(projectConfigView))
                 .apply("Filter rows", Filter.by(row ->
                         row.hasColumns() && row.getColumns().containsFields("identifier")
                         && row.getColumns().containsFields("timestamp")

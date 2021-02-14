@@ -16,12 +16,20 @@
 
 package com.cognite.beam.io.fn.read;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.beam.io.fn.IOBaseFn;
 import com.cognite.client.servicesV1.ResponseItems;
+import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,115 +44,91 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Reads cursors for assets and events, and adds them to the request parameters.
  */
-public class ReadCursorsFn extends DoFn<RequestParameters, RequestParameters> {
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
+public class ReadCursorsFn extends IOBaseFn<RequestParameters, RequestParameters> {
+    private final static Logger LOG = LoggerFactory.getLogger(ReadCursorsFn.class);
     private final int MAX_RESULTS_SET_SIZE_LIMIT = 20000;
 
-    private final Hints hints;
-    private final ResourceType resourceType;
-    private final ConnectorServiceV1 connector;
+    private final ReaderConfig readerConfig;
+    private final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    public ReadCursorsFn(Hints hints, ResourceType resourceType, ReaderConfig readerConfig) {
-        this.hints = hints;
-        this.resourceType = resourceType;
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(readerConfig.getAppIdentifier())
-                .setSessionIdentifier(readerConfig.getSessionIdentifier())
-                .build();
-    }
+    public ReadCursorsFn(Hints hints,
+                         ReaderConfig readerConfig,
+                         PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints);
+        Preconditions.checkNotNull(readerConfig, "Reader config cannot be null.");
+        Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
 
-    @Setup
-    public void setup() {
-        LOG.info("Setting up ReadCursorsFn.");
-        LOG.debug("Validating the hints");
-        hints.validate();
+        this.projectConfigView = projectConfigView;
+        this.readerConfig = readerConfig;
     }
 
     @ProcessElement
-    public void processElement(@Element RequestParameters query,
-                               OutputReceiver<RequestParameters> outputReceiver) throws Exception {
-        final String batchIdentifierPrefix = "Batch id: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+    public void processElement(@Element RequestParameters requestParameters,
+                               OutputReceiver<RequestParameters> outputReceiver,
+                               ProcessContext context) throws Exception {
+        final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+        final Instant batchStartInstant = Instant.now();
+
+        // Identify the project config to use
+        ProjectConfig projectConfig;
+        if (context.sideInput(projectConfigView).size() > 0) {
+            projectConfig = context.sideInput(projectConfigView).get(0);
+        } else {
+            String message = batchLogPrefix + "Cannot identify project config. Empty side input.";
+            LOG.error(message);
+            throw new Exception(message);
+        }
 
         // if readShards = 1, then skip fetching cursors
-        LOG.debug(batchIdentifierPrefix + "Checking hints for readShards: {}", hints.getReadShards().get());
+        LOG.debug(batchLogPrefix + "Checking hints for readShards: {}", hints.getReadShards().get());
 
         if (hints.getReadShards().get() < 2) {
-            LOG.debug(batchIdentifierPrefix + "readShards < 2, skipping cursors");
-            outputReceiver.output(query);
+            LOG.debug(batchLogPrefix + "readShards < 2, skipping cursors");
+            outputReceiver.output(requestParameters);
             return;
         }
 
-        LOG.debug("Received query to process {}", query.toString());
-
         // the filter parameters cannot contain a cursor parameter
-        LOG.debug(batchIdentifierPrefix + "Checking if request parameters already contains a cursor.");
-        checkArgument(!query.getRequestParameters().containsKey("cursor"),
+        LOG.debug(batchLogPrefix + "Checking if request parameters already contains a cursor.");
+        checkArgument(!requestParameters.getRequestParameters().containsKey("cursor"),
                 "Filter parameters cannot contain a cursor");
 
-        // set a reasonably low prefetch limit.
-        int prefetchResultsSetSizeLimit = Math.min(MAX_RESULTS_SET_SIZE_LIMIT, (int) Math.round(Math.pow(hints.getReadShards().get(), 2)));
-        LOG.debug(batchIdentifierPrefix + "cursor prefetch results set size target set to {}", prefetchResultsSetSizeLimit);
+        Preconditions.checkArgument(requestParameters.getRequestParameters().containsKey("dbName")
+                        && requestParameters.getRequestParameters().get("dbName") instanceof String,
+                "Request parameters must include dnName with a string value");
+        Preconditions.checkArgument(requestParameters.getRequestParameters().containsKey("tableName")
+                        && requestParameters.getRequestParameters().get("tableName") instanceof String,
+                "Request parameters must include tableName");
 
-        // based on the prefetch limit, adjust the results set batch size so that we don't ask for more results than we need.
-        int prefetchResultsSetPageLimit = Math.min(prefetchResultsSetSizeLimit + 1, 1000);
-        if (query.getRequestParameters().containsKey("limit")
-                && query.getRequestParameters().get("limit") instanceof Integer) {
-            prefetchResultsSetPageLimit = Math.min(prefetchResultsSetSizeLimit, (Integer) query.getRequestParameters().get("limit"));
-        }
-        LOG.debug(batchIdentifierPrefix + "cursor prefetch request batch/page limit set to {}", prefetchResultsSetPageLimit);
-        RequestParameters cursorQuery = query.withRootParameter("limit", prefetchResultsSetPageLimit);
-
-        LOG.debug(batchIdentifierPrefix + "Sending query to the Cognite data platform: {}", cursorQuery.toString());
-        // Check that the results set is large enough for it to warrant the use of cursors.
-        Iterator<CompletableFuture<ResponseItems<String>>> results;
-        switch (resourceType) {
-            case RAW_ROW:
-                results = connector.readRawRows(cursorQuery);
-                break;
-            default:
-                LOG.error(batchIdentifierPrefix + "Not a supported resource type: " + resourceType);
-                throw new Exception(batchIdentifierPrefix + "Not a supported resource type: " + resourceType);
-        }
+        String dbName = (String) requestParameters.getRequestParameters().get("dbName");
+        String tableName = (String) requestParameters.getRequestParameters().get("tableName");
 
         try {
-            LOG.info(batchIdentifierPrefix + "Probing the results set size of {}.", resourceType);
-            int resultsSetCounter = 0;
-            ResponseItems<String> responseItems;
-            while (results.hasNext() && resultsSetCounter <= prefetchResultsSetSizeLimit) {
-                responseItems = results.next().join();
-                if (!responseItems.isSuccessful()) {
-                    throw new Exception(batchIdentifierPrefix + "An error occurred while prefetching rows from Raw.");
-                }
-                resultsSetCounter += responseItems.getResultsItems().size();
-            }
-            LOG.debug(batchIdentifierPrefix + "Results set size: {}.", resultsSetCounter);
+            int totalNoPartitions = hints.getReadShards().get();
+            LOG.info(batchLogPrefix + "Will split into {} total partitions / cursors "
+                            + "with {} (parallel) partitions per worker. Duration: {}",
+                    totalNoPartitions,
+                    hints.getReadShardsPerWorker(),
+                    Duration.between(batchStartInstant, Instant.now()).toString());
 
-            if (resultsSetCounter >= prefetchResultsSetSizeLimit && hints.getReadShards().get() > 1) {
-                LOG.info(batchIdentifierPrefix + "Fetching cursors for {}.", resourceType);
-                ResponseItems<String> cursors;
-                switch (resourceType) {
-                    case RAW_ROW:
-                        cursors = connector.readCursorsRawRows().getItems(query
-                                .withRootParameter("numberOfCursors", hints.getReadShards().get()));
-                        break;
-                    default:
-                        LOG.error(batchIdentifierPrefix + "Not a supported resource type: " + resourceType);
-                        throw new Exception(batchIdentifierPrefix + "Not a supported resource type: " + resourceType);
+            List<String> cursors = getClient(projectConfig, readerConfig).raw().rows()
+                    .retrieveCursors(dbName, tableName, totalNoPartitions, requestParameters);
+
+            List<String> partitions = new ArrayList<>();
+            for (String cursor : cursors) {
+                // Build the partitions list
+                partitions.add(cursor);
+                if (partitions.size() >= hints.getReadShardsPerWorker()) {
+                    outputReceiver.output(requestParameters.withPartitions(partitions));
+                    partitions = new ArrayList<>();
                 }
-                if (!cursors.isSuccessful()) {
-                    throw new Exception(batchIdentifierPrefix + "An error occurred while reading cursors.");
-                }
-                for (String item : cursors.getResultsItems()) {
-                    outputReceiver.output(query.withRootParameter("cursor", item));
-                }
-            } else {
-                LOG.info(batchIdentifierPrefix + "Skipping cursors--results set size too small or hints specify split = 1.");
-                outputReceiver.output(query);
+            }
+            if (partitions.size() > 0) {
+                outputReceiver.output(requestParameters.withPartitions(partitions));
             }
 
         } catch (Exception e) {
-            LOG.error(batchIdentifierPrefix + "Error reading results from the Cognite connector.", e);
+            LOG.error(batchLogPrefix + "Error reading results from the Cognite connector.", e);
             throw e;
         }
     }

@@ -67,7 +67,7 @@ public abstract class Events extends ApiBase {
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
      * have to stream these results into your own data structure.
      *
-     * The assets are retrieved using multiple, parallel request streams towards the Cognite api. The number of
+     * The events are retrieved using multiple, parallel request streams towards the Cognite api. The number of
      * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
      *
      * @param requestParameters the filters to use for retrieving the assets.
