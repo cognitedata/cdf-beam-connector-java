@@ -32,7 +32,7 @@ import java.util.List;
  * the item will be deleted and then created. Effectively this results in an upsert.
  *
  */
-public class UpsertRelationshipFn extends UpsertItemBaseNewFn<Relationship> {
+public class UpsertRelationshipFn extends UpsertItemBaseFn<Relationship> {
     public UpsertRelationshipFn(Hints hints,
                                 WriterConfig writerConfig,
                                 PCollectionView<List<ProjectConfig>> projectConfigView) {

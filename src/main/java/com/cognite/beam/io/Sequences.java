@@ -41,7 +41,6 @@ import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
 import com.cognite.beam.io.transform.BreakFusion;
-import com.cognite.beam.io.fn.parse.ParseSequenceMetaFn;
 import com.google.auto.value.AutoValue;
 
 import java.util.List;

@@ -24,7 +24,6 @@ import com.cognite.client.dto.*;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.parse.ParseFileMetaFn;
 import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.write.UpsertFileFn;
 import com.cognite.beam.io.transform.BreakFusion;
@@ -559,8 +558,7 @@ public abstract class Files {
                     .apply("Remove key", Values.<Iterable<FileContainer>>create())
                     .apply("Upsert files", ParDo.of(
                             new UpsertFileFn(getHints(), getWriterConfig(), isDeleteTempFile(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseFileMetaFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }

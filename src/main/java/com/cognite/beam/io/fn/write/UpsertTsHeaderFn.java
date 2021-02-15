@@ -33,7 +33,7 @@ import java.util.List;
  * or Id), the headers will be updated. Effectively this results in an upsert.
  *
  */
-public class UpsertTsHeaderFn extends UpsertItemBaseNewFn<TimeseriesMetadata> {
+public class UpsertTsHeaderFn extends UpsertItemBaseFn<TimeseriesMetadata> {
     public UpsertTsHeaderFn(Hints hints,
                          WriterConfig writerConfig,
                          PCollectionView<List<ProjectConfig>> projectConfigView) {

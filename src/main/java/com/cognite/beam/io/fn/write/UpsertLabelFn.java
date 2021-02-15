@@ -31,7 +31,7 @@ import java.util.List;
  * This function will first try to write the items as new items. In case the items already exists (based on externalId),
  * the item will be deleted and then created. Effectively this results in an upsert.
  */
-public class UpsertLabelFn extends UpsertItemBaseNewFn<Label> {
+public class UpsertLabelFn extends UpsertItemBaseFn<Label> {
     public UpsertLabelFn(Hints hints,
             WriterConfig writerConfig,
             PCollectionView<List<ProjectConfig>> projectConfigView) {

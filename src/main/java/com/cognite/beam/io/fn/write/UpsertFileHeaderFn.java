@@ -32,7 +32,7 @@ import java.util.List;
  * they will be created via the files upload endpoint. Effectively this results in an upsert.
  *
  */
-public class UpsertFileHeaderFn extends UpsertItemBaseNewFn<FileMetadata> {
+public class UpsertFileHeaderFn extends UpsertItemBaseFn<FileMetadata> {
     public UpsertFileHeaderFn(Hints hints,
                          WriterConfig writerConfig,
                          PCollectionView<List<ProjectConfig>> projectConfigView) {

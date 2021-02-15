@@ -40,7 +40,7 @@ import java.util.*;
  * In any case, we recommend that you create the TS header before starting to write TS data points to it.
  *
  */
-public class UpsertTsPointsProtoFn extends UpsertItemBaseNewFn<TimeseriesPointPost> {
+public class UpsertTsPointsProtoFn extends UpsertItemBaseFn<TimeseriesPointPost> {
     final Distribution tsBatch = Metrics.distribution("cognite", "TsPerBatch");
 
     public UpsertTsPointsProtoFn(Hints hints,

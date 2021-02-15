@@ -33,7 +33,7 @@ import java.util.List;
  * or Id), the headers will be updated. Effectively this results in an upsert.
  *
  */
-public class UpsertSeqHeaderFn extends UpsertItemBaseNewFn<SequenceMetadata> {
+public class UpsertSeqHeaderFn extends UpsertItemBaseFn<SequenceMetadata> {
     public UpsertSeqHeaderFn(Hints hints,
                          WriterConfig writerConfig,
                          PCollectionView<List<ProjectConfig>> projectConfigView) {

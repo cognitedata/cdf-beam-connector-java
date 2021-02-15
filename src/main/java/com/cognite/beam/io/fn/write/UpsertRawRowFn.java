@@ -35,7 +35,7 @@ import java.util.List;
  * must contain rows for the same raw destination table.
  *
  */
-public class UpsertRawRowFn extends UpsertItemBaseNewFn<RawRow> {
+public class UpsertRawRowFn extends UpsertItemBaseFn<RawRow> {
     public UpsertRawRowFn(Hints hints,
                           WriterConfig writerConfig,
                           PCollectionView<List<ProjectConfig>> projectConfigView) {

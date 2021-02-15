@@ -38,7 +38,7 @@ import java.util.*;
  *
  * In any case, we recommend that you create the sequence header before starting to write sequence rows to it.
  */
-public class UpsertSeqBodyFn extends UpsertItemBaseNewFn<SequenceBody> {
+public class UpsertSeqBodyFn extends UpsertItemBaseFn<SequenceBody> {
     final Distribution seqRowsBatch = Metrics.distribution("cognite", "sequenceRowsPerBatch");
 
     public UpsertSeqBodyFn(Hints hints,

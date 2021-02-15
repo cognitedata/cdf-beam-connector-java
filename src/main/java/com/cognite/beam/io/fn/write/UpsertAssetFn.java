@@ -31,7 +31,7 @@ import java.util.List;
  * This function will first try to insert the items as new assets. In case of conflict, it will retry as an update. The
  * update behavior is specified by the WriterConfig.
  */
-public class UpsertAssetFn extends UpsertItemBaseNewFn<Asset> {
+public class UpsertAssetFn extends UpsertItemBaseFn<Asset> {
     public UpsertAssetFn(Hints hints,
                          WriterConfig writerConfig,
                          PCollectionView<List<ProjectConfig>> projectConfigView) {

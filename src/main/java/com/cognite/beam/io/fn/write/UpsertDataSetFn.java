@@ -29,7 +29,7 @@ import java.util.List;
  * Writes data sets to CDF.Clean.
  *
  */
-public class UpsertDataSetFn extends UpsertItemBaseNewFn<DataSet> {
+public class UpsertDataSetFn extends UpsertItemBaseFn<DataSet> {
     public UpsertDataSetFn(Hints hints,
                            WriterConfig writerConfig,
                            PCollectionView<List<ProjectConfig>> projectConfigView) {

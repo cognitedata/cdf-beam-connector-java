@@ -32,7 +32,7 @@ import java.util.List;
  * or Id), the events will be updated. Effectively this results in an upsert.
  *
  */
-public class UpsertEventFn extends UpsertItemBaseNewFn<Event> {
+public class UpsertEventFn extends UpsertItemBaseFn<Event> {
     public UpsertEventFn(Hints hints,
                          WriterConfig writerConfig,
                          PCollectionView<List<ProjectConfig>> projectConfigView) {
