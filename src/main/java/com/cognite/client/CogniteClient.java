@@ -241,6 +241,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Contextualization} representing the Cognite contextualization api endpoints.
+     *
+     * @return The contextualization api endpoint.
+     */
+    public Contextualization contextualization() {
+        return Contextualization.of(this);
+    }
+
+    /**
      * Returns the services layer mirroring the Cognite Data Fusion API.
      * @return
      */
