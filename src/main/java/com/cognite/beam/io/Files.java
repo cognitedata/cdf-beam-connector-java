@@ -516,8 +516,6 @@ public abstract class Files {
 
         @Override
         public PCollection<FileMetadata> expand(PCollection<FileContainer> input) {
-            LOG.info("Starting Cognite writer.");
-
             LOG.debug("Building upsert file composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<FileContainer> containerCoder = ProtoCoder.of(FileContainer.class);
