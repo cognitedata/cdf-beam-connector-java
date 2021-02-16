@@ -113,6 +113,38 @@ public abstract class RawRows extends ApiBase {
     }
 
     /**
+     * Returns all rows from a table. Only the specified columns will be returned for each row.
+     *
+     * If you provide an empty columns list, only the row keys will be returned.
+     *
+     * @param dbName the database to list rows from.
+     * @param tableName the table to list rows from.
+     * @param columns The columns to return.
+     * @param requestParameters the column and filter specification for the rows.
+     * @return an {@link Iterator} to page through the rows.
+     * @throws Exception
+     */
+    public Iterator<List<RawRow>> list(String dbName,
+                                       String tableName,
+                                       List<String> columns,
+                                       RequestParameters requestParameters) throws Exception {
+        Preconditions.checkNotNull(columns,
+                "The columns list cannot be null.");
+
+        // In case there is an empty columns list, we only return the row keys
+        String columnsValue = ",";
+
+        if (columns.size() > 0) {
+            columnsValue = String.join(",", columns);
+        }
+
+        RequestParameters request = requestParameters
+                .withRootParameter("columns", columnsValue);
+
+        return list(dbName, tableName, request);
+    }
+
+    /**
      * Returns a set of rows from a table.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
