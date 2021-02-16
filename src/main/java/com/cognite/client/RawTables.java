@@ -74,7 +74,7 @@ public abstract class RawTables extends ApiBase {
                         .withExecutorService(getClient().getExecutorService())
                         .withHttpClient(getClient().getHttpClient());
 
-        return FanOutIterator.of(ImmutableList.of(futureIterator));
+        return AdapterIterator.of(FanOutIterator.of(ImmutableList.of(futureIterator)), this::parseName);
     }
 
     /**

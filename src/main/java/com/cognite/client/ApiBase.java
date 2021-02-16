@@ -18,6 +18,7 @@ package com.cognite.client;
 
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
@@ -25,6 +26,7 @@ import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.AggregateParser;
+import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
@@ -537,6 +539,31 @@ abstract class ApiBase {
             resultMap.put(getItemId(item).orElse(""), item);
         }
         return resultMap;
+    }
+
+    /**
+     * Try parsing the specified Json path as a {@link String}.
+     *
+     * @param itemJson The Json string
+     * @param fieldName The Json path to parse
+     * @return The Json path as a {@link String}.
+     */
+    protected String parseString(String itemJson, String fieldName) {
+        try {
+            return ItemParser.parseString(itemJson, fieldName).orElse("");
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Returns the name attribute value from a json input.
+     *
+     * @param json the json to parse
+     * @return The name value
+     */
+    protected String parseName(String json) {
+        return parseString(json, "name");
     }
 
     /*

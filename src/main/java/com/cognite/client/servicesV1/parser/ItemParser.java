@@ -120,7 +120,7 @@ public class ItemParser {
      * If the Json node cannot be parsed, an empty {@link Optional} will be returned.
      * @param itemJson The Json string
      * @param fieldName The Json path to parse
-     * @return The Json path as a {@link String}, or an empty {@link Optional} if unable to parse it.
+     * @return The Json path as a {@link Long}, or an empty {@link Optional} if unable to parse it.
      */
     public static Optional<Long> parseLong(String itemJson, String fieldName) {
         Optional<Long> returnObject = Optional.empty();
