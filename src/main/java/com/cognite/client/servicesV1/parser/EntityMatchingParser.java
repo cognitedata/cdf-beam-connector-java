@@ -73,7 +73,7 @@ public class EntityMatchingParser {
                     if (node.path("target").isObject()) {
                         Struct.Builder structBuilder = Struct.newBuilder();
                         JsonFormat.parser().merge(node.path("target").toString(), structBuilder);
-                        entityMatchBuilder.setMatchTo(structBuilder.build());
+                        entityMatchBuilder.setTarget(structBuilder.build());
                     } else {
                         throw new Exception("Unable to parse result item. "
                                 + "Result does not contain a valid [target] node. "

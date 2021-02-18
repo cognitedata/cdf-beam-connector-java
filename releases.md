@@ -41,6 +41,8 @@ Changes are grouped as follows:
 - Refactored `com.cognite.beam.io.config.UpsertMode` to `com.cognite.client.config.UpsertMode`.
   All other signatures are the same as before, so you may run a search & replace to update your client.
   
+- `EntityMatch.matchTo` renamed to `EntityMatch.target` to align with the entity matching api v1.
+  
 ### Fixed
 
 - Fixed a bug causing the number of write shards to be double of the configured value.
