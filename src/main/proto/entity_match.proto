@@ -12,3 +12,8 @@ message EntityMatch {
     google.protobuf.DoubleValue score = 1;
     google.protobuf.Struct matchTo = 2;
 }
+
+message EntityMatchResult {
+    google.protobuf.Struct source = 1;
+    repeated EntityMatch matches = 2;
+}

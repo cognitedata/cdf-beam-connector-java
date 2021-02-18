@@ -16,23 +16,14 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.config.ResourceType;
-import com.cognite.client.config.UpsertMode;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.DataSet;
-import com.cognite.client.dto.Item;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.parser.DataSetParser;
+import com.cognite.client.dto.EntityMatchResult;
 import com.google.auto.value.AutoValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+
 
 /**
  * This class represents the Cognite entity matching api endpoint
@@ -63,6 +54,10 @@ public abstract class EntityMatching extends ApiBase {
                 .build();
     }
 
+    public List<EntityMatchResult> predict() throws Exception {
+
+        return Collections.emptyList();
+    }
 
 
     @AutoValue.Builder
