@@ -684,7 +684,10 @@ public abstract class FileBinaryRequestExecutor {
             if (fileURI.getScheme().equalsIgnoreCase("gs")) {
                 try {
                     Blob blob = getBlob(fileURI);
-                    contentLength = blob.getSize();
+                    if (null != blob.getSize()) {
+                        // can get null here for some reason--so need to check
+                        contentLength = blob.getSize();
+                    }
                 } catch (IOException e) {
                     LOG.warn(e.getMessage());
                 }
