@@ -27,6 +27,10 @@ Changes are grouped as follows:
 
 ## [0.9.15-SNAPSHOT]
 
+### Added
+
+- Refactored the core I/O engine into a separate Java SDK. This should also give a general performance improvement of about 2x.
+
 ### Changed
 
 - Refactored `RequestParameters` from `com.cognite.beam.servicesV1.RequestParameters` to `com.cognite.beam.RequestParameters`.
@@ -50,6 +54,8 @@ Changes are grouped as follows:
 - Fixed missing duplicate detection when upserting sequences rows. 
 
 - Fixed a bug when reading `Relationship` where `TargetExternalId` would always be set to `null`.
+
+- Fixed a null pointer exception when using GCS temp storage for files--in some cases GCS is unable to report a correct content size.
 
 ## 0.9.14
 
