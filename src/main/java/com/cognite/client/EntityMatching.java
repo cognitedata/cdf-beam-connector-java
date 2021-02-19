@@ -16,6 +16,7 @@
 
 package com.cognite.client;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.EntityMatchResult;
 import com.google.auto.value.AutoValue;
 import org.slf4j.Logger;
@@ -54,7 +55,16 @@ public abstract class EntityMatching extends ApiBase {
                 .build();
     }
 
-    public List<EntityMatchResult> predict() throws Exception {
+    /**
+     * Matches a set of source entities with a set of targets via a given matching model.
+     *
+     * All input parameters are provided via the request object.
+     * @param requests input parameters for the predict jobs.
+     * @return The entity match results.
+     * @throws Exception
+     */
+    public List<EntityMatchResult> predict(List<RequestParameters> requests) throws Exception {
+
 
         return Collections.emptyList();
     }
