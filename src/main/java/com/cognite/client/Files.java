@@ -165,8 +165,6 @@ public abstract class Files extends ApiBase {
         ConnectorServiceV1.ItemWriter createWriter = getClient().getConnectorService().writeFileHeaders();
 
         // naive de-duplication based on ids
-        Map<Long, FileMetadata> internalIdInsertMap = new HashMap<>(500);
-        Map<String, FileMetadata> externalIdInsertMap = new HashMap<>(500);
         Map<Long, FileMetadata> internalIdUpdateMap = new HashMap<>(1000);
         Map<String, FileMetadata> externalIdUpdateMap = new HashMap<>(1000);
         Map<Long, FileMetadata> internalIdAssetsMap = new HashMap<>(50);
@@ -470,7 +468,7 @@ public abstract class Files extends ApiBase {
         String loggingPrefix = "upload() -";
         Instant startInstant = Instant.now();
         if (files.isEmpty()) {
-            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
+            LOG.warn(loggingPrefix + "No items specified in the request. Will skip the upload request.");
             return Collections.emptyList();
         }
 

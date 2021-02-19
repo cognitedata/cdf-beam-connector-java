@@ -16,55 +16,40 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.EntityMatch;
+import com.cognite.client.dto.EntityMatchResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Struct;
 import com.google.protobuf.util.JsonFormat;
 
-import java.util.ArrayList;
-import java.util.List;
-
-
+/**
+ * Methods for parsing entity matching results json into typed objects.
+ */
 public class EntityMatchingParser {
     static final String logPrefix = "EntityMatchingParser - ";
     static final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Extract the [source] entry from a result item. The result item contains a single [source]
-     * object that is mapped to a {@link Struct}.
-     *
-     * @param item
+     * Parses an entity matching result json string into a typed {@link EntityMatchResult}.
+     * @param json
      * @return
      * @throws Exception
      */
-    private Struct parseEntityMatcherResultItemMatchFrom(String item) throws Exception {
-        JsonNode root = objectMapper.readTree(item);
+    public static EntityMatchResult parseEntityMatchResult(String json) throws Exception {
+        JsonNode root = objectMapper.readTree(json);
 
+        EntityMatchResult.Builder responseBuilder = EntityMatchResult.newBuilder();
         if (root.path("source").isObject()) {
             Struct.Builder structBuilder = Struct.newBuilder();
             JsonFormat.parser().merge(root.path("source").toString(), structBuilder);
-            return structBuilder.build();
+            responseBuilder.setSource(structBuilder.build());
         } else {
-            throw new Exception("Unable to parse result item. "
+            throw new Exception(logPrefix + "Unable to parse result item. "
                     + "Result does not contain a valid [source] node. "
                     + "Source: " + root.path("source").getNodeType());
         }
-    }
-
-    /**
-     * Extract the [target] entries from a result item. The result item contains 0..N
-     * [target] entries.
-     *
-     * @param item
-     * @return
-     * @throws Exception
-     */
-    private List<EntityMatch> parseEntityMatcherResultItemMatchTo(String item) throws Exception {
-        JsonNode root = objectMapper.readTree(item);
-        List<EntityMatch> matches = new ArrayList<>(10);
 
         if (root.path("matches").isArray()) {
             for (JsonNode node : root.path("matches")) {
@@ -75,7 +60,7 @@ public class EntityMatchingParser {
                         JsonFormat.parser().merge(node.path("target").toString(), structBuilder);
                         entityMatchBuilder.setTarget(structBuilder.build());
                     } else {
-                        throw new Exception("Unable to parse result item. "
+                        throw new Exception(logPrefix + "Unable to parse result item. "
                                 + "Result does not contain a valid [target] node. "
                                 + "Target: " + node.path("target").getNodeType());
                     }
@@ -83,24 +68,19 @@ public class EntityMatchingParser {
                     if (node.path("score").isNumber()) {
                         entityMatchBuilder.setScore(DoubleValue.of(node.path("score").doubleValue()));
                     }
-                    matches.add(entityMatchBuilder.build());
+                    responseBuilder.addMatches(entityMatchBuilder.build());
                 } else {
-                    throw new Exception("Unable to parse result item. "
+                    throw new Exception(logPrefix + "Unable to parse result item. "
                             + "Result does not contain a valid [matches] entry node. "
-                            + "maches: " + node.getNodeType());
+                            + "matches: " + node.getNodeType());
                 }
             }
         } else {
-            throw new Exception("Unable to parse result item. "
+            throw new Exception(logPrefix + "Unable to parse result item. "
                     + "Result does not contain a valid [matches] array node. "
                     + "matches array: " + root.path("matches").getNodeType());
         }
 
-        return matches;
-    }
-
-    private static String buildErrorMessage(String fieldName, String inputElement) {
-        return logPrefix + "Unable to parse attribute: "+ fieldName + ". Item payload: "
-                + inputElement.substring(0, Math.min(inputElement.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        return responseBuilder.build();
     }
 }
