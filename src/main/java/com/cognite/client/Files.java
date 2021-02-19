@@ -764,7 +764,8 @@ public abstract class Files extends ApiBase {
 
             request = addAuthInfo(RequestParameters.create()
                     .withItems(toRequestItems(deDuplicate(itemMap.values())))
-                    .withRootParameter("ignoreUnknownIds", true));
+                    //.withRootParameter("ignoreUnknownIds", true))
+            );
 
             requestResult = reader.readFileBinaries(request);
             retries++;
