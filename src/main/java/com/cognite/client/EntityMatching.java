@@ -67,12 +67,39 @@ public abstract class EntityMatching extends ApiBase {
                 .build();
     }
 
+    /**
+     * Matches a set of source entities with a set of targets via a given matching model.
+     *
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
+     *
+     * The default number of matches is 1 and score threshold used for matching is 0.
+     * @param modelExternalId The external id of the matching model to use.
+     * @param sources A list of entities to match from. If the list is empty, the model training sources will be used.
+     * @param targets A list of entities to match to. If the list is empty, the model traning targets will be used.
+     * @return The entity matching results.
+     * @throws Exception
+     */
     public List<EntityMatchResult> predict(String modelExternalId,
                                            List<Struct> sources,
                                            List<Struct> targets) throws Exception {
         return predict(modelExternalId, sources, targets, 1);
     }
 
+    /**
+     * Matches a set of source entities with a set of targets via a given matching model.
+     *
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
+     *
+     * The default score threshold used for matching is 0.
+     * @param modelExternalId The external id of the matching model to use.
+     * @param sources A list of entities to match from. If the list is empty, the model training sources will be used.
+     * @param targets A list of entities to match to. If the list is empty, the model traning targets will be used.
+     * @param numMatches The maximum number of match candidates per source.
+     * @return The entity matching results.
+     * @throws Exception
+     */
     public List<EntityMatchResult> predict(String modelExternalId,
                                            List<Struct> sources,
                                            List<Struct> targets,
@@ -83,11 +110,15 @@ public abstract class EntityMatching extends ApiBase {
     /**
      * Matches a set of source entities with a set of targets via a given matching model.
      *
-     * @param modelExternalId
-     * @param sources
-     * @param targets
-     * @param numMatches
-     * @return
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
+     *
+     * @param modelExternalId The external id of the matching model to use.
+     * @param sources A list of entities to match from. If the list is empty, the model training sources will be used.
+     * @param targets A list of entities to match to. If the list is empty, the model traning targets will be used.
+     * @param numMatches The maximum number of match candidates per source.
+     * @param scoreThreshold The minimum score required for a match candidate.
+     * @return The entity matching results.
      * @throws Exception
      */
     public List<EntityMatchResult> predict(String modelExternalId,
@@ -130,12 +161,39 @@ public abstract class EntityMatching extends ApiBase {
         return predict(requestBatches);
     }
 
+    /**
+     * Matches a set of source entities with a set of targets via a given matching model.
+     *
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
+     *
+     * The default number of matches is 1 and score threshold used for matching is 0.
+     * @param modelId The internal id of the matching model to use.
+     * @param sources A list of entities to match from. If the list is empty, the model training sources will be used.
+     * @param targets A list of entities to match to. If the list is empty, the model traning targets will be used.
+     * @return The entity matching results.
+     * @throws Exception
+     */
     public List<EntityMatchResult> predict(long modelId,
                                            List<Struct> sources,
                                            List<Struct> targets) throws Exception {
         return predict(modelId, sources, targets, 1);
     }
 
+    /**
+     * Matches a set of source entities with a set of targets via a given matching model.
+     *
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
+     *
+     * The default score threshold used for matching is 0.
+     * @param modelId The internal id of the matching model to use.
+     * @param sources A list of entities to match from. If the list is empty, the model training sources will be used.
+     * @param targets A list of entities to match to. If the list is empty, the model traning targets will be used.
+     * @param numMatches The maximum number of match candidates per source.
+     * @return The entity matching results.
+     * @throws Exception
+     */
     public List<EntityMatchResult> predict(long modelId,
                                            List<Struct> sources,
                                            List<Struct> targets,
@@ -146,11 +204,15 @@ public abstract class EntityMatching extends ApiBase {
     /**
      * Matches a set of source entities with a set of targets via a given matching model.
      *
-     * @param modelId
-     * @param sources
-     * @param targets
-     * @param numMatches
-     * @return
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
+     *
+     * @param modelId The internal id of the matching model to use.
+     * @param sources A list of entities to match from. If the list is empty, the model training sources will be used.
+     * @param targets A list of entities to match to. If the list is empty, the model traning targets will be used.
+     * @param numMatches The maximum number of match candidates per source.
+     * @param scoreThreshold The minimum score required for a match candidate.
+     * @return The entity matching results.
      * @throws Exception
      */
     public List<EntityMatchResult> predict(long modelId,
@@ -194,6 +256,9 @@ public abstract class EntityMatching extends ApiBase {
 
     /**
      * Matches a set of source entities with a set of targets via a given matching model.
+     *
+     * If either sources or targets are empty lists, the entity matcher will use
+     * the sources/targets from the model training.
      *
      * All input parameters are provided via the request object.
      * @param requests input parameters for the predict jobs.
