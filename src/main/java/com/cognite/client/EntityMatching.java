@@ -17,8 +17,10 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.dto.EntityMatchModel;
 import com.cognite.client.dto.EntityMatchResult;
 import com.cognite.client.dto.Item;
+import com.cognite.client.servicesV1.Connector;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
@@ -318,26 +320,36 @@ public abstract class EntityMatching extends ApiBase {
                 .collect(Collectors.toList());
     }
 
-    // todo: implement create / fit
-    public List<EntityMatchResult> create(List<RequestParameters> requests) throws Exception {
-        final String loggingPrefix = "predict() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+
+    /**
+     * Train a model that predicts matches between entities (for example, time series names to asset names).
+     * This is also known as fuzzy joining. If there are no trueMatches (labeled data), you train a
+     * static (unsupervised) model, otherwise a machine learned (supervised) model is trained.
+     *
+     * All input parameters are provided via the request object.
+     * @param requests Input parameters for the create model job(s).
+     * @return The created entity match models
+     * @throws Exception
+     */
+    public List<EntityMatchModel> create(List<RequestParameters> requests) throws Exception {
+        final String loggingPrefix = "create() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
         Instant startInstant = Instant.now();
-        LOG.debug(loggingPrefix + "Received {} entity matcher requests.",
+        LOG.debug(loggingPrefix + "Received {} create model requests.",
                 requests.size());
 
         if (requests.isEmpty()) {
-            LOG.info(loggingPrefix + "No items specified in the request. Will skip the predict request.");
+            LOG.info(loggingPrefix + "No items specified in the request. Will skip the create model request.");
             return Collections.emptyList();
         }
 
-        ItemReader<String> entityMatcher = getClient().getConnectorService().entityMatcherPredict();
+        Connector<String> entityMatcher = getClient().getConnectorService().entityMatcherFit();
 
         List<CompletableFuture<ResponseItems<String>>> resultFutures = new ArrayList<>();
         for (RequestParameters request : requests) {
-            resultFutures.add(entityMatcher.getItemsAsync(addAuthInfo(request)));
+            resultFutures.add(entityMatcher.executeAsync(addAuthInfo(request)));
         }
-        LOG.info(loggingPrefix + "Submitted {} entity matching jobs within a duration of {}.",
+        LOG.info(loggingPrefix + "Submitted {} create model jobs within a duration of {}.",
                 requests.size(),
                 Duration.between(startInstant, Instant.now()).toString());
 
@@ -352,7 +364,7 @@ public abstract class EntityMatching extends ApiBase {
         for (CompletableFuture<ResponseItems<String>> responseItemsFuture : resultFutures) {
             if (!responseItemsFuture.join().isSuccessful()) {
                 // something went wrong with the request
-                String message = loggingPrefix + "Entity matching job failed: "
+                String message = loggingPrefix + "Create model job failed: "
                         + responseItemsFuture.join().getResponseBodyAsString();
                 LOG.error(message);
                 throw new Exception(message);
@@ -360,13 +372,12 @@ public abstract class EntityMatching extends ApiBase {
             responseItemsFuture.join().getResultsItems().forEach(result -> responseItems.add(result));
         }
 
-        LOG.info(loggingPrefix + "Completed matching {} entities across {} matching jobs within a duration of {}.",
-                responseItems.size(),
+        LOG.info(loggingPrefix + "Completed creating {} models within a duration of {}.",
                 requests.size(),
                 Duration.between(startInstant, Instant.now()).toString());
 
         return responseItems.stream()
-                .map(this::parseEntityMatchResult)
+                .map(this::parseEntityMatchModel)
                 .collect(Collectors.toList());
     }
 
@@ -401,6 +412,18 @@ public abstract class EntityMatching extends ApiBase {
     private EntityMatchResult parseEntityMatchResult(String json) {
         try {
             return EntityMatchingParser.parseEntityMatchResult(json);
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /*
+    Wrapping the parser because we need to handle the exception--an ugly workaround since lambdas don't
+    deal very well with exceptions.
+     */
+    private EntityMatchModel parseEntityMatchModel(String json) {
+        try {
+            return EntityMatchingParser.parseEntityMatchModel(json);
         } catch (Exception e)  {
             throw new RuntimeException(e);
         }

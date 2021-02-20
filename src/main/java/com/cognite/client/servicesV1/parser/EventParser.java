@@ -52,7 +52,7 @@ public class EventParser {
         if (root.path("id").isIntegralNumber()) {
             eventBuilder.setId(Int64Value.of(root.get("id").longValue()));
         } else {
-            String message = logPrefix + "Unable to parse attribute: id. Item exerpt: "
+            String message = logPrefix + "Unable to parse attribute: id. Item excerpt: "
                     + json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
             throw new Exception(message);
         }

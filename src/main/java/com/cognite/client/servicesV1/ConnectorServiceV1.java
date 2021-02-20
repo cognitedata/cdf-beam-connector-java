@@ -2219,7 +2219,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
         /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
          *
-         *
          * @param items
          * @return
          * @throws Exception
@@ -2304,7 +2303,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private static final RequestParametersResponseParser DEFAULT_JOB_START_RESPONSE_PARSER =
                 RequestParametersResponseParser.of(ImmutableMap.of(
                         "modelId", "modelId",
-                        "jobId", "jobId"
+                        "jobId", "jobId",
+                        "id", "id"
                 ));
 
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
@@ -2396,7 +2396,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * When the timeout is triggered, the reader will respond with the current job status (most likely
          * "Queued" or "Running").
          *
-         * The default timeout is 10 minutes.
+         * The default timeout is 15 minutes.
          *
          * @param timeout
          * @return
@@ -2411,7 +2411,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
          *
          * Don't set the polling interval too low, or you risk overloading the api.
          *
-         * The default polling interval is 1 sec.
+         * The default polling interval is 2 sec.
          *
          * @param interval
          * @return
@@ -2421,8 +2421,35 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
-         * Executes a request to get items and blocks the thread until all items have been downloaded.
+         * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
+         * the setting applied.
          *
+         * @param client The {@link OkHttpClient} to use.
+         * @return a {@link AsyncJobReader} object with the configuration applied.
+         */
+        public AsyncJobReader<T> withHttpClient(OkHttpClient client) {
+            Preconditions.checkNotNull(client, "The http client cannot be null.");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
+                    .build();
+        }
+
+        /**
+         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
+         * a {@link AsyncJobReader} with the setting applied.
+         *
+         * @param executorService The {@link ExecutorService} to use.
+         * @return a {@link ItemWriter} object with the configuration applied.
+         */
+        public AsyncJobReader<T> withExecutorService(ExecutorService executorService) {
+            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
+                    .build();
+        }
+
+        /**
+         * Executes a request to get items and blocks the thread until all items have been downloaded.
          *
          * @param items
          * @return
@@ -2445,7 +2472,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
-         *
          *
          * @param items
          * @return

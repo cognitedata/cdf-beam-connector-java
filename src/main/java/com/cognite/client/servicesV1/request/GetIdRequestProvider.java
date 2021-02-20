@@ -44,7 +44,8 @@ public abstract class GetIdRequestProvider extends GenericRequestProvider{
                 .setRequestParameters(RequestParameters.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
-                .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER);
+                .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
+                .setBetaEnabled(ConnectorConstants.DEFAULT_BETA_ENABLED);
     }
 
     /**

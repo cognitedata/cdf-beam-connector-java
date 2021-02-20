@@ -2,17 +2,11 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
-import com.cognite.client.config.UpsertMode;
+import com.cognite.client.dto.EntityMatchModel;
+import com.cognite.client.dto.EntityMatchResult;
 import com.cognite.client.dto.Item;
-import com.cognite.client.dto.Label;
-import com.cognite.client.servicesV1.Connector;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.util.DataGenerator;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.StringValue;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 import org.junit.jupiter.api.Tag;
@@ -22,18 +16,12 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EntityMatchingTest {
-    final ObjectMapper mapper = new ObjectMapper();
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     @Test
@@ -54,34 +42,52 @@ class EntityMatchingTest {
         LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         try {
-            LOG.info(loggingPrefix + "Start upserting labels.");
-            List<Label> upsertLabelsList = DataGenerator.generateLabels(58);
-            client.labels().upsert(upsertLabelsList);
-            LOG.info(loggingPrefix + "Finished upserting labels. Duration: {}",
+            LOG.info(loggingPrefix + "Start creating matching model.");
+            String[] modelTypes = {"simple", "insensitive", "bigram", "frequencyweightedbigram",
+                    "bigramextratokenizers", "bigramcombo"};
+            long modelId = trainMatchingModel(client, modelTypes[1], loggingPrefix);
+
+            LOG.info(loggingPrefix + "Finished creating matching model. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
+            LOG.info(loggingPrefix + "Start entity match predict.");
+            ImmutableList<Struct> source = generateSourceStructs();
+            ImmutableList<Struct> target = generateTargetStructs();
+            List<EntityMatchResult> matchResults = client.contextualization()
+                    .entityMatching()
+                    .predict(modelId, source, target);
 
+            LOG.info(loggingPrefix + "Finished entity match predict. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
-            assertEquals(upsertLabelsList.size(), listLabelsResults.size());
-            assertEquals(deleteItemsInput.size(), deleteItemsResults.size());
+            LOG.info(loggingPrefix + "Start delete matching model.");
+            Item modelItem = Item.newBuilder()
+                    .setId(modelId)
+                    .build();
+            List<Item> deleteResults = client.contextualization()
+                    .entityMatching()
+                    .delete(ImmutableList.of(modelItem));
+
+            LOG.info(loggingPrefix + "Finished delete matching model. Duration: {}",
+                    Duration.between(startInstant, Instant.now()));
+            LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+            assertEquals(source.size(), matchResults.size());
+            assertEquals(deleteResults.size(), 1);
         } catch (Exception e) {
             LOG.error(e.toString());
             e.printStackTrace();
         }
     }
 
-    private long trainMatchingModel(String featureType, String loggingPrefix) throws Exception {
+    private long trainMatchingModel(CogniteClient client, String featureType, String loggingPrefix) throws Exception {
         // Set up the main data objects to use during the test
-        LOG.info(loggingPrefix + "Building test data objects...");
         ImmutableList<Struct> source = generateSourceStructs();
         ImmutableList<Struct> target = generateTargetTrainingStructs();
 
-        String[] featureTypes = {"simple", "bigram", "frequency-weighted-bigram", "bigram-extra-tokenizers"};
-
         // Train the matching model
-        LOG.info(loggingPrefix + "Training matching model...");
-        ConnectorServiceV1 connectorService = ConnectorServiceV1.builder().build();
-        Connector<String> entityMatchConnector = connectorService.entityMatcherFit();
         long modelId = -1L;
         RequestParameters entityMatchFitRequest = RequestParameters.create()
                 .withRootParameter("sources",  source)
@@ -89,21 +95,15 @@ class EntityMatchingTest {
                 .withRootParameter("matchFields", ImmutableList.of(
                         ImmutableMap.of("source", "name", "target", "externalId")
                 ))
-                .withRootParameter("featureType", featureType)
-                .withProjectConfig(projectConfig);
+                .withRootParameter("featureType", featureType);
 
-        CompletableFuture<ResponseItems<String>> responseItems = entityMatchConnector
-                .executeAsync(entityMatchFitRequest);
-        LOG.info(loggingPrefix + "Train matching model response: isSuccessful: {}, status: {}",
-                responseItems.join().isSuccessful(),
-                responseItems.join().getStatus().get(0));
-        LOG.info(loggingPrefix + "Train matching model response body: {}",
-                responseItems.join().getResponseBodyAsString());
-        assertTrue(responseItems.join().isSuccessful());
-        modelId = mapper.readTree(responseItems.join().getResultsItems().get(0)).path("id").longValue();
-        LOG.info(loggingPrefix + "Matching model training finished. Model id: {}", modelId);
+        List<EntityMatchModel> models = client.contextualization().entityMatching()
+                .create(ImmutableList.of(entityMatchFitRequest));
 
-        return modelId;
+        LOG.debug(loggingPrefix + "Train matching model response body: {}",
+                models.get(0));
+
+        return models.get(0).getId().getValue();
     }
 
     private ImmutableList<Struct> generateSourceStructs() {
