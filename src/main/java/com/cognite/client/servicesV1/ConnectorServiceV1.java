@@ -1858,8 +1858,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         LOG.debug(loggingPrefix + "Initiating entity matcher predict service.");
         this.validate();
 
-        PostPlaygroundJsonRequestProvider jobStartRequestProvider =
-                PostPlaygroundJsonRequestProvider.builder()
+        PostJsonRequestProvider jobStartRequestProvider =
+                PostJsonRequestProvider.builder()
                         .setEndpoint("context/entitymatching/predict")
                         .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                         .setAppIdentifier(getAppIdentifier())
@@ -1867,10 +1867,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser
-                .of(ImmutableMap.of("jobId", "jobId"));
+                .of(ImmutableMap.of("jobId", "id"));
 
-        GetPlaygroundJobIdRequestProvider jobResultsRequestProvider =
-                GetPlaygroundJobIdRequestProvider.of("context/entitymatching/jobs")
+        GetIdRequestProvider jobResultsRequestProvider =
+                GetIdRequestProvider.of("context/entitymatching/jobs")
                 .toBuilder()
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(getAppIdentifier())
@@ -1891,8 +1891,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         LOG.debug(loggingPrefix + "Initiating entity matcher training service.");
         this.validate();
 
-        PostPlaygroundJsonRequestProvider jobStartRequestProvider =
-                PostPlaygroundJsonRequestProvider.builder()
+        PostJsonRequestProvider jobStartRequestProvider =
+                PostJsonRequestProvider.builder()
                         .setEndpoint("context/entitymatching")
                         .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                         .setAppIdentifier(getAppIdentifier())
@@ -1900,10 +1900,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser.of(
-                ImmutableMap.of("id", "jobId"));
+                ImmutableMap.of("id", "id"));
 
-        GetPlaygroundJobIdRequestProvider jobResultsRequestProvider =
-                GetPlaygroundJobIdRequestProvider.of("context/entitymatching")
+        GetIdRequestProvider jobResultsRequestProvider =
+                GetIdRequestProvider.of("context/entitymatching")
                         .toBuilder()
                         .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                         .setAppIdentifier(getAppIdentifier())

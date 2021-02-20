@@ -16,8 +16,8 @@
 
 package com.cognite.client.servicesV1.request;
 
-import com.cognite.client.servicesV1.ConnectorConstants;
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ConnectorConstants;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
@@ -29,16 +29,18 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 /**
- * Builds request to get entity matcher training results.
+ * Builds request to get results from an async api job based on a jobId.
+ *
+ * Used by various context api services as most context services are based on an async api pattern.
  *
  * Job id is specified via the {@link RequestParameters}.
  */
 @AutoValue
 @DefaultCoder(AvroCoder.class)
-public abstract class EntityMatcherTrainingGetResultsRequestProvider extends GenericPlaygroundRequestProvider {
+public abstract class GetIdRequestProvider extends GenericRequestProvider{
 
     static Builder builder() {
-        return new AutoValue_EntityMatcherTrainingGetResultsRequestProvider.Builder()
+        return new AutoValue_GetIdRequestProvider.Builder()
                 .setRequestParameters(RequestParameters.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
@@ -46,19 +48,19 @@ public abstract class EntityMatcherTrainingGetResultsRequestProvider extends Gen
     }
 
     /**
-     * Returns a request provider that will operate towards the entity matcher training endpoint.
+     * Returns a request provider that will get job results from a jobId endpoint.
      *
      * @return
      */
-    public static EntityMatcherTrainingGetResultsRequestProvider create() {
-        return EntityMatcherTrainingGetResultsRequestProvider.builder()
-                .setEndpoint("context/entitymatching")
+    public static GetIdRequestProvider of(String endpoint) {
+        return GetIdRequestProvider.builder()
+                .setEndpoint(endpoint)
                 .build();
     }
 
     public abstract Builder toBuilder();
 
-    public EntityMatcherTrainingGetResultsRequestProvider withRequestParameters(RequestParameters parameters) {
+    public GetIdRequestProvider withRequestParameters(RequestParameters parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("id")
                 && (parameters.getRequestParameters().get("id") instanceof Integer
@@ -82,7 +84,7 @@ public abstract class EntityMatcherTrainingGetResultsRequestProvider extends Gen
     }
 
     @AutoValue.Builder
-    public static abstract class Builder extends GenericPlaygroundRequestProvider.Builder<Builder> {
-        public abstract EntityMatcherTrainingGetResultsRequestProvider build();
+    public static abstract class Builder extends GenericRequestProvider.Builder<Builder> {
+        public abstract GetIdRequestProvider build();
     }
 }
