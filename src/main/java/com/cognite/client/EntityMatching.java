@@ -18,6 +18,8 @@ package com.cognite.client;
 
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.EntityMatchResult;
+import com.cognite.client.dto.Item;
+import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.EntityMatchingParser;
@@ -314,6 +316,82 @@ public abstract class EntityMatching extends ApiBase {
         return responseItems.stream()
                 .map(this::parseEntityMatchResult)
                 .collect(Collectors.toList());
+    }
+
+    // todo: implement create / fit
+    public List<EntityMatchResult> create(List<RequestParameters> requests) throws Exception {
+        final String loggingPrefix = "predict() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+        Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
+        Instant startInstant = Instant.now();
+        LOG.debug(loggingPrefix + "Received {} entity matcher requests.",
+                requests.size());
+
+        if (requests.isEmpty()) {
+            LOG.info(loggingPrefix + "No items specified in the request. Will skip the predict request.");
+            return Collections.emptyList();
+        }
+
+        ItemReader<String> entityMatcher = getClient().getConnectorService().entityMatcherPredict();
+
+        List<CompletableFuture<ResponseItems<String>>> resultFutures = new ArrayList<>();
+        for (RequestParameters request : requests) {
+            resultFutures.add(entityMatcher.getItemsAsync(addAuthInfo(request)));
+        }
+        LOG.info(loggingPrefix + "Submitted {} entity matching jobs within a duration of {}.",
+                requests.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        // Sync all downloads to a single future. It will complete when all the upstream futures have completed.
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(resultFutures.toArray(
+                new CompletableFuture[resultFutures.size()]));
+        // Wait until the uber future completes.
+        allFutures.join();
+
+        // Collect the response items
+        List<String> responseItems = new ArrayList<>();
+        for (CompletableFuture<ResponseItems<String>> responseItemsFuture : resultFutures) {
+            if (!responseItemsFuture.join().isSuccessful()) {
+                // something went wrong with the request
+                String message = loggingPrefix + "Entity matching job failed: "
+                        + responseItemsFuture.join().getResponseBodyAsString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+            responseItemsFuture.join().getResultsItems().forEach(result -> responseItems.add(result));
+        }
+
+        LOG.info(loggingPrefix + "Completed matching {} entities across {} matching jobs within a duration of {}.",
+                responseItems.size(),
+                requests.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
+        return responseItems.stream()
+                .map(this::parseEntityMatchResult)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Deletes a set of entity matching models.
+     *
+     * The models to delete are identified via their {@code externalId / id} by submitting a list of
+     * {@link Item}.
+     *
+     * @param entityMatchingModels a list of {@link Item} representing the entity matching models (externalId / id)
+     *                             to be deleted
+     * @return The deleted models via {@link Item}
+     * @throws Exception
+     */
+    public List<Item> delete(List<Item> entityMatchingModels) throws Exception {
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEntityMatcherModels()
+                .withHttpClient(getClient().getHttpClient())
+                .withExecutorService(getClient().getExecutorService());
+
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+                //.addParameter("ignoreUnknownIds", true)
+                ;
+
+        return deleteItems.deleteItems(entityMatchingModels);
     }
 
     /*
