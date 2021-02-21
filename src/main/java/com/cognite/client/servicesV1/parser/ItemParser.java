@@ -135,10 +135,10 @@ public class ItemParser {
                         + "Unable to parse attribute: " + fieldName + ". Item exerpt: " +
                         itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
 
-                LOG.warn(message);
+                LOG.debug(message);
             }
         } catch (Exception e) {
-            LOG.error(logPrefix + parseErrorDefaultPrefix, e);
+            LOG.warn(logPrefix + parseErrorDefaultPrefix, e);
         } finally {
             return returnObject;
         }
@@ -169,10 +169,10 @@ public class ItemParser {
                         + "Unable to parse attribute: " + fieldName + ". Item exerpt: " +
                         itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
 
-                LOG.warn(message);
+                LOG.debug(message);
             }
         } catch (Exception e) {
-            LOG.error(logPrefix + parseErrorDefaultPrefix, e);
+            LOG.warn(logPrefix + parseErrorDefaultPrefix, e);
         } finally {
             return returnObject;
         }

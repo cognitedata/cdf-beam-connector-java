@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -86,7 +87,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<EntityMatchResult> predict(String modelExternalId,
                                            List<Struct> sources,
-                                           List<Struct> targets) throws Exception {
+                                           Collection<Struct> targets) throws Exception {
         return predict(modelExternalId, sources, targets, 1);
     }
 
@@ -106,7 +107,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<EntityMatchResult> predict(String modelExternalId,
                                            List<Struct> sources,
-                                           List<Struct> targets,
+                                           Collection<Struct> targets,
                                            int numMatches) throws Exception {
         return predict(modelExternalId, sources, targets, numMatches, 0d);
     }
@@ -127,7 +128,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<EntityMatchResult> predict(String modelExternalId,
                                            List<Struct> sources,
-                                           List<Struct> targets,
+                                           Collection<Struct> targets,
                                            int numMatches,
                                            double scoreThreshold) throws Exception {
         final String loggingPrefix = "predict() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
@@ -180,7 +181,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<EntityMatchResult> predict(long modelId,
                                            List<Struct> sources,
-                                           List<Struct> targets) throws Exception {
+                                           Collection<Struct> targets) throws Exception {
         return predict(modelId, sources, targets, 1);
     }
 
@@ -200,7 +201,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<EntityMatchResult> predict(long modelId,
                                            List<Struct> sources,
-                                           List<Struct> targets,
+                                           Collection<Struct> targets,
                                            int numMatches) throws Exception {
         return predict(modelId, sources, targets, numMatches, 0d);
     }
@@ -221,7 +222,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<EntityMatchResult> predict(long modelId,
                                            List<Struct> sources,
-                                           List<Struct> targets,
+                                           Collection<Struct> targets,
                                            int numMatches,
                                            double scoreThreshold) throws Exception {
         final String loggingPrefix = "predict() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
@@ -269,7 +270,7 @@ public abstract class EntityMatching extends ApiBase {
      * @return The entity match results.
      * @throws Exception
      */
-    public List<EntityMatchResult> predict(List<RequestParameters> requests) throws Exception {
+    public List<EntityMatchResult> predict(Collection<RequestParameters> requests) throws Exception {
         final String loggingPrefix = "predict() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
         Instant startInstant = Instant.now();
@@ -331,7 +332,7 @@ public abstract class EntityMatching extends ApiBase {
      * @return The created entity match models
      * @throws Exception
      */
-    public List<EntityMatchModel> create(List<RequestParameters> requests) throws Exception {
+    public List<EntityMatchModel> create(Collection<RequestParameters> requests) throws Exception {
         final String loggingPrefix = "create() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
         Instant startInstant = Instant.now();

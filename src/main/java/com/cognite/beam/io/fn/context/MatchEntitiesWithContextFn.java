@@ -19,9 +19,9 @@ package com.cognite.beam.io.fn.context;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.EntityMatchResult;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.values.PCollectionView;
@@ -64,15 +64,17 @@ public class MatchEntitiesWithContextFn extends MatchEntitiesBaseFn {
     }
 
     /**
-     * Build the request for the entity matcher.
+     * Perform the entity matching.
      *
+     * @param client The {@link CogniteClient} to use for writing the items.
      * @param element The list of entities to try and match from.
      * @param context The {@link ProcessContext}, offering access to side inputs.
      * @return The request for the entity matcher.
      */
     @Override
-    protected RequestParameters buildRequestParameters(List<Struct> element,
-                                                     ProcessContext context) {
+    protected List<EntityMatchResult> predictMatches(CogniteClient client,
+                                                     List<Struct> element,
+                                                     ProcessContext context) throws Exception {
         Preconditions.checkState(null != modelId || null != modelExternalId,
                 "Neither model id nor model externalId is specified.");
         List<Struct> matchToList = context.sideInput(matchToView);
@@ -80,20 +82,15 @@ public class MatchEntitiesWithContextFn extends MatchEntitiesBaseFn {
         if (null != modelExternalId) {
             Preconditions.checkState(modelExternalId.isAccessible(),
                     "Parameter [modelExternalId] is not available.");
-            return RequestParameters.create()
-                    .withRootParameter("externalId", modelExternalId.get())
-                    .withRootParameter("sources", ImmutableList.copyOf(element))
-                    .withRootParameter("targets", ImmutableList.copyOf(matchToList))
-                    .withRootParameter("numMatches", maxNumMatches)
-                    .withRootParameter("scoreThreshold", scoreThreshold);
+            return client.contextualization()
+                    .entityMatching()
+                    .predict(modelExternalId.get(), element, matchToList, maxNumMatches, scoreThreshold);
+
         } else {
             Preconditions.checkState(modelId.isAccessible(), "Parameter [modelId] is not available.");
-            return RequestParameters.create()
-                    .withRootParameter("id", modelId.get())
-                    .withRootParameter("sources", ImmutableList.copyOf(element))
-                    .withRootParameter("targets", ImmutableList.copyOf(matchToList))
-                    .withRootParameter("numMatches", maxNumMatches)
-                    .withRootParameter("scoreThreshold", scoreThreshold);
+            return client.contextualization()
+                    .entityMatching()
+                    .predict(modelId.get(), element, matchToList, maxNumMatches, scoreThreshold);
         }
     }
 }

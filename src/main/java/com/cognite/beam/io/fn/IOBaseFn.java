@@ -73,10 +73,4 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
 
         return client;
     }
-
-    @Setup
-    public void setup() {
-    }
-
-
 }
