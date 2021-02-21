@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Cognite AS
+ * Copyright (c) 2021 Cognite AS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import com.cognite.beam.io.util.internal.MetricsUtil;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.BytesValue;
+import com.google.protobuf.Int64Value;
 import com.google.protobuf.Struct;
 import com.google.protobuf.util.Values;
 import org.apache.beam.sdk.metrics.Distribution;
@@ -177,7 +178,7 @@ public class CreateInteractivePnIDFn extends DoFn<Iterable<Item>, PnIDResponse> 
                             PnIDResponseParser.ParsePnIDAnnotationResponse(entry.getKey().getResultsItems().get(0));
                     // must add the fileId via a lookup since it isn't a part of the response payload
                     annotationsResponse = annotationsResponse.toBuilder()
-                            .setFileId(entry.getValue().getId())
+                            .setFileId(Int64Value.of(entry.getValue().getId()))
                             .build();
 
                     results.add(annotationsResponse);
@@ -307,7 +308,7 @@ public class CreateInteractivePnIDFn extends DoFn<Iterable<Item>, PnIDResponse> 
         RequestParameters interactiveFilesRequest = RequestParameters.create()
                 .withProjectConfig(config)
                 .withRootParameter("fileId", annotations.getFileId())
-                .withRootParameter("items", annotations.getEntitiesList());
+                .withRootParameter("items", annotations.getItemsList());
 
         return connector.convertPnid()
                 .getItemsAsync(interactiveFilesRequest)

@@ -21,7 +21,10 @@ import com.cognite.client.dto.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.DoubleValue;
+import com.google.protobuf.Int64Value;
 import com.google.protobuf.StringValue;
+import com.google.protobuf.Struct;
+import com.google.protobuf.util.JsonFormat;
 
 
 public class PnIDResponseParser {
@@ -37,61 +40,69 @@ public class PnIDResponseParser {
      */
     public static PnIDResponse ParsePnIDAnnotationResponse(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
-        PnIDResponse.Builder PnIDBuilder = PnIDResponse.newBuilder();
-        BoundingBox.Builder BoundingBoxBuilder = BoundingBox.newBuilder();
-        Entity.Builder EntityBuilder = Entity.newBuilder();
+        PnIDResponse.Builder pnIDBuilder = PnIDResponse.newBuilder();
+        BoundingBox.Builder boundingBoxBuilder = BoundingBox.newBuilder();
+        Annotation.Builder annotationBuilder = Annotation.newBuilder();
 
         if (root.path("fileId").isIntegralNumber()) {
-            PnIDBuilder.setFileId(root.get("fileId").longValue());
+            pnIDBuilder.setFileId(Int64Value.of(root.get("fileId").longValue()));
+        }
+        if (root.path("fileExternalId").isTextual()) {
+            pnIDBuilder.setFileExternalId(StringValue.of(root.get("fileExternalId").textValue()));
         }
 
         if (root.path("items").isArray()) {
             for (JsonNode node : root.path("items")) {
                 if (node.path("boundingBox").isObject()) {
                     if (node.path("boundingBox").path("xMax").isFloatingPointNumber()) {
-                        BoundingBoxBuilder.setXMax(node.path("boundingBox").path("xMax").doubleValue());
+                        boundingBoxBuilder.setXMax(node.path("boundingBox").path("xMax").doubleValue());
                     } else {
                         throw new Exception(PnIDResponseParser.buildErrorMessage("boundingBox.xMax", json));
                     }
 
                     if (node.path("boundingBox").path("xMin").isFloatingPointNumber()) {
-                        BoundingBoxBuilder.setXMin(node.path("boundingBox").path("xMin").doubleValue());
+                        boundingBoxBuilder.setXMin(node.path("boundingBox").path("xMin").doubleValue());
                     } else {
                         throw new Exception(PnIDResponseParser.buildErrorMessage("boundingBox.xMin", json));
                     }
 
                     if (node.path("boundingBox").path("yMax").isFloatingPointNumber()) {
-                        BoundingBoxBuilder.setYMax(node.path("boundingBox").path("yMax").doubleValue());
+                        boundingBoxBuilder.setYMax(node.path("boundingBox").path("yMax").doubleValue());
                     } else {
                         throw new Exception(PnIDResponseParser.buildErrorMessage("boundingBox.yMax", json));
                     }
 
                     if (node.path("boundingBox").path("yMin").isFloatingPointNumber()) {
-                        BoundingBoxBuilder.setYMin(node.path("boundingBox").path("yMin").doubleValue());
+                        boundingBoxBuilder.setYMin(node.path("boundingBox").path("yMin").doubleValue());
                     } else {
                         throw new Exception(PnIDResponseParser.buildErrorMessage("boundingBox.xMin", json));
                     }
 
-                    EntityBuilder.setBoundingBox(BoundingBoxBuilder);
+                    annotationBuilder.setBoundingBox(boundingBoxBuilder);
                 }
 
                 if (node.path("text").isTextual()) {
-                    EntityBuilder.setText(StringValue.of(node.get("text").textValue()));
+                    annotationBuilder.setText(StringValue.of(node.get("text").textValue()));
+                }
+                if (node.path("entities").isObject()) {
+                    Struct.Builder structBuilder = Struct.newBuilder();
+                    JsonFormat.parser().merge(node.path("entities").toString(), structBuilder);
+                    annotationBuilder.setEntity(structBuilder.build());
                 }
                 if (node.path("confidence").isFloatingPointNumber()) {
-                    EntityBuilder.setConfidence(DoubleValue.of(node.get("confidence").doubleValue()));
+                    annotationBuilder.setConfidence(DoubleValue.of(node.get("confidence").doubleValue()));
                 }
                 if (node.path("type").isTextual()) {
-                    EntityBuilder.setType(StringValue.of(node.get("type").textValue()));
+                    annotationBuilder.setType(StringValue.of(node.get("type").textValue()));
                 }
 
-                PnIDBuilder.addEntities(EntityBuilder);
+                pnIDBuilder.addItems(annotationBuilder);
             }
         } else {
             throw new Exception(PnIDResponseParser.buildErrorMessage("items", json));
         }
 
-        return PnIDBuilder.build();
+        return pnIDBuilder.build();
     }
 
     /**
@@ -103,24 +114,27 @@ public class PnIDResponseParser {
      */
     public static PnIDResponse ParsePnIDConvertResponse(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
-        PnIDResponse.Builder PnIDBuilder = PnIDResponse.newBuilder();
+        PnIDResponse.Builder pnIDBuilder = PnIDResponse.newBuilder();
 
         if (root.path("svgUrl").isTextual()) {
-            PnIDBuilder.setSvgUrl(StringValue.of(root.get("svgUrl").textValue()));
+            pnIDBuilder.setSvgUrl(StringValue.of(root.get("svgUrl").textValue()));
         } else {
             throw new Exception(PnIDResponseParser.buildErrorMessage("svgURL", json));
         }
 
         if (root.path("pngUrl").isTextual()) {
-            PnIDBuilder.setPngUrl(StringValue.of(root.get("pngUrl").textValue()));
+            pnIDBuilder.setPngUrl(StringValue.of(root.get("pngUrl").textValue()));
         }
 
         if (root.path("fileId").isIntegralNumber()) {
-            PnIDBuilder.setFileId(root.get("fileId").longValue());
+            pnIDBuilder.setFileId(Int64Value.of(root.get("fileId").longValue()));
+        }
+        if (root.path("fileExternalId").isTextual()) {
+            pnIDBuilder.setFileExternalId(StringValue.of(root.get("fileExternalId").textValue()));
         }
 
 
-        return PnIDBuilder.build();
+        return pnIDBuilder.build();
     }
 
     private static String buildErrorMessage(String fieldName, String inputElement) {
