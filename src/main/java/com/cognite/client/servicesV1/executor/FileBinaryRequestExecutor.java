@@ -654,6 +654,12 @@ public abstract class FileBinaryRequestExecutor {
         public void writeTo(@NotNull BufferedSink bufferedSink) throws IOException {
             if (null != fileURI.getScheme() && fileURI.getScheme().equalsIgnoreCase("gs")) {
                 Blob blob = getBlob(fileURI);
+                if (null == blob) {
+                    LOG.error("Looks like the GCS blob is null/does not exist. File URI: {}",
+                            fileURI.toString());
+                    throw new IOException(String.format("Looks like the GCS blob is null/does not exist. File URI: %s",
+                            fileURI.toString()));
+                }
                 blob.downloadTo(bufferedSink.outputStream());
                 if (deleteTempFile) {
                     blob.delete();
