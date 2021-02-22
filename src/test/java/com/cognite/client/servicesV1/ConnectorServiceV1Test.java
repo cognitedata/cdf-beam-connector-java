@@ -835,7 +835,7 @@ class ConnectorServiceV1Test extends TestConfigProviderV1 {
         RequestParameters getInteractiveFilesRequest = RequestParameters.create()
                 .withProjectConfig(projectConfig)
                 .withRootParameter("fileId", 7339813294098717L)
-                .withRootParameter("items", annotationsResponse.getEntitiesList());
+                .withRootParameter("items", annotationsResponse.getItemsList());
         //LOG.info("Request object for get interactive pnid: " + getInteractiveFilesRequest.getRequestParametersAsJson());
         CompletableFuture<ResponseItems<String>> intPnidResponse = interactiveFiles.getItemsAsync(getInteractiveFilesRequest);
         //LOG.info("Int pnid ResponseItems: " + intPnidResponse.get().toString());
