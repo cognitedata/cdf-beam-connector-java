@@ -42,5 +42,5 @@ message FileBinary {
         bytes binary = 3;
         string binary_uri = 4;
     }
-    google.protobuf.Int64Value content_length = 5;
+    int64 content_length = 5;
 }

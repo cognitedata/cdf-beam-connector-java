@@ -3102,12 +3102,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
             FileContainer fileContainer = (FileContainer) fileContainerRequest.getProtoRequestBody();
             boolean hasExtraAssetIds = false;
 
-            LOG.info(loggingPrefix + "Received file container to write. Name: {}, Binary type: {}, Size: {}MB, "
-                    + "Binary URI: {}, Number of asset links: {}, Number of metadata fields: {}",
+            LOG.info(loggingPrefix + "Received file container to write. Name: {}, Binary type: {}, Binary Size: {}MB, "
+                    + "Binary URI: {}, Content lenght: {}, Number of asset links: {}, Number of metadata fields: {}",
                     fileContainer.getFileMetadata().getName().getValue(),
                     fileContainer.getFileBinary().getBinaryTypeCase().toString(),
                     String.format("%.3f", fileContainer.getFileBinary().getBinary().size() / (1024d * 1024d)),
                     fileContainer.getFileBinary().getBinaryUri(),
+                    fileContainer.getFileBinary().getContentLength(),
                     fileContainer.getFileMetadata().getAssetIdsCount(),
                     fileContainer.getFileMetadata().getMetadataCount());
 
@@ -3344,7 +3345,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             CompletableFuture<FileBinary> future = requestExecutor.downloadBinaryAsync(FileBinaryBuilder)
                     .thenApply(fileBinary -> {
                         long requestDuration = System.currentTimeMillis() - startTimeMillies;
-                        long contentLength = fileBinary.getContentLength().getValue();
+                        long contentLength = fileBinary.getContentLength();
                         double contentLengthMb = -1;
                         if (contentLength > 0) {
                             contentLengthMb = contentLength / (1024d * 1024d);

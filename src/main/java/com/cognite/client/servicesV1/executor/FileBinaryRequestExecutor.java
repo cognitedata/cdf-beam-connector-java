@@ -302,7 +302,7 @@ public abstract class FileBinaryRequestExecutor {
                             String.format("%.2f", response.body().contentLength() / (1024d * 1024d)));
                     return FileBinary.newBuilder()
                             .setBinary(ByteString.readFrom(response.body().byteStream()))
-                            .setContentLength(Int64Value.of(response.body().contentLength()))
+                            .setContentLength(response.body().contentLength())
                             .build();
                 }
             } catch (Exception e) {
@@ -544,7 +544,7 @@ public abstract class FileBinaryRequestExecutor {
 
             return FileBinary.newBuilder()
                     .setBinaryUri(fileURI.toString())
-                    .setContentLength(Int64Value.of(response.body().contentLength()))
+                    .setContentLength(response.body().contentLength())
                     .build();
         } else if (null != getTempStoragePath().getScheme()
                 && getTempStoragePath().getScheme().equalsIgnoreCase("file")) {
@@ -563,7 +563,7 @@ public abstract class FileBinaryRequestExecutor {
 
             return FileBinary.newBuilder()
                     .setBinaryUri(tempFilePath.toUri().toString())
-                    .setContentLength(Int64Value.of(response.body().contentLength()))
+                    .setContentLength(response.body().contentLength())
                     .build();
         } else {
             throw new IOException("Temp storage location not supported: " + getTempStoragePath());
