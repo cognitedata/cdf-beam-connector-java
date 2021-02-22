@@ -672,7 +672,7 @@ public abstract class FileBinaryRequestExecutor {
                         Files.delete(Paths.get(fileURI));
                     }
                 } catch (Exception e) {
-                    new IOException(e);
+                    throw new IOException(e);
                 }
             } else {
                 throw new IOException("URI is unsupported: " + fileURI.toString());
@@ -684,8 +684,10 @@ public abstract class FileBinaryRequestExecutor {
             if (fileURI.getScheme().equalsIgnoreCase("gs")) {
                 try {
                     Blob blob = getBlob(fileURI);
-                    if (null != blob.getSize()) {
-                        // can get null here for some reason--so need to check
+                    if (null == blob) {
+                        LOG.warn("Looks like the GCS blob is null/does not exist. File URI: {}",
+                                fileURI.toString());
+                    } else {
                         contentLength = blob.getSize();
                     }
                 } catch (IOException e) {
