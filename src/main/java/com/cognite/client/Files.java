@@ -722,6 +722,11 @@ public abstract class Files extends ApiBase {
             reader = reader.withTempStoragePath(tempStoragePath);
         }
 
+        // Delete and completed lists
+        //List<Item> elementListDelete = deduplicate(items);
+        //List<Item> elementListCompleted = new ArrayList<>(elementListDelete.size());
+
+
         // build initial request object
         RequestParameters request = addAuthInfo(RequestParameters.create()
                 .withItems(toRequestItems(deDuplicate(fileItems)))
@@ -808,6 +813,24 @@ public abstract class Files extends ApiBase {
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig());
 
         return deleteItems.deleteItems(files);
+    }
+
+    private Map<List<FileBinary>, List<Item>> splitAndDownloadFileBinaries(List<Item> fileItems,
+                                                                           @Nullable URI tempStoragePath,
+                                                                           boolean forceTempStorage) throws Exception {
+        Map<List<FileBinary>, List<Item>> responseMap = new HashMap<>();
+        List<List<Item>> itemBatches = Partition.ofSize(fileItems, 10);
+
+        // Set up the download service
+        ConnectorServiceV1.FileBinaryReader reader = getClient().getConnectorService().readFileBinariesByIds()
+                .enableForceTempStorage(forceTempStorage);
+
+        if (null != tempStoragePath) {
+            reader = reader.withTempStoragePath(tempStoragePath);
+        }
+
+        // Process all batches.
+        return new HashMap<>();
     }
 
     /**

@@ -210,7 +210,6 @@ public abstract class Files {
 
         @Override
         public PCollection<FileContainer> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all files composite transform.");
             Coder<Long> varLongCoder = VarLongCoder.of();
             Coder<FileMetadata> metadataCoder = ProtoCoder.of(FileMetadata.class);
