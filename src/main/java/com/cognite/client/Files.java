@@ -28,6 +28,7 @@ import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ import java.util.stream.Collectors;
 @AutoValue
 public abstract class Files extends ApiBase {
     private static final int MAX_WRITE_REQUEST_BATCH_SIZE = 100;
+    private static final int MAX_DOWNLOAD_BINARY_BATCH_SIZE = 10;
 
     private static Builder builder() {
         return new AutoValue_Files.Builder();
@@ -699,8 +701,8 @@ public abstract class Files extends ApiBase {
     public List<FileBinary> downloadFileBinaries(List<Item> fileItems,
                                                  @Nullable URI tempStoragePath,
                                                  boolean forceTempStorage) throws Exception {
-        final int MAX_RETRIES = 2;
-        String loggingPrefix = "downloadFileBinaries() - ";
+        final int MAX_RETRIES = 3;
+        String loggingPrefix = "downloadFileBinaries() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Preconditions.checkArgument(!(null == tempStoragePath && forceTempStorage),
                 "Illegal parameter combination. You must specify a URI in order to force temp storage.");
         Preconditions.checkArgument(itemsHaveId(fileItems),
@@ -715,83 +717,105 @@ public abstract class Files extends ApiBase {
         LOG.info(loggingPrefix + "Received request to download {} file binaries.",
                 fileItems.size());
 
-        ConnectorServiceV1.FileBinaryReader reader = getClient().getConnectorService().readFileBinariesByIds()
-                .enableForceTempStorage(forceTempStorage);
-
-        if (null != tempStoragePath) {
-            reader = reader.withTempStoragePath(tempStoragePath);
-        }
-
-        // Delete and completed lists
-        //List<Item> elementListDelete = deduplicate(items);
-        //List<Item> elementListCompleted = new ArrayList<>(elementListDelete.size());
-
-
-        // build initial request object
-        RequestParameters request = addAuthInfo(RequestParameters.create()
-                .withItems(toRequestItems(deDuplicate(fileItems)))
-                //.withRootParameter("ignoreUnknownIds", true)
-        );
-
-        List<ResponseItems<FileBinary>> requestResult = reader.readFileBinaries(request);
+        // Download and completed lists
+        Map<String, Item> itemMap = mapItemToId(deDuplicate(fileItems));
+        List<Item> elementListDownload = deDuplicate(fileItems);
+        List<FileBinary> elementListCompleted = new ArrayList<>();
 
         /*
         Responses from readFileBinaryById will be a single item in case of an error. Check that item for success,
         missing items and duplicates.
          */
         // if the request result is false, we have duplicates and/or missing items.
-        Map<String, Item> itemMap = mapItemToId(fileItems);
-        int retries = 0;
-        while (!requestResult.isEmpty() && !requestResult.get(0).isSuccessful() && retries <= MAX_RETRIES) {
-            LOG.info(loggingPrefix + "Read file request failed. Removing duplicates and missing items and retrying the request");
-            List<Item> duplicates = ItemParser.parseItems(requestResult.get(0).getDuplicateItems());
-            List<Item> missing = ItemParser.parseItems(requestResult.get(0).getMissingItems());
-            LOG.debug(loggingPrefix + "No of duplicates reported: {}", duplicates.size());
-            LOG.debug(loggingPrefix + "No of missing items reported: {}", missing.size());
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        String exceptionMessage = "";
+        for (int i = 0; i < MAX_RETRIES && elementListDownload.size() > 0;
+             i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+            LOG.debug(loggingPrefix + "Start download loop {} with {} items to download and "
+                            + "{} completed items at duration {}",
+                    i,
+                    elementListDownload.size(),
+                    elementListCompleted.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
 
-            for (Item value : missing) {
-                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
-                    itemMap.remove(value.getExternalId());
-                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                    itemMap.remove(String.valueOf(value.getId()));
+            /*
+            Download files
+             */
+            Map<List<ResponseItems<FileBinary>>, List<Item>> downloadResponseMap =
+                    splitAndDownloadFileBinaries(elementListDownload, tempStoragePath, forceTempStorage);
+            LOG.debug(loggingPrefix + "Completed download files requests for {} files across {} batches at duration {}",
+                    elementListDownload.size(),
+                    downloadResponseMap.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
+            elementListDownload.clear();
+
+            for (List<ResponseItems<FileBinary>> responseBatch : downloadResponseMap.keySet()) {
+                if (responseBatch.size() > 0 && responseBatch.get(0).isSuccessful()) {
+                    // All files downloaded successfully
+                    for (ResponseItems<FileBinary> response : responseBatch) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                        } else {
+                            // Should not be possible...
+                            LOG.warn(loggingPrefix + "Download not successful: {}", response.getResponseBodyAsString());
+                        }
+                    }
+                } else if (responseBatch.size() > 0 && !responseBatch.get(0).isSuccessful()) {
+                    // Batch failed. Most likely because of missing or duplicated items
+                    exceptionMessage = responseBatch.get(0).getResponseBodyAsString();
+                    LOG.debug(loggingPrefix + "Download items request failed: {}", responseBatch.get(0).getResponseBodyAsString());
+                    if (i == MAX_RETRIES - 1) {
+                        // Add the error message to std logging
+                        LOG.error(loggingPrefix + "Download items request failed. {}", responseBatch.get(0).getResponseBodyAsString());
+                    }
+                    LOG.debug(loggingPrefix + "Removing duplicates and missing items and retrying the request");
+                    List<Item> duplicates = ItemParser.parseItems(responseBatch.get(0).getDuplicateItems());
+                    List<Item> missing = ItemParser.parseItems(responseBatch.get(0).getMissingItems());
+                    LOG.debug(loggingPrefix + "No of duplicates reported: {}", duplicates.size());
+                    LOG.debug(loggingPrefix + "No of missing items reported: {}", missing.size());
+
+                    // Remove missing items from the download request
+                    Map<String, Item> itemsMap = mapItemToId(downloadResponseMap.get(responseBatch));
+                    for (Item value : missing) {
+                        if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                            itemsMap.remove(value.getExternalId());
+                        } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                            itemsMap.remove(String.valueOf(value.getId()));
+                        }
+                    }
+
+                    // Remove duplicate items from the download request
+                    for (Item value : duplicates) {
+                        if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                            itemsMap.remove(value.getExternalId());
+                        } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                            itemsMap.remove(String.valueOf(value.getId()));
+                        }
+                    }
+
+                    elementListDownload.addAll(itemsMap.values());
                 }
             }
-
-            for (Item value : duplicates) {
-                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
-                    itemMap.remove(value.getExternalId());
-                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                    itemMap.remove(String.valueOf(value.getId()));
-                }
-            }
-
-            request = addAuthInfo(RequestParameters.create()
-                    .withItems(toRequestItems(deDuplicate(itemMap.values())))
-                    //.withRootParameter("ignoreUnknownIds", true))
-            );
-
-            requestResult = reader.readFileBinaries(request);
-            retries++;
         }
 
-        if (!requestResult.isEmpty() && !requestResult.get(0).isSuccessful()) {
-            LOG.error(loggingPrefix + "Failed to read file binaries.", requestResult.get(0).getResponseBodyAsString());
-            throw new Exception(loggingPrefix + "Failed to delete items. " + requestResult.get(0).getResponseBodyAsString());
-        }
-        List<FileBinary> results = new ArrayList<>();
-        for (ResponseItems<FileBinary> responseItems : requestResult) {
-            if (responseItems.isSuccessful()) {
-                for (FileBinary fileBinary: responseItems.getResultsItems()) {
-                   results.add(fileBinary);
-                }
-            }
+        // Check if all elements completed the download requests
+        if (elementListDownload.isEmpty()) {
+            LOG.info(loggingPrefix + "Successfully downloaded {} files within a duration of {}.",
+                    elementListCompleted.size(),
+                    Duration.between(startInstant, Instant.now()).toString());
+        } else {
+            LOG.error(loggingPrefix + "Failed to download files. {} files remaining. {} files completed delete."
+                            + System.lineSeparator() + "{}",
+                    elementListDownload.size(),
+                    elementListCompleted.size(),
+                    exceptionMessage);
+            throw new Exception(String.format(loggingPrefix + "Failed to download files. %d files remaining. "
+                            + " %d files completed download. %n " + exceptionMessage,
+                    elementListDownload.size(),
+                    elementListCompleted.size()));
         }
 
-        LOG.info(loggingPrefix + "Completed download of {} files within a duration of {}.",
-                requestResult.size(),
-                Duration.between(startInstant, Instant.now()).toString());
-
-        return results;
+        return elementListCompleted;
     }
 
     /**
@@ -815,11 +839,20 @@ public abstract class Files extends ApiBase {
         return deleteItems.deleteItems(files);
     }
 
-    private Map<List<FileBinary>, List<Item>> splitAndDownloadFileBinaries(List<Item> fileItems,
-                                                                           @Nullable URI tempStoragePath,
-                                                                           boolean forceTempStorage) throws Exception {
-        Map<List<FileBinary>, List<Item>> responseMap = new HashMap<>();
-        List<List<Item>> itemBatches = Partition.ofSize(fileItems, 10);
+    /**
+     * Download a set of file binaries. Large batches are split into multiple download requests.
+     *
+     * @param fileItems The list of files to download.
+     * @param tempStoragePath The URI to the download storage. Set to null to only perform in-memory download.
+     * @param forceTempStorage Set to true to always download the binary to temp storage
+     * @return The file binary response map.
+     * @throws Exception
+     */
+    private Map<List<ResponseItems<FileBinary>>, List<Item>> splitAndDownloadFileBinaries(List<Item> fileItems,
+                                                                                          @Nullable URI tempStoragePath,
+                                                                                          boolean forceTempStorage) throws Exception {
+        Map<List<ResponseItems<FileBinary>>, List<Item>> responseMap = new HashMap<>();
+        List<List<Item>> itemBatches = Partition.ofSize(fileItems, MAX_DOWNLOAD_BINARY_BATCH_SIZE);
 
         // Set up the download service
         ConnectorServiceV1.FileBinaryReader reader = getClient().getConnectorService().readFileBinariesByIds()
@@ -830,7 +863,14 @@ public abstract class Files extends ApiBase {
         }
 
         // Process all batches.
-        return new HashMap<>();
+        for (List<Item> batch : itemBatches) {
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                            .withItems(toRequestItems(deDuplicate(batch))));
+
+            responseMap.put(reader.readFileBinaries(request), batch);
+        }
+
+        return responseMap;
     }
 
     /**

@@ -1996,7 +1996,7 @@ abstract class ApiBase {
                             if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                                 itemsMap.remove(value.getExternalId());
                             } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                                itemsMap.remove(value.getId());
+                                itemsMap.remove(String.valueOf(value.getId()));
                             }
                         }
 
@@ -2005,7 +2005,7 @@ abstract class ApiBase {
                             if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                                 itemsMap.remove(value.getExternalId());
                             } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                                itemsMap.remove(value.getId());
+                                itemsMap.remove(String.valueOf(value.getId()));
                             }
                         }
 
@@ -2020,13 +2020,13 @@ abstract class ApiBase {
                         elementListCompleted.size(),
                         Duration.between(startInstant, Instant.now()).toString());
             } else {
-                LOG.error(batchLogPrefix + "Failed to delete items. {} items remaining. {} items completed delete."
+                LOG.error(batchLogPrefix + "Failed to delete items. {} items remaining. {} items deleted."
                                 + System.lineSeparator() + "{}",
                         elementListDelete.size(),
                         elementListCompleted.size(),
                         exceptionMessage);
-                throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
-                                + " %d items completed upsert. %n " + exceptionMessage,
+                throw new Exception(String.format(batchLogPrefix + "Failed to delete items. %d items remaining. "
+                                + " %d items deleted. %n " + exceptionMessage,
                         elementListDelete.size(),
                         elementListCompleted.size()));
             }
