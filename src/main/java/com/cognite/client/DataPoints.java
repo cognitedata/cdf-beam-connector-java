@@ -1062,7 +1062,9 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
-     * Calculate the max frequency of the TS items in the query.
+     * Calculate the max frequency of the TS items in the query. Only numeric data points are considered.
+     * In case of string data points, this method returns 0 (i.e. no splitting per time window for string
+     * time series).
      *
      * @param requestParameters
      * @param startOfWindow
@@ -1073,15 +1075,46 @@ public abstract class DataPoints extends ApiBase {
     private double getMaxFrequency(RequestParameters requestParameters,
                                    Instant startOfWindow,
                                    Instant endOfWindow) throws Exception {
-        final String loggingPrefix = "getMaxFrequency() - ";
+        final String loggingPrefix = "getMaxFrequency() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         final Duration MAX_STATS_DURATION = Duration.ofDays(10);
         long from = startOfWindow.toEpochMilli();
         long to = endOfWindow.toEpochMilli();
-
         double frequency = 0d;
 
-        // Filter out string time series from the request
+        /*
+        Filter out the string time series from the request. Only numeric time series
+        are considered for frequency calculations.
+         */
         List<ImmutableMap<String, Object>> requestItems = requestParameters.getItems();
+        List<Item> items = new ArrayList<>();
+        for (ImmutableMap<String, Object> requestItem : requestItems) {
+            if (parseToItem(requestItem).isPresent()) {
+                items.add(parseToItem(requestItem).get());
+            }
+        }
+        List<Item> numericItems = getClient().timeseries().retrieve(items).stream()
+                .filter(ts -> !ts.getIsString())
+                .map(ts -> {
+                    if (ts.hasExternalId()) {
+                        return Item.newBuilder()
+                                .setExternalId(ts.getExternalId().getValue())
+                                .build();
+                    } else {
+                        return Item.newBuilder()
+                                .setId(ts.getId().getValue())
+                                .build();
+                    }
+                })
+                .collect(Collectors.toList());
+
+        if (numericItems.isEmpty()) {
+            // Guard against empty items input.
+            return frequency;
+        }
+
+        RequestParameters request = requestParameters
+                .withItems(toRequestItems(numericItems));
+
 
         Duration duration = Duration.ofMillis(to - from);
         if (duration.compareTo(MAX_STATS_DURATION) > 0) {
@@ -1097,7 +1130,7 @@ public abstract class DataPoints extends ApiBase {
                     Instant.ofEpochMilli(from).toString(),
                     Instant.ofEpochMilli(to).toString());
 
-            RequestParameters statsQuery = requestParameters
+            RequestParameters statsQuery = request
                     .withRootParameter(START_KEY, from)
                     .withRootParameter(END_KEY, to)
                     .withRootParameter(GRANULARITY_KEY, "d")
@@ -1115,7 +1148,7 @@ public abstract class DataPoints extends ApiBase {
                     Instant.ofEpochMilli(from).toString(),
                     Instant.ofEpochMilli(to).toString());
 
-            RequestParameters statsQuery = requestParameters
+            RequestParameters statsQuery = request
                     .withRootParameter(START_KEY, from)
                     .withRootParameter(END_KEY, to)
                     .withRootParameter(GRANULARITY_KEY, "h")
