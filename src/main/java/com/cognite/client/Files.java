@@ -155,7 +155,7 @@ public abstract class Files extends ApiBase {
      * @throws Exception
      */
     public List<FileMetadata> upsert(List<FileMetadata> fileMetadataList) throws Exception {
-        String loggingPrefix = "upsert() -";
+        String loggingPrefix = "upsert() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         final int maxUpsertLoopIterations = 3;
         Instant startInstant = Instant.now();
         if (fileMetadataList.isEmpty()) {
@@ -467,7 +467,7 @@ public abstract class Files extends ApiBase {
      * @throws Exception
      */
     public List<FileMetadata> upload(@NotNull List<FileContainer> files, boolean deleteTempFile) throws Exception {
-        String loggingPrefix = "upload() -";
+        String loggingPrefix = "upload() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();
         if (files.isEmpty()) {
             LOG.warn(loggingPrefix + "No items specified in the request. Will skip the upload request.");
@@ -567,7 +567,7 @@ public abstract class Files extends ApiBase {
      * @return File containers with file headers and references/byte streams of the binary.
      */
     public List<FileContainer> download(List<Item> files, Path downloadPath, boolean preferByteStream) throws Exception {
-        String loggingPrefix = "download() -";
+        String loggingPrefix = "download() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Preconditions.checkArgument(java.nio.file.Files.isDirectory(downloadPath),
                 loggingPrefix + "The download path must be a valid directory.");
 
@@ -631,6 +631,10 @@ public abstract class Files extends ApiBase {
             }
             results.addAll(resultContainers);
         }
+        LOG.info(loggingPrefix + "Successfully downloaded {} files within a duration of {}.",
+                results.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+
         return results;
     }
 

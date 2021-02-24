@@ -883,6 +883,16 @@ abstract class ApiBase {
         }
 
         /**
+         * Configures the max batch size for the individual api requests. The default batch size is 1000 items.
+         *
+         * @param maxBatchSize The maximum batch size per api request.
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> withMaxBatchSize(int maxBatchSize) {
+            return toBuilder().setMaxBatchSize(maxBatchSize).build();
+        }
+
+        /**
          * Upserts a set of items via create and update.
          *
          * This function will first try to write the items as new items. In case the items already exists

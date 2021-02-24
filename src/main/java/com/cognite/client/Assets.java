@@ -27,6 +27,7 @@ import com.cognite.client.servicesV1.parser.AssetParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.cycle.CycleDetector;
 import org.jgrapht.graph.DefaultEdge;
@@ -160,6 +161,7 @@ public abstract class Assets extends ApiBase {
      * @throws Exception
      */
     public List<Asset> upsert(Collection<Asset> assets) throws Exception {
+        String loggingPrefix = "upsert() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();
         // Check integrity and sort assets topologically
         List<Asset> sortedAssets = sortAssetsForUpsert(assets);
@@ -189,7 +191,7 @@ public abstract class Assets extends ApiBase {
             assetUpsertResults.addAll(upsertItems.upsertViaCreateAndUpdate(batch));
         }
 
-        LOG.info("upsert() - Finished upserting {} assets across {} batches within a duration of {}",
+        LOG.info(loggingPrefix + "Finished upserting {} assets across {} batches within a duration of {}",
                 sortedAssets.size(),
                 sortedBatches.size(),
                 Duration.between(startInstant, Instant.now()));
@@ -278,7 +280,7 @@ public abstract class Assets extends ApiBase {
      */
     private List<Asset> sortAssetsForUpsert(Collection<Asset> assets) throws Exception {
         Instant startInstant = Instant.now();
-        String loggingPrefix = "sortAssetsForUpsert - ";
+        String loggingPrefix = "sortAssetsForUpsert - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Preconditions.checkArgument(checkExternalId(assets),
                 "Some assets do not have externalId. Please check the log for more information.");
         Preconditions.checkArgument(checkDuplicates(assets),
@@ -333,7 +335,7 @@ public abstract class Assets extends ApiBase {
      * @return true if all assets contain {@code externalId}. False if one or more assets do not have {@code externalId}.
      */
     private boolean checkExternalId(Collection<Asset> assets) {
-        String loggingPrefix = "checkExternalId() - ";
+        String loggingPrefix = "checkExternalId() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         List<Asset> missingExternalIdList = new ArrayList<>(50);
 
         for (Asset asset : assets) {
@@ -373,7 +375,7 @@ public abstract class Assets extends ApiBase {
      * @return true if no duplicates are detected. False if one or more duplicates are detected.
      */
     private boolean checkDuplicates(Collection<Asset> assets) {
-        String loggingPrefix = "checkDuplicates() - ";
+        String loggingPrefix = "checkDuplicates() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         List<Asset> duplicatesList = new ArrayList<>(50);
         Map<String, Asset> inputMap = new HashMap<>((int) (assets.size() * 1.35));
 
@@ -416,7 +418,7 @@ public abstract class Assets extends ApiBase {
      * @return true if no self-references are detected. False if one or more self-reference are detected.
      */
     private boolean checkSelfReference(Collection<Asset> assets) {
-        String loggingPrefix = "checkExternalId() - ";
+        String loggingPrefix = "checkExternalId() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         List<Asset> selfReferenceList = new ArrayList<>(50);
 
         for (Asset asset : assets) {
@@ -459,7 +461,7 @@ public abstract class Assets extends ApiBase {
      * @return True if circular references are detected. False if no circular references are detected.
      */
     private boolean checkCircularReferences(Collection<Asset> assets) {
-        String loggingPrefix = "checkCircularReferences() - ";
+        String loggingPrefix = "checkCircularReferences() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Map<String, Asset> assetMap = new HashMap<>();
         assets.stream()
                 .forEach(asset -> assetMap.put(asset.getExternalId().getValue(), asset));
@@ -504,7 +506,7 @@ public abstract class Assets extends ApiBase {
      * @return True if integrity is intact. False otherwise.
      */
     private boolean checkReferentialIntegrity(Collection<Asset> assets) {
-        String loggingPrefix = "checkReferentialIntegrity() - ";
+        String loggingPrefix = "checkReferentialIntegrity() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Map<String, Asset> inputMap = new HashMap<>();
         List<Asset> invalidReferenceList = new ArrayList<>(50);
         List<Asset> rootNodeList = new ArrayList<>(2);

@@ -28,6 +28,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -225,7 +226,7 @@ public abstract class RawRows extends ApiBase {
     public List<RawRow> retrieve(String dbName,
                                  String tableName,
                                  Collection<String> rowKeys) throws Exception {
-        String loggingPrefix = "retrieve() - ";
+        String loggingPrefix = "retrieve() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(null!= dbName && !dbName.isEmpty(),
                 "Database cannot be null or empty.");
@@ -327,7 +328,7 @@ public abstract class RawRows extends ApiBase {
                                         String tableName,
                                         int noCursors,
                                         RequestParameters requestParameters) throws Exception {
-        String loggingPrefix = "retrieveCursors() - ";
+        String loggingPrefix = "retrieveCursors() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
                 "You must specify a data base name.");
@@ -362,7 +363,7 @@ public abstract class RawRows extends ApiBase {
      * @throws Exception
      */
     public List<RawRow> upsert(List<RawRow> rows, boolean ensureParent) throws Exception {
-        String loggingPrefix = "upsert() - ";
+        String loggingPrefix = "upsert() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(null!= rows,
                 "Rows list cannot be empty.");
