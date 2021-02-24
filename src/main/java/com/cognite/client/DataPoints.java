@@ -547,8 +547,6 @@ public abstract class DataPoints extends ApiBase {
      * of 20 items per request. Depending on the effect of this split, the algorithm looks at
      * further splitting per time window.
      *
-     *
-     *
      * @param requestParameters
      * @return
      * @throws Exception
@@ -1047,6 +1045,23 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
+     * Parse a query item object into typed items ({@code externalId / id}).
+     *
+     * @param item The query item object to be parsed.
+     * @return the typed {@link Item} result.
+     */
+    private Optional<Item> parseToItem(Map<String, Object> item) {
+        if (item.containsKey("id") && item.get("id") instanceof Long) {
+            return Optional.of(Item.newBuilder().setId((Long) item.get("id")).build());
+        }
+        if (item.containsKey("externalId") && item.get("externalId") instanceof String) {
+            return Optional.of(Item.newBuilder().setExternalId((String) item.get("externalId")).build());
+        }
+
+        return Optional.empty();
+    }
+
+    /**
      * Calculate the max frequency of the TS items in the query.
      *
      * @param requestParameters
@@ -1064,6 +1079,9 @@ public abstract class DataPoints extends ApiBase {
         long to = endOfWindow.toEpochMilli();
 
         double frequency = 0d;
+
+        // Filter out string time series from the request
+        List<ImmutableMap<String, Object>> requestItems = requestParameters.getItems();
 
         Duration duration = Duration.ofMillis(to - from);
         if (duration.compareTo(MAX_STATS_DURATION) > 0) {
