@@ -319,7 +319,7 @@ public abstract class DataPoints extends ApiBase {
                 dataPoints.size(),
                 responseMap.size(),
                 Duration.between(startInstant, Instant.now()).toString(),
-                String.format("%d", (dataPoints.size())
+                String.format("%.2f", (dataPoints.size())
                         / (Math.max(1l, Duration.between(startInstant, Instant.now()).toMillis())) / 1000d),
                 String.format("%.2f", responseMap.keySet().stream()
                         .mapToLong(response -> response.getResponseBinary().getApiLatency())
