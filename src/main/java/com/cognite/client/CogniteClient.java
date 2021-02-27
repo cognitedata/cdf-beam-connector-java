@@ -250,6 +250,15 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Experimental} representing experimental (non-released) api endpoints.
+     *
+     * @return The Experimental api endpoints.
+     */
+    public Experimental experimental() {
+        return Experimental.of(this);
+    }
+
+    /**
      * Returns the services layer mirroring the Cognite Data Fusion API.
      * @return
      */

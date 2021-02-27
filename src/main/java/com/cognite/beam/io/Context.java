@@ -536,6 +536,7 @@ public abstract class Context {
     @AutoValue
     public abstract static class CreateInteractivePnID
             extends ConnectorBase<PCollection<Item>, PCollection<PnIDResponse>> {
+        private static final String DEFAULT_SEARCH_FIELD = "name";
         private static final boolean DEFAULT_PARTIAL_MATCH = false;
         private static final boolean DEFAULT_CONVERT_FILE = false;
         private static final int DEFAULT_MIN_TOKENS = 2;
@@ -546,6 +547,7 @@ public abstract class Context {
                     .setHints(CogniteIO.defaultHints)
                     .setReaderConfig(ReaderConfig.create())
                     .setProjectConfigFile(invalidProjectConfigFile)
+                    .setSearchField(DEFAULT_SEARCH_FIELD)
                     .setConvertFile(DEFAULT_CONVERT_FILE)
                     .setWorkerParallelization(DEFAULT_WORKER_PARALLELIZATION)
                     .setPartialMatch(DEFAULT_PARTIAL_MATCH)
@@ -559,6 +561,7 @@ public abstract class Context {
 
         public abstract Builder toBuilder();
         public abstract ReaderConfig getReaderConfig();
+        public abstract String getSearchField();
         public abstract boolean isConvertFile();
         public abstract int getWorkerParallelization();
         public abstract boolean isPartialMatch();
@@ -589,6 +592,12 @@ public abstract class Context {
         public CreateInteractivePnID withReaderConfig(ReaderConfig config) {
             Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
+        }
+
+        public CreateInteractivePnID withSearchField(String searchField) {
+            Preconditions.checkNotNull(searchField, "Search field cannot be null");
+            Preconditions.checkArgument(!searchField.isEmpty(), "Search field cannot be an empty string.");
+            return toBuilder().setSearchField(searchField).build();
         }
 
         public CreateInteractivePnID enableConvertFile(boolean convertFile) {
@@ -641,7 +650,8 @@ public abstract class Context {
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Item>>create())
                     .apply("Create int. PnID", ParDo.of(new CreateInteractivePnIDFn(getHints(), getReaderConfig(),
-                            projectConfigView, getTargetView(), isConvertFile(), isPartialMatch(), getMinTokens()))
+                            projectConfigView, getTargetView(), getSearchField(), isConvertFile(),
+                            isPartialMatch(), getMinTokens()))
                     .withSideInputs(projectConfigView, getTargetView()));
 
             return outputCollection;
@@ -651,6 +661,7 @@ public abstract class Context {
         public abstract static class Builder
                 extends ConnectorBase.Builder<CreateInteractivePnID.Builder> {
             abstract Builder setReaderConfig(ReaderConfig value);
+            abstract Builder setSearchField(String value);
             abstract Builder setConvertFile(boolean value);
             abstract Builder setWorkerParallelization(int value);
             abstract Builder setPartialMatch(boolean value);

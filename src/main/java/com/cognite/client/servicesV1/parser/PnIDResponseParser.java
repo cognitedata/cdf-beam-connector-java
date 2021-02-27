@@ -112,29 +112,28 @@ public class PnIDResponseParser {
      * @return
      * @throws Exception
      */
-    public static PnIDResponse ParsePnIDConvertResponse(String json) throws Exception {
+    public static ConvertResponse ParsePnIDConvertResponse(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
-        PnIDResponse.Builder pnIDBuilder = PnIDResponse.newBuilder();
+        ConvertResponse.Builder convertBuilder = ConvertResponse.newBuilder();
 
         if (root.path("svgUrl").isTextual()) {
-            pnIDBuilder.setSvgUrl(StringValue.of(root.get("svgUrl").textValue()));
+            convertBuilder.setSvgUrl(StringValue.of(root.get("svgUrl").textValue()));
         } else {
             throw new Exception(PnIDResponseParser.buildErrorMessage("svgURL", json));
         }
 
         if (root.path("pngUrl").isTextual()) {
-            pnIDBuilder.setPngUrl(StringValue.of(root.get("pngUrl").textValue()));
+            convertBuilder.setPngUrl(StringValue.of(root.get("pngUrl").textValue()));
         }
 
         if (root.path("fileId").isIntegralNumber()) {
-            pnIDBuilder.setFileId(Int64Value.of(root.get("fileId").longValue()));
+            convertBuilder.setFileId(Int64Value.of(root.get("fileId").longValue()));
         }
         if (root.path("fileExternalId").isTextual()) {
-            pnIDBuilder.setFileExternalId(StringValue.of(root.get("fileExternalId").textValue()));
+            convertBuilder.setFileExternalId(StringValue.of(root.get("fileExternalId").textValue()));
         }
 
-
-        return pnIDBuilder.build();
+        return convertBuilder.build();
     }
 
     private static String buildErrorMessage(String fieldName, String inputElement) {

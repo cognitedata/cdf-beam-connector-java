@@ -3279,8 +3279,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
     public static class DownloadFileBinary {
         final static Logger LOG = LoggerFactory.getLogger(DownloadFileBinary.class);
-        final static String randomIdString = RandomStringUtils.randomAlphanumeric(5);
-        final static String loggingPrefix = "DownloadFileBinary [" + randomIdString + "] -";
+        final static String loggingPrefix = "DownloadFileBinary() - ";
         final static OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(90, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.MINUTES)
@@ -3314,6 +3313,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                                                                               int maxRetries,
                                                                               @Nullable URI tempStorageURI,
                                                                               boolean forceTempStorage) {
+            String loggingPrefix = DownloadFileBinary.loggingPrefix +  RandomStringUtils.randomAlphanumeric(5) + " - ";
             LOG.debug(loggingPrefix + "Download URL received: {}. Max retries: {}. Temp storage: {}. "
                     + "Force temp storage: {}",
                     downloadUrl,

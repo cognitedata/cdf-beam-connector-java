@@ -40,16 +40,29 @@ message PnIDResponse {
     // The identified entity annotations with bounding boxes
     repeated Annotation items = 3;
 
-    // The URL for the converted SVG file
-    google.protobuf.StringValue svg_url = 4;
-
-    // The URL for the converted PNG file
-    google.protobuf.StringValue png_url = 5;
-
     // The converted SVG binary
-    google.protobuf.BytesValue svg_binary = 6;
+    google.protobuf.BytesValue svg_binary = 4;
 
     // The converted PNG binary
-    google.protobuf.BytesValue png_binary = 7;
+    google.protobuf.BytesValue png_binary = 5;
 }
 
+message ConvertResponse {
+  /*
+     The id of the source file used for building
+     interactive P&ID
+     */
+  google.protobuf.Int64Value file_id = 1;
+
+  /*
+  The external id of the source file used for building
+  interactive P&ID
+  */
+  google.protobuf.StringValue file_external_id = 2;
+
+  // The URL for the converted SVG file
+  google.protobuf.StringValue svg_url = 4;
+
+  // The URL for the converted PNG file
+  google.protobuf.StringValue png_url = 5;
+}

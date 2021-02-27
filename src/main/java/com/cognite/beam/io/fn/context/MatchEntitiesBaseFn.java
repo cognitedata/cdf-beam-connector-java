@@ -23,21 +23,8 @@ import com.cognite.beam.io.fn.IOBaseFn;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.EntityMatch;
 import com.cognite.client.dto.EntityMatchResult;
-import com.cognite.client.dto.Item;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.util.JsonUtil;
-import com.cognite.beam.io.util.internal.MetricsUtil;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Struct;
-import com.google.protobuf.util.JsonFormat;
-import org.apache.beam.sdk.metrics.Distribution;
-import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.ValueProvider;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -49,9 +36,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
 
 /**
  * Base class for matching a set of entities using an entity matcher ML model.
@@ -67,7 +51,6 @@ import java.util.stream.Collectors;
 public abstract class MatchEntitiesBaseFn extends IOBaseFn<Iterable<Struct>, KV<Struct, List<EntityMatch>>> {
 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
-    protected final ObjectReader objectReader = JsonUtil.getObjectMapperInstance().reader();
     protected final ReaderConfig readerConfig;
     protected final PCollectionView<List<ProjectConfig>> projectConfigView;
     protected final int maxNumMatches;
