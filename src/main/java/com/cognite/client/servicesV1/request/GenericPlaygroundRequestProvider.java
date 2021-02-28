@@ -16,10 +16,9 @@
 
 package com.cognite.client.servicesV1.request;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
-import okhttp3.Request;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,21 +38,20 @@ abstract class GenericPlaygroundRequestProvider implements RequestProvider, Seri
     public abstract String getAppIdentifier();
     public abstract String getSessionIdentifier();
     public abstract String getEndpoint();
-    public abstract RequestParameters getRequestParameters();
+    public abstract Request getRequest();
 
-    protected Request.Builder buildGenericRequest() throws URISyntaxException {
+    protected okhttp3.Request.Builder buildGenericRequest() throws URISyntaxException {
         Preconditions.checkState(this.getAppIdentifier().length() < 40
                 , "App identifier out of range. Length must be < 40.");
         Preconditions.checkState(this.getSdkIdentifier().length() < 40
                 , "SDK identifier out of range. Length must be < 40.");
         Preconditions.checkState(this.getSessionIdentifier().length() < 40
                 , "Session identifier out of range. Length must be < 40.");
-        getRequestParameters().getProjectConfig().validate();
 
         // build standard part of the request.
-        return new Request.Builder()
+        return new okhttp3.Request.Builder()
                 .header("Accept", "application/json")
-                .header("api-key", this.getRequestParameters().getProjectConfig().getApiKey().get())
+                .header("api-key", this.getRequest().getAuthConfig().getApiKey())
                 .header("x-cdp-sdk", this.getSdkIdentifier())
                 .header("x-cdp-app", this.getAppIdentifier())
                 .header("x-cdp-clienttag", this.getSessionIdentifier())
@@ -61,16 +59,14 @@ abstract class GenericPlaygroundRequestProvider implements RequestProvider, Seri
     }
 
     protected HttpUrl.Builder buildGenericUrl() throws URISyntaxException {
-        getRequestParameters().getProjectConfig().validate();
-        URI uri = null;
-        uri = new URI(this.getRequestParameters().getProjectConfig().getHost().get());
+        URI uri = new URI(this.getRequest().getAuthConfig().getHost());
         return new HttpUrl.Builder()
                 .scheme(uri.getScheme())
                 .host(uri.getHost())
                 .addPathSegment("api")
                 .addPathSegment(apiVersion)
                 .addPathSegment("projects")
-                .addPathSegment(this.getRequestParameters().getProjectConfig().getProject().get())
+                .addPathSegment(this.getRequest().getAuthConfig().getProject())
                 .addPathSegments(this.getEndpoint());
     }
 
@@ -79,6 +75,6 @@ abstract class GenericPlaygroundRequestProvider implements RequestProvider, Seri
         public abstract B setAppIdentifier(String value);
         public abstract B setSessionIdentifier(String value);
         public abstract B setEndpoint(String value);
-        public abstract B setRequestParameters(RequestParameters value);
+        public abstract B setRequest(Request value);
     }
 }

@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.response;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.cognite.client.servicesV1.util.TSIterationUtilities;
 import com.cognite.v1.timeseries.proto.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,16 +48,16 @@ public abstract class TSPointsProtoResponseParser implements ResponseParser<Data
 
     public static TSPointsProtoResponseParser.Builder builder() {
         return new com.cognite.client.servicesV1.response.AutoValue_TSPointsProtoResponseParser.Builder()
-                .setRequestParameters(RequestParameters.create());
+                .setRequest(Request.create());
     }
 
     public abstract TSPointsProtoResponseParser.Builder toBuilder();
 
-    public abstract RequestParameters getRequestParameters();
+    public abstract Request getRequest();
 
-    public TSPointsProtoResponseParser withRequestParameters(RequestParameters parameters) {
+    public TSPointsProtoResponseParser withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
     /**
@@ -87,7 +87,7 @@ public abstract class TSPointsProtoResponseParser implements ResponseParser<Data
         LOG.debug(loggingPrefix + "Found {} TS list response items in the response payload", responseItems.size());
         // Adjust the limit based on the number of TS in the request
         int effectiveLimit = TSIterationUtilities.calculateLimit(
-                (Integer) getRequestParameters().getRequestParameters().getOrDefault("limit", DEFAULT_PARAMETER_LIMIT),
+                (Integer) getRequest().getRequestParameters().getOrDefault("limit", DEFAULT_PARAMETER_LIMIT),
                 responseItems.size());
 
         List<Map<String, Object>> cursorList = new ArrayList<>();
@@ -189,8 +189,8 @@ public abstract class TSPointsProtoResponseParser implements ResponseParser<Data
         // check if we have an end time (otherwise it was now)
         LOG.debug(loggingPrefix + "Check request for end time from attribute {}: [{}]",
                 END_KEY,
-                getRequestParameters().getRequestParameters().get(END_KEY));
-        Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(getRequestParameters());
+                getRequest().getRequestParameters().get(END_KEY));
+        Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(getRequest());
         if (requestEndTime.isPresent()) {
             endTimestamp = requestEndTime.get();
         }
@@ -207,10 +207,10 @@ public abstract class TSPointsProtoResponseParser implements ResponseParser<Data
         long nextDelta = 1; // the default delta for raw datapoints
 
         // Check if this is an aggregation
-        Optional<Duration> aggGranularity = TSIterationUtilities.getAggregateGranularityDuration(getRequestParameters());
+        Optional<Duration> aggGranularity = TSIterationUtilities.getAggregateGranularityDuration(getRequest());
         if (aggGranularity.isPresent()) {
             LOG.debug(loggingPrefix + "Request is an aggregation request: {}",
-                    getRequestParameters().getRequestParameters().get(GRANULARITY_KEY));
+                    getRequest().getRequestParameters().get(GRANULARITY_KEY));
             nextDelta = aggGranularity.get().toMillis();
         }
 
@@ -227,7 +227,7 @@ public abstract class TSPointsProtoResponseParser implements ResponseParser<Data
 
     @AutoValue.Builder
     public abstract static class Builder {
-        public abstract TSPointsProtoResponseParser.Builder setRequestParameters(RequestParameters value);
+        public abstract TSPointsProtoResponseParser.Builder setRequest(Request value);
 
         public abstract TSPointsProtoResponseParser build();
     }

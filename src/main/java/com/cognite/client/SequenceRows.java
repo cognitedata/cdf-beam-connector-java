@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
@@ -78,7 +77,7 @@ public abstract class SequenceRows extends ApiBase {
 
     /**
      * Returns all {@link SequenceBody} objects (i.e. sequences rows x columns) that matches the
-     * specification set in the {@link RequestParameters}.
+     * specification set in the {@link Request}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
@@ -91,15 +90,15 @@ public abstract class SequenceRows extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SequenceBody>> retrieve(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<SequenceBody>> retrieve(Request requestParameters) throws Exception {
         return this.retrieve(ImmutableList.of(requestParameters));
     }
 
     /**
      * Returns all {@link SequenceBody} objects (i.e. sequences rows x columns) that matches the
-     * specification set in the collection of {@link RequestParameters}.
+     * specification set in the collection of {@link Request}.
      *
-     * By submitting a collection of {@link RequestParameters}, the requests will be submitted in parallel to
+     * By submitting a collection of {@link Request}, the requests will be submitted in parallel to
      * Cognite Data Fusion, potentially increasing the overall I/O performance.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
@@ -113,10 +112,10 @@ public abstract class SequenceRows extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SequenceBody>> retrieve(List<RequestParameters> requestParametersList) throws Exception {
+    public Iterator<List<SequenceBody>> retrieve(List<Request> requestParametersList) throws Exception {
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<String>>>> iterators = new ArrayList<>();
-        for (RequestParameters requestParameters : requestParametersList) {
+        for (Request requestParameters : requestParametersList) {
             iterators.add(getListResponseIterator(ResourceType.SEQUENCE_BODY, addAuthInfo(requestParameters)));
         }
 
@@ -141,11 +140,11 @@ public abstract class SequenceRows extends ApiBase {
      * @throws Exception
      */
     public Iterator<List<SequenceBody>> retrieveComplete(List<Item> items) throws Exception {
-        List<RequestParameters> requestParametersList = new ArrayList<>(items.size());
+        List<Request> requestParametersList = new ArrayList<>(items.size());
 
         // Build the request objects representing the items
         for (Item item : items) {
-            RequestParameters requestParameters = RequestParameters.create()
+            Request requestParameters = Request.create()
                     .withRootParameter("limit", DEFAULT_MAX_BATCH_SIZE_SEQUENCES_ROWS);
             if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                 requestParameters = requestParameters.withRootParameter("externalId", item.getExternalId());
@@ -583,7 +582,7 @@ public abstract class SequenceRows extends ApiBase {
         }
 
         // build request object
-        RequestParameters deleteItemsRequest = addAuthInfo(RequestParameters.create()
+        Request deleteItemsRequest = addAuthInfo(Request.create()
                 .withItems(deleteItemsBuilder.build()));
 
         // post write request
@@ -757,7 +756,7 @@ public abstract class SequenceRows extends ApiBase {
                 Duration.between(startInstant, Instant.now()).toString());
 
         // build request object
-        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+        Request postSeqBody = addAuthInfo(Request.create()
                 .withItems(insertItemsBuilder.build()));
 
         // post write request

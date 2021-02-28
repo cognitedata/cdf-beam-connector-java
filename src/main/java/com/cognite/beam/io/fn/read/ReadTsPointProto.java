@@ -119,6 +119,6 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
                                                      String... partitions) throws Exception {
         Preconditions.checkArgument(partitions.length == 0,
                 "Partitions is not supported for data points");
-        return client.timeseries().dataPoints().retrieve(requestParameters);
+        return client.timeseries().dataPoints().retrieve(requestParameters.getRequest());
     }
 }

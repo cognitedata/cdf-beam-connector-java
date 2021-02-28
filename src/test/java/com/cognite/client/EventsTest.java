@@ -2,10 +2,8 @@ package com.cognite.client;
 
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Asset;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.util.DataGenerator;
 import com.google.protobuf.StringValue;
@@ -56,7 +54,7 @@ class EventsTest {
             LOG.info(loggingPrefix + "Start reading events.");
             List<Event> listEventsResults = new ArrayList<>();
             client.events()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
@@ -141,7 +139,7 @@ class EventsTest {
             LOG.info(loggingPrefix + "Start reading events.");
             List<Event> listEventsResults = new ArrayList<>();
             client.events()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading events. Duration: {}",
@@ -225,7 +223,7 @@ class EventsTest {
             LOG.info(loggingPrefix + "Start listing events.");
             List<Event> listEventsResults = new ArrayList<>();
             client.events()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished listing events. Duration: {}",
@@ -289,7 +287,7 @@ class EventsTest {
 
             LOG.info(loggingPrefix + "Start aggregating events.");
             Aggregate aggregateResult = client.events()
-                    .aggregate(RequestParameters.create()
+                    .aggregate(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue));
             LOG.info(loggingPrefix + "Aggregate results: {}", aggregateResult);
             LOG.info(loggingPrefix + "Finished aggregating events. Duration: {}",
@@ -298,7 +296,7 @@ class EventsTest {
             LOG.info(loggingPrefix + "Start reading events.");
             List<Event> listEventsResults = new ArrayList<>();
             client.events()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listEventsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading events. Duration: {}",

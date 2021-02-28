@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ItemReader;
@@ -126,13 +125,13 @@ public abstract class PnID extends ApiBase {
         }
 
         // Build the baseline request.
-        RequestParameters detectAnnotations = RequestParameters.create()
+        Request detectAnnotations = Request.create()
                 .withRootParameter("entities", entities)
                 .withRootParameter("searchField", searchField)
                 .withRootParameter("partialMatch", partialMatch)
                 .withRootParameter("minTokens", minTokens);
 
-        List<RequestParameters> requestBatches = new ArrayList<>();
+        List<Request> requestBatches = new ArrayList<>();
         for (Item file : files) {
             if (file.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                 requestBatches.add(detectAnnotations.withRootParameter("fileExternalId", file.getExternalId()));
@@ -155,7 +154,7 @@ public abstract class PnID extends ApiBase {
      * @return The results from the detect annotations job(s).
      * @throws Exception
      */
-    public List<PnIDResponse> detectAnnotationsPnID(Collection<RequestParameters> requests,
+    public List<PnIDResponse> detectAnnotationsPnID(Collection<Request> requests,
                                                     boolean convertToInteractive) throws Exception {
         final String loggingPrefix = "detectAnnotationsPnID() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
@@ -171,7 +170,7 @@ public abstract class PnID extends ApiBase {
         ItemReader<String> annotationsReader = getClient().getConnectorService().detectAnnotationsPnid();
 
         List<CompletableFuture<ResponseItems<String>>> resultFutures = new ArrayList<>();
-        for (RequestParameters request : requests) {
+        for (Request request : requests) {
             resultFutures.add(annotationsReader.getItemsAsync(addAuthInfo(request)));
         }
         LOG.info(loggingPrefix + "Submitted {} detect annotations jobs within a duration of {}.",
@@ -239,7 +238,7 @@ public abstract class PnID extends ApiBase {
 
         Map<CompletableFuture<PnIDResponse>, PnIDResponse> futuresMap = new HashMap();
         for (PnIDResponse annotations : annotationsList) {
-            RequestParameters interactiveFilesRequest = RequestParameters.create()
+            Request interactiveFilesRequest = Request.create()
                     .withRootParameter("items", annotations.getItemsList())
                     .withRootParameter("grayscale", grayscale);
 

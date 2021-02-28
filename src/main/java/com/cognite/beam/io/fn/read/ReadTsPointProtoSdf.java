@@ -125,7 +125,7 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
         RequestParameters queryRestricted = buildRequestParameters(query, startRange, endRange, localLoggingPrefix);
         try {
             Iterator<CompletableFuture<ResponseItems<DataPointListItem>>> results =
-                    connector.readTsDatapointsProto(queryRestricted);
+                    connector.readTsDatapointsProto(queryRestricted.getRequest());
             CompletableFuture<ResponseItems<DataPointListItem>> responseItemsFuture;
             ResponseItems<DataPointListItem> responseItems;
 
@@ -200,7 +200,7 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
         LOG.debug(loggingPrefix + "GetInitialRestriction, get end time from request attribute {}: [{}]",
                 END_KEY,
                 requestParameters.getRequestParameters().get(END_KEY));
-        Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(requestParameters);
+        Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(requestParameters.getRequest());
         if (requestEndTime.isPresent()) {
             endTimestamp = requestEndTime.get();
         }
@@ -209,7 +209,7 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
         LOG.debug(loggingPrefix + "GetInitialRestriction, get start time from request attribute {}: [{}]",
                 START_KEY,
                 requestParameters.getRequestParameters().get(START_KEY));
-        Optional<Long> requestStartTime = TSIterationUtilities.getStartAsMillis(requestParameters);
+        Optional<Long> requestStartTime = TSIterationUtilities.getStartAsMillis(requestParameters.getRequest());
         if (requestStartTime.isPresent()) {
             startTimestamp = requestStartTime.get();
         }
@@ -340,7 +340,7 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
         double average = 0d;
         try {
             Iterator<CompletableFuture<ResponseItems<DataPointListItem>>> results =
-                    connector.readTsDatapointsProto(query);
+                    connector.readTsDatapointsProto(query.getRequest());
             CompletableFuture<ResponseItems<DataPointListItem>> responseItemsFuture;
             ResponseItems<DataPointListItem> responseItems;
 

@@ -1,6 +1,5 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
@@ -52,7 +51,7 @@ class TimeseriesTest {
             LOG.info(loggingPrefix + "Start reading timeseries.");
             List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();
             client.timeseries()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(timeseries -> listTimeseriesResults.addAll(timeseries));
             LOG.info(loggingPrefix + "Finished reading timeseries. Duration: {}",
@@ -125,7 +124,7 @@ class TimeseriesTest {
             LOG.info(loggingPrefix + "Start reading timeseries.");
             List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();
             client.timeseries()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(timeseries -> listTimeseriesResults.addAll(timeseries));
             LOG.info(loggingPrefix + "Finished reading timeseries. Duration: {}",
@@ -216,7 +215,7 @@ class TimeseriesTest {
             LOG.info(loggingPrefix + "Start reading timeseries.");
             List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();
             client.timeseries()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("new-key", "new-value"))
                     .forEachRemaining(timeseries -> listTimeseriesResults.addAll(timeseries));
             LOG.info(loggingPrefix + "Finished reading timeseries. Duration: {}",
@@ -296,7 +295,7 @@ class TimeseriesTest {
             LOG.info(loggingPrefix + "Start listing timeseries.");
             List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();
             client.timeseries()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(timeseries -> listTimeseriesResults.addAll(timeseries));
             LOG.info(loggingPrefix + "Finished listing timeseries. Duration: {}",
@@ -360,7 +359,7 @@ class TimeseriesTest {
 
             LOG.info(loggingPrefix + "Start aggregating timeseries.");
             Aggregate aggregateResult = client.timeseries()
-                    .aggregate(RequestParameters.create()
+                    .aggregate(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue));
             LOG.info(loggingPrefix + "Aggregate results: {}", aggregateResult);
             LOG.info(loggingPrefix + "Finished aggregating timeseries. Duration: {}",
@@ -369,7 +368,7 @@ class TimeseriesTest {
             LOG.info(loggingPrefix + "Start reading timeseries.");
             List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();
             client.timeseries()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(timeseries -> listTimeseriesResults.addAll(timeseries));
             LOG.info(loggingPrefix + "Finished reading timeseries. Duration: {}",

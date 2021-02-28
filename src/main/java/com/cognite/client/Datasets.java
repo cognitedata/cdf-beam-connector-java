@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
@@ -64,7 +63,7 @@ public abstract class Datasets extends ApiBase {
     }
 
     /**
-     * Return all {@link DataSet} object that matches the filters set in the {@link RequestParameters}.
+     * Return all {@link DataSet} object that matches the filters set in the {@link Request}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer entire results set, then you have to
@@ -77,14 +76,14 @@ public abstract class Datasets extends ApiBase {
      * @return An {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<DataSet>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<DataSet>> list(Request requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
     /**
-     * Return all {@link DataSet} objects that matches the filters set in the {@link RequestParameters} for the specific
+     * Return all {@link DataSet} objects that matches the filters set in the {@link Request} for the specific
      * partitions. This method is intended for advanced use cases where you need direct control over the individual
      * partitions. For example, when using the SDK in a distributed computing environment.
      *
@@ -97,7 +96,7 @@ public abstract class Datasets extends ApiBase {
      * @return An {@link Iterator} to page through the results set
      * @throws Exception
      */
-    public Iterator<List<DataSet>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+    public Iterator<List<DataSet>> list(Request requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.DATA_SET, requestParameters, partitions), this::parseDatasets);
     }
 
@@ -126,7 +125,7 @@ public abstract class Datasets extends ApiBase {
      * @throws Exception
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
-    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+    public Aggregate aggregate(Request requestParameters) throws Exception {
         return aggregate(ResourceType.DATA_SET, requestParameters);
     }
 
@@ -151,7 +150,7 @@ public abstract class Datasets extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<DataSet> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+        UpsertItems<DataSet> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)
                 .withUpdateMappingFunction(this::toRequestUpdateItem);
 

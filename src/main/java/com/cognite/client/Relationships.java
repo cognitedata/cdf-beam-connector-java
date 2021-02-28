@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
@@ -62,7 +61,7 @@ public abstract class Relationships extends ApiBase {
     }
 
     /**
-     * Returns all {@link Relationship} objects that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link Relationship} objects that matches the filters set in the {@link Request}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
@@ -75,7 +74,7 @@ public abstract class Relationships extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<Relationship>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<Relationship>> list(Request requestParameters) throws Exception {
         /*
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
@@ -89,7 +88,7 @@ public abstract class Relationships extends ApiBase {
     }
 
     /**
-     * Returns all {@link Relationship} objects that matches the filters set in the {@link RequestParameters} for the
+     * Returns all {@link Relationship} objects that matches the filters set in the {@link Request} for the
      * specified partitions. This is method is intended for advanced use cases where you need direct control over
      * the individual partitions. For example, when using the SDK in a distributed computing environment.
      *
@@ -102,7 +101,7 @@ public abstract class Relationships extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<Relationship>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+    public Iterator<List<Relationship>> list(Request requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.RELATIONSHIP, requestParameters, partitions), this::parseRelationship);
     }
 
@@ -141,7 +140,7 @@ public abstract class Relationships extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<Relationship> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+        UpsertItems<Relationship> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withDeleteItemWriter(deleteItemWriter)
                 .addDeleteParameter("ignoreUnknownIds", true)
                 .withItemMappingFunction(this::toItem)
@@ -168,7 +167,7 @@ public abstract class Relationships extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(relationships);

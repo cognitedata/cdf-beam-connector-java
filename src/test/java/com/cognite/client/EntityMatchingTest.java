@@ -1,6 +1,5 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.dto.EntityMatchModel;
 import com.cognite.client.dto.EntityMatchResult;
@@ -88,8 +87,7 @@ class EntityMatchingTest {
         ImmutableList<Struct> target = generateTargetTrainingStructs();
 
         // Train the matching model
-        long modelId = -1L;
-        RequestParameters entityMatchFitRequest = RequestParameters.create()
+        Request entityMatchFitRequest = Request.create()
                 .withRootParameter("sources",  source)
                 .withRootParameter("targets", target)
                 .withRootParameter("matchFields", ImmutableList.of(

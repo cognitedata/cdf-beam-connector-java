@@ -42,7 +42,7 @@ public class ListSequencesFn extends ListItemsBaseFn<SequenceMetadata> {
     protected Iterator<List<SequenceMetadata>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.sequences().list(requestParameters, partitions);
+        return client.sequences().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

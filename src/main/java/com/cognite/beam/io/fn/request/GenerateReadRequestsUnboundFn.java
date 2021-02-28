@@ -190,7 +190,7 @@ public class GenerateReadRequestsUnboundFn extends DoFn<RequestParameters, Reque
             LOG.debug(loggingPrefix + "GetInitialRestriction, get end time from request attribute {}: [{}]",
                     TS_END_KEY,
                     requestParameters.getRequestParameters().getOrDefault(TS_END_KEY, "null"));
-            Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(requestParameters);
+            Optional<Long> requestEndTime = TSIterationUtilities.getEndAsMillis(requestParameters.getRequest());
             if (requestEndTime.isPresent()) {
                 endTimestamp = requestEndTime.get();
             }
@@ -199,7 +199,7 @@ public class GenerateReadRequestsUnboundFn extends DoFn<RequestParameters, Reque
             LOG.debug(loggingPrefix + "GetInitialRestriction, get start time from request attribute {}: [{}]",
                     TS_START_KEY,
                     requestParameters.getRequestParameters().getOrDefault(TS_START_KEY, "null"));
-            Optional<Long> requestStartTime = TSIterationUtilities.getStartAsMillis(requestParameters);
+            Optional<Long> requestStartTime = TSIterationUtilities.getStartAsMillis(requestParameters.getRequest());
             if (requestStartTime.isPresent()) {
                 startTimestamp = requestStartTime.get();
             }

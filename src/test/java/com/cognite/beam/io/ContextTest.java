@@ -4,6 +4,7 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.CogniteClient;
+import com.cognite.client.Request;
 import com.cognite.client.dto.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -474,7 +475,7 @@ class ContextTest extends TestConfigProviderV1 {
         ImmutableList<Struct> target = generateTargetTrainingStructs();
 
         // Train the matching model
-        RequestParameters entityMatchFitRequest = RequestParameters.create()
+        Request entityMatchFitRequest = Request.create()
                 .withRootParameter("sources",  source)
                 .withRootParameter("targets", target)
                 .withRootParameter("matchFields", ImmutableList.of(

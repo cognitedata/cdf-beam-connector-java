@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.util.JsonUtil;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -29,6 +28,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing item object between Cognite api representations
@@ -77,7 +78,7 @@ public class ItemParser {
                 itemBuilder.setLegacyName(root.get("legacyName").textValue());
             } else {
                 String message = "Unable to parse attribute: id / externalId / legacyName. Item exerpt: " +
-                        itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+                        itemJson.substring(0, Math.min(itemJson.length(), MAX_LOG_ELEMENT_LENGTH));
 
                 throw new Exception(message);
             }
@@ -133,7 +134,7 @@ public class ItemParser {
             } else {
                 String message = logPrefix + parseErrorDefaultPrefix
                         + "Unable to parse attribute: " + fieldName + ". Item exerpt: " +
-                        itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+                        itemJson.substring(0, Math.min(itemJson.length(), MAX_LOG_ELEMENT_LENGTH));
 
                 LOG.debug(message);
             }
@@ -167,7 +168,7 @@ public class ItemParser {
             } else {
                 String message = logPrefix + parseErrorDefaultPrefix
                         + "Unable to parse attribute: " + fieldName + ". Item exerpt: " +
-                        itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+                        itemJson.substring(0, Math.min(itemJson.length(), MAX_LOG_ELEMENT_LENGTH));
 
                 LOG.debug(message);
             }

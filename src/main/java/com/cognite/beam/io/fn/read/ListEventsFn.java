@@ -42,7 +42,7 @@ public class ListEventsFn extends ListItemsBaseFn<Event> {
     protected Iterator<List<Event>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.events().list(requestParameters, partitions);
+        return client.events().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

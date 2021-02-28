@@ -20,7 +20,6 @@ import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
 import com.cognite.client.config.ResourceType;
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.parser.AssetParser;
@@ -71,7 +70,7 @@ public abstract class Assets extends ApiBase {
     }
 
     /**
-     * Returns all {@link Asset} objects that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link Asset} objects that matches the filters set in the {@link Request}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
@@ -84,14 +83,14 @@ public abstract class Assets extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<Asset>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<Asset>> list(Request requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
     /**
-     * Returns all {@link Asset} objects that matches the filters set in the {@link RequestParameters} for the
+     * Returns all {@link Asset} objects that matches the filters set in the {@link Request} for the
      * specified partitions. This is method is intended for advanced use cases where you need direct control over
      * the individual partitions. For example, when using the SDK in a distributed computing environment.
      *
@@ -104,7 +103,7 @@ public abstract class Assets extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<Asset>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+    public Iterator<List<Asset>> list(Request requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.ASSET, requestParameters, partitions), this::parseAsset);
     }
 
@@ -133,7 +132,7 @@ public abstract class Assets extends ApiBase {
      * @throws Exception
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
-    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+    public Aggregate aggregate(Request requestParameters) throws Exception {
         return aggregate(ResourceType.ASSET, requestParameters);
     }
 
@@ -175,7 +174,7 @@ public abstract class Assets extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<Asset> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+        UpsertItems<Asset> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)
                 .withUpdateMappingFunction(this::toRequestUpdateItem)
                 .withIdFunction(this::getAssetId);
@@ -244,7 +243,7 @@ public abstract class Assets extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(items);

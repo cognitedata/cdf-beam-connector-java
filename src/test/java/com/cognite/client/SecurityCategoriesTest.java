@@ -1,13 +1,8 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
-import com.cognite.client.config.UpsertMode;
-import com.cognite.client.dto.Item;
-import com.cognite.client.dto.Label;
 import com.cognite.client.dto.SecurityCategory;
 import com.cognite.client.util.DataGenerator;
-import com.google.protobuf.StringValue;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -17,11 +12,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.BooleanSupplier;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SecurityCategoriesTest {
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
@@ -54,7 +46,7 @@ class SecurityCategoriesTest {
             LOG.info(loggingPrefix + "Start reading security categories.");
             List<SecurityCategory> listSecurityCategoriesResults = new ArrayList<>();
             client.securityCategories()
-                    .list(RequestParameters.create())
+                    .list(Request.create())
                     .forEachRemaining(labels -> listSecurityCategoriesResults.addAll(labels));
             LOG.info(loggingPrefix + "Finished reading security categories. Duration: {}",
                     Duration.between(startInstant, Instant.now()));

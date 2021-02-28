@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.util;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -51,7 +51,7 @@ public final class TSIterationUtilities {
      * @return
      * @throws Exception
      */
-    public static Optional<Long> getStartAsMillis(RequestParameters requestParameters) throws Exception {
+    public static Optional<Long> getStartAsMillis(Request requestParameters) throws Exception {
         return getTimestampFromRequest(requestParameters, START_KEY);
     }
 
@@ -62,7 +62,7 @@ public final class TSIterationUtilities {
      * @return
      * @throws Exception
      */
-    public static Optional<Long> getEndAsMillis(RequestParameters requestParameters) throws Exception {
+    public static Optional<Long> getEndAsMillis(Request requestParameters) throws Exception {
         return getTimestampFromRequest(requestParameters, END_KEY);
     }
 
@@ -73,7 +73,7 @@ public final class TSIterationUtilities {
      * @return
      * @throws Exception
      */
-    public static Optional<Duration> getAggregateGranularityDuration(RequestParameters requestParameters) throws Exception {
+    public static Optional<Duration> getAggregateGranularityDuration(Request requestParameters) throws Exception {
         Optional<Duration> returnValue = Optional.empty();
 
         // Check if this is an aggregation
@@ -99,7 +99,8 @@ public final class TSIterationUtilities {
      * @return
      * @throws Exception
      */
-    private static Optional<Long> getTimestampFromRequest(RequestParameters requestParameters, String parameterKey) throws Exception {
+    private static Optional<Long> getTimestampFromRequest(Request requestParameters,
+                                                          String parameterKey) throws Exception {
         Optional<Long> returnValue = Optional.empty();
 
         if (requestParameters.getRequestParameters().containsKey(parameterKey)) {

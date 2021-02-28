@@ -42,7 +42,7 @@ public class ListAssetsFn extends ListItemsBaseFn<Asset> {
     protected Iterator<List<Asset>> listItems(CogniteClient client,
                                               RequestParameters requestParameters,
                                               String... partitions) throws Exception {
-        return client.assets().list(requestParameters, partitions);
+        return client.assets().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

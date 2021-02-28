@@ -42,7 +42,7 @@ public class ListDataSetsFn extends ListItemsBaseFn<DataSet> {
     protected Iterator<List<DataSet>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.datasets().list(requestParameters, partitions);
+        return client.datasets().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

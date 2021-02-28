@@ -1,6 +1,5 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Item;
@@ -53,7 +52,7 @@ class LabelsTest {
             LOG.info(loggingPrefix + "Start reading labels.");
             List<Label> listLabelsResults = new ArrayList<>();
             client.labels()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("externalIdPrefix", DataGenerator.sourceValue))
                     .forEachRemaining(labels -> listLabelsResults.addAll(labels));
             LOG.info(loggingPrefix + "Finished reading labels. Duration: {}",
@@ -128,7 +127,7 @@ class LabelsTest {
             LOG.info(loggingPrefix + "Start reading labels.");
             List<Label> listLabelsResults = new ArrayList<>();
             client.labels()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("externalIdPrefix", DataGenerator.sourceValue))
                     .forEachRemaining(labels -> listLabelsResults.addAll(labels));
             LOG.info(loggingPrefix + "Finished reading labels. Duration: {}",

@@ -16,11 +16,12 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.Aggregate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.StringValue;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing file objects between Cognite api representations
@@ -38,7 +39,7 @@ public class AggregateParser {
      * @throws Exception
      */
     public static Aggregate parseAggregate(String json) throws Exception {
-        String jsonExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String jsonExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
         JsonNode root = objectMapper.readTree(json);
         Aggregate.Builder aggregateBuilder = Aggregate.newBuilder();
 

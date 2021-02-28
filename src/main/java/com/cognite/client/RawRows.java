@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.servicesV1.ConnectorConstants;
@@ -80,7 +79,7 @@ public abstract class RawRows extends ApiBase {
      */
     public Iterator<List<RawRow>> list(String dbName,
                                        String tableName) throws Exception {
-        return list(dbName, tableName, RequestParameters.create());
+        return list(dbName, tableName, Request.create());
     }
 
     /**
@@ -107,7 +106,7 @@ public abstract class RawRows extends ApiBase {
             columnsValue = String.join(",", columns);
         }
 
-        RequestParameters request = RequestParameters.create()
+        Request request = Request.create()
                 .withRootParameter("columns", columnsValue);
 
         return list(dbName, tableName, request);
@@ -128,7 +127,7 @@ public abstract class RawRows extends ApiBase {
     public Iterator<List<RawRow>> list(String dbName,
                                        String tableName,
                                        List<String> columns,
-                                       RequestParameters requestParameters) throws Exception {
+                                       Request requestParameters) throws Exception {
         Preconditions.checkNotNull(columns,
                 "The columns list cannot be null.");
 
@@ -139,7 +138,7 @@ public abstract class RawRows extends ApiBase {
             columnsValue = String.join(",", columns);
         }
 
-        RequestParameters request = requestParameters
+        Request request = requestParameters
                 .withRootParameter("columns", columnsValue);
 
         return list(dbName, tableName, request);
@@ -163,7 +162,7 @@ public abstract class RawRows extends ApiBase {
      */
     public Iterator<List<RawRow>> list(String dbName,
                                        String tableName,
-                                       RequestParameters requestParameters) throws Exception {
+                                       Request requestParameters) throws Exception {
         Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
                 "You must specify a data base name.");
         Preconditions.checkArgument(tableName != null && !tableName.isEmpty(),
@@ -195,7 +194,7 @@ public abstract class RawRows extends ApiBase {
      */
     public Iterator<List<RawRow>> list(String dbName,
                                        String tableName,
-                                       RequestParameters requestParameters,
+                                       Request requestParameters,
                                        String... cursors) throws Exception {
         Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
                 "You must specify a data base name.");
@@ -203,7 +202,7 @@ public abstract class RawRows extends ApiBase {
                 "You must specify a table name.");
 
         // Add db name, table name and default limit
-        RequestParameters request = requestParameters
+        Request request = requestParameters
                 .withRootParameter("dbName", dbName)
                 .withRootParameter("tableName", tableName)
                 .withRootParameter("limit", requestParameters.getRequestParameters()
@@ -244,7 +243,7 @@ public abstract class RawRows extends ApiBase {
         // Submit all batches
         Map<CompletableFuture<ResponseItems<String>>, String> responseMap = new HashMap<>();
         for (String rowKey : rowKeys) {
-            RequestParameters request = RequestParameters.create()
+            Request request = Request.create()
                     .withRootParameter("dbName", dbName)
                     .withRootParameter("tableName", tableName)
                     .withRootParameter("rowKey", rowKey);
@@ -303,7 +302,7 @@ public abstract class RawRows extends ApiBase {
      */
     public List<String> retrieveCursors(String dbName,
                                         String tableName,
-                                        RequestParameters requestParameters) throws Exception {
+                                        Request requestParameters) throws Exception {
         return retrieveCursors(dbName,
                 tableName,
                 getClient().getClientConfig().getNoListPartitions(),
@@ -327,7 +326,7 @@ public abstract class RawRows extends ApiBase {
     public List<String> retrieveCursors(String dbName,
                                         String tableName,
                                         int noCursors,
-                                        RequestParameters requestParameters) throws Exception {
+                                        Request requestParameters) throws Exception {
         String loggingPrefix = "retrieveCursors() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         Instant startInstant = Instant.now();
         Preconditions.checkArgument(dbName != null && !dbName.isEmpty(),
@@ -336,7 +335,7 @@ public abstract class RawRows extends ApiBase {
                 "You must specify a table name.");
 
         // Build request
-        RequestParameters request = requestParameters
+        Request request = requestParameters
                 .withRootParameter("dbName", dbName)
                 .withRootParameter("tableName", tableName)
                 .withRootParameter("numberOfCursors", noCursors);
@@ -395,7 +394,7 @@ public abstract class RawRows extends ApiBase {
                 batch.stream()
                         .forEach(row -> upsertItems.add(toRequestInsertItem(row)));
 
-                RequestParameters request = RequestParameters.create()
+                Request request = Request.create()
                         .withItems(upsertItems)
                         .withRootParameter("ensureParent", ensureParent)
                         .withRootParameter("dbName", batch.get(0).getDbName())
@@ -510,7 +509,7 @@ public abstract class RawRows extends ApiBase {
                 batch.stream()
                         .forEach(row -> deleteItems.add(ImmutableMap.of("key", row.getKey())));
 
-                RequestParameters request = RequestParameters.create()
+                Request request = Request.create()
                         .withItems(deleteItems)
                         .withRootParameter("dbName", batch.get(0).getDbName())
                         .withRootParameter("tableName", batch.get(0).getTableName());

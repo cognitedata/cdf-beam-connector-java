@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.response;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auto.value.AutoValue;
@@ -34,24 +34,24 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Parses a Json payload and generates a {@link RequestParameters} object containing the extracted parameters.
+ * Parses a Json payload and generates a {@link Request} object containing the extracted parameters.
  *
  * The parser will look for Json parameters that match the attribute map. The parameters
  * are added to the {@code RequestParameters} object as root parameters.
  *
  * The attribute map defines {@code json node} -> {@code RequestParameters root node}. The {@code key} specifies which
- * json node to extract, and the corresponding {@code value} specifies the {@link RequestParameters} root parameter name.
+ * json node to extract, and the corresponding {@code value} specifies the {@link Request} root parameter name.
  * Example:
- * {@code {"jobId", "id"}} will extract the json value from {@code root.jobId} and maps it to the {@link RequestParameters}
+ * {@code {"jobId", "id"}} will extract the json value from {@code root.jobId} and maps it to the {@link Request}
  * parameter "id".
  *
  * If you specify '*' as a key in the attribute map, all root attributes that are value nodes (i.e. not container
- * nodes) will be added to the {@link RequestParameters}.
+ * nodes) will be added to the {@link Request}.
  *
  * A cursor is never returned from this parser.
  */
 @AutoValue
-public abstract class RequestParametersResponseParser implements ResponseParser<RequestParameters>, Serializable {
+public abstract class RequestParametersResponseParser implements ResponseParser<Request>, Serializable {
     private static final int MAX_LENGTH_JSON_LOG = 500;
 
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
@@ -77,13 +77,13 @@ public abstract class RequestParametersResponseParser implements ResponseParser<
     /**
      * Enables/disables item mode.
      *
-     * In item mode, the {@link RequestParameters} will be populated with values within an items array. This is a
+     * In item mode, the {@link Request} will be populated with values within an items array. This is a
      * common request pattern for performing per-item requests towards the Cognite API.
      *
      * Example:
      * Given the attribute map {@code {"jobId", "id"}}.
      * In non-item mode this will extract the json value
-     * from {@code root.jobId} and map it to the {@link RequestParameters} parameter {@code root.id}.
+     * from {@code root.jobId} and map it to the {@link Request} parameter {@code root.id}.
      *
      * In item mode, this will extract the json value from {@code root.jobId} and map it to {@code root.items[n].id}
      *
@@ -113,10 +113,10 @@ public abstract class RequestParametersResponseParser implements ResponseParser<
      * @return
      * @throws IOException
      */
-    public ImmutableList<RequestParameters> extractItems(byte[] payload) throws Exception {
+    public ImmutableList<Request> extractItems(byte[] payload) throws Exception {
         String loggingPrefix = "RequestParametersResponseParser.extractItems - " + instanceId + " - ";
         String json = parseToString(payload);
-        RequestParameters requestParameters = RequestParameters.create();
+        Request requestParameters = Request.create();
 
         LOG.debug(loggingPrefix + "Parsing Json payload: \r\n" + json
                 .substring(0, Math.min(MAX_LENGTH_JSON_LOG, json.length())));
@@ -152,9 +152,9 @@ public abstract class RequestParametersResponseParser implements ResponseParser<
     /*
     Extracts all root nodes and puts them on the root of the {@link RequestParameters}.
      */
-    private RequestParameters extractAllRootNodes(String json,
-                                                  RequestParameters requestParameters) throws Exception {
-        RequestParameters returnValue = requestParameters;
+    private Request extractAllRootNodes(String json,
+                                        Request requestParameters) throws Exception {
+        Request returnValue = requestParameters;
 
         for (Iterator<String> it = objectMapper.readTree(json).fieldNames(); it.hasNext(); ) {
             String nodeName = it.next();
@@ -181,10 +181,10 @@ public abstract class RequestParametersResponseParser implements ResponseParser<
     /*
     Extract the value from the specified json node and add it as a parameter to the RequestParameters.
      */
-    private RequestParameters extractNode(String json,
-                                          String path,
-                                          RequestParameters requestParameters,
-                                          String parameterName) throws Exception {
+    private Request extractNode(String json,
+                                String path,
+                                Request requestParameters,
+                                String parameterName) throws Exception {
         JsonNode node = objectMapper.readTree(json).path(path);
 
         if (node.isIntegralNumber()) {

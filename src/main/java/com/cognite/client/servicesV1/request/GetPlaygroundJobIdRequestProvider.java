@@ -17,13 +17,10 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
-import okhttp3.Request;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 
 import java.net.URISyntaxException;
 import java.util.Optional;
@@ -33,15 +30,14 @@ import java.util.Optional;
  *
  * Used by various context api services as most context services are based on an async api pattern.
  *
- * Job id is specified via the {@link RequestParameters}.
+ * Job id is specified via the {@link Request}.
  */
 @AutoValue
-@DefaultCoder(AvroCoder.class)
 public abstract class GetPlaygroundJobIdRequestProvider extends GenericPlaygroundRequestProvider{
 
     static Builder builder() {
         return new AutoValue_GetPlaygroundJobIdRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER);
@@ -60,18 +56,18 @@ public abstract class GetPlaygroundJobIdRequestProvider extends GenericPlaygroun
 
     public abstract Builder toBuilder();
 
-    public GetPlaygroundJobIdRequestProvider withRequestParameters(RequestParameters parameters) {
+    public GetPlaygroundJobIdRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("jobId")
                 && (parameters.getRequestParameters().get("jobId") instanceof Integer
                         || parameters.getRequestParameters().get("jobId") instanceof Long),
                 "Request parameters must include jobId with an int/long value");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws URISyntaxException {
-        RequestParameters requestParameters = getRequestParameters();
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws URISyntaxException {
+        Request requestParameters = getRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
 
         // Build path

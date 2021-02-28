@@ -17,22 +17,18 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
-import okhttp3.Request;
 import okhttp3.RequestBody;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Optional;
 
 @AutoValue
-@DefaultCoder(AvroCoder.class)
 /**
  * Writes rows to a CFD.Raw table.
  */
@@ -40,7 +36,7 @@ public abstract class RawWriteRowsRequestProvider extends GenericRequestProvider
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_RawWriteRowsRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -49,7 +45,7 @@ public abstract class RawWriteRowsRequestProvider extends GenericRequestProvider
 
     public abstract Builder toBuilder();
 
-    public RawWriteRowsRequestProvider withRequestParameters(RequestParameters parameters) {
+    public RawWriteRowsRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("dbName")
                 && parameters.getRequestParameters().get("dbName") instanceof String,
@@ -57,29 +53,29 @@ public abstract class RawWriteRowsRequestProvider extends GenericRequestProvider
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("tableName")
                         && parameters.getRequestParameters().get("tableName") instanceof String,
                 "Request parameters must include tableName");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
 
         // Build path
-        urlBuilder.addPathSegment((String) getRequestParameters().getRequestParameters().get("dbName"));
+        urlBuilder.addPathSegment((String) getRequest().getRequestParameters().get("dbName"));
         urlBuilder.addPathSegment("tables");
-        urlBuilder.addPathSegment((String) getRequestParameters().getRequestParameters().get("tableName"));
+        urlBuilder.addPathSegment((String) getRequest().getRequestParameters().get("tableName"));
         urlBuilder.addPathSegment("rows");
 
-        if (getRequestParameters().getRequestParameters().containsKey("ensureParent")
-                && getRequestParameters().getRequestParameters().get("ensureParent") instanceof Boolean) {
+        if (getRequest().getRequestParameters().containsKey("ensureParent")
+                && getRequest().getRequestParameters().get("ensureParent") instanceof Boolean) {
             urlBuilder.addQueryParameter("ensureParent",
-                    String.valueOf(getRequestParameters().getRequestParameters().get("ensureParent")));
+                    String.valueOf(getRequest().getRequestParameters().get("ensureParent")));
         }
         requestBuilder.url(urlBuilder.build());
 
         // Build a "clean" request parameter object containing only the items from the input.
-        RequestParameters requestParameters = RequestParameters.create()
-                .withItems(getRequestParameters().getItems());
+        Request requestParameters = Request.create()
+                .withItems(getRequest().getItems());
 
         String outputJson = requestParameters.getRequestParametersAsJson();
         return requestBuilder.post(RequestBody.Companion.create(outputJson, MediaType.get("application/json"))).build();

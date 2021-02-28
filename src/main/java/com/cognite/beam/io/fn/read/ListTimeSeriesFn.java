@@ -42,7 +42,7 @@ public class ListTimeSeriesFn extends ListItemsBaseFn<TimeseriesMetadata> {
     protected Iterator<List<TimeseriesMetadata>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.timeseries().list(requestParameters, partitions);
+        return client.timeseries().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

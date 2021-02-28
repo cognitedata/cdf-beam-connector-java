@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.Relationship;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing file objects between Cognite api representations
@@ -56,7 +57,7 @@ public class RelationshipParser {
      * @throws Exception
      */
     public static Relationship parseRelationship(String json) throws Exception {
-        String jsonExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String jsonExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
         JsonNode root = objectMapper.readTree(json);
         Relationship.Builder relationshipBuilder = Relationship.newBuilder();
 

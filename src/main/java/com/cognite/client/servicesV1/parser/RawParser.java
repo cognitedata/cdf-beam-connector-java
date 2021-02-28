@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.RawRow;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +28,8 @@ import com.google.protobuf.Value;
 import com.google.protobuf.util.JsonFormat;
 
 import java.util.Map;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing file objects between Cognite api representations
@@ -48,7 +49,7 @@ public class RawParser {
         Preconditions.checkNotNull(dbName, "dbName cannot be null");
         Preconditions.checkNotNull(dbTable, "dbTable cannot be null");
         Preconditions.checkNotNull(rowJson, "rowJson cannot be null");
-        String logItemExerpt = rowJson.substring(0, Math.min(rowJson.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String logItemExerpt = rowJson.substring(0, Math.min(rowJson.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         JsonNode root = objectMapper.readTree(rowJson);
         RawRow.Builder rowBuilder = RawRow.newBuilder()

@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.util.Partition;
@@ -68,7 +67,7 @@ public abstract class RawDatabases extends ApiBase {
     public Iterator<List<String>> list() throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ResultFutureIterator<String> futureIterator =
-                connector.readRawDbNames(getClient().buildProjectConfig())
+                connector.readRawDbNames(getClient().buildAuthConfig())
                         .withExecutorService(getClient().getExecutorService())
                         .withHttpClient(getClient().getHttpClient());
 
@@ -101,7 +100,7 @@ public abstract class RawDatabases extends ApiBase {
             for (String table : batch) {
                 items.add(ImmutableMap.of("name", table));
             }
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                     .withItems(items));
             ResponseItems<String> response = createItemWriter.writeItems(request);
             if (!response.isSuccessful()) {
@@ -143,7 +142,7 @@ public abstract class RawDatabases extends ApiBase {
             for (String table : batch) {
                 items.add(ImmutableMap.of("name", table));
             }
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                     .withItems(items));
             ResponseItems<String> response = deleteItemWriter.writeItems(request);
             if (!response.isSuccessful()) {

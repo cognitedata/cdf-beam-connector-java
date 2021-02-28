@@ -94,7 +94,7 @@ public class ReadItemsFn extends DoFn<RequestParameters, String> {
                     LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
                     throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
             }
-            ResponseItems<String> responseItems = itemReader.getItems(query);
+            ResponseItems<String> responseItems = itemReader.getItems(query.getRequest());
 
             if (!responseItems.isSuccessful()) {
                 // something went wrong with the request

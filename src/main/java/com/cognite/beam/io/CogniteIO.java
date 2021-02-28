@@ -25,8 +25,6 @@ import org.slf4j.LoggerFactory;
  *
  */
 public class CogniteIO {
-    public static final int MAX_LOG_ELEMENT_LENGTH = 1000;
-
     static final Hints defaultHints = Hints.create();
     static final RequestParameters emptyRequestParameters = RequestParameters.create();
     static final ValueProvider.StaticValueProvider<String> invalidProjectConfigFile =

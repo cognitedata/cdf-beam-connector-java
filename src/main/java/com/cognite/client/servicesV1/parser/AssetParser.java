@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.Asset;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing file objects between Cognite api representations
@@ -56,7 +57,7 @@ public class AssetParser {
         } else {
             throw new Exception(logPrefix + "Unable to parse attribute: id. Item exerpt: "
                     + json
-                    .substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH)));
+                    .substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH)));
         }
 
         if (root.path("name").isTextual()) {

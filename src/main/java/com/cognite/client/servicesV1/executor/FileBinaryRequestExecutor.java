@@ -24,7 +24,6 @@ import com.google.cloud.storage.*;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.Int64Value;
 import okhttp3.*;
 import okio.BufferedSink;
 import org.apache.commons.lang3.RandomStringUtils;

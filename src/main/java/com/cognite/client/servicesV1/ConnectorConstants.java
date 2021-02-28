@@ -64,4 +64,9 @@ public final class ConnectorConstants {
     Controls the recording of metrics
      */
     public static final boolean DEFAULT_METRICS_ENABLED = false;
+
+    /*
+    Various
+     */
+    public static final int MAX_LOG_ELEMENT_LENGTH = 1000;
 }

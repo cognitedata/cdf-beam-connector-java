@@ -1,6 +1,5 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
@@ -55,7 +54,7 @@ class SequencesTest {
             LOG.info(loggingPrefix + "Start reading sequences.");
             List<SequenceMetadata> listSequencesResults = new ArrayList<>();
             client.sequences()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(sequences -> listSequencesResults.addAll(sequences));
             LOG.info(loggingPrefix + "Finished reading sequences. Duration: {}",
@@ -123,7 +122,7 @@ class SequencesTest {
             LOG.info(loggingPrefix + "Start reading sequences headers.");
             List<SequenceMetadata> listSequencesResults = new ArrayList<>();
             client.sequences()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(sequences -> listSequencesResults.addAll(sequences));
             LOG.info(loggingPrefix + "Finished reading sequences headers. Duration: {}",
@@ -225,7 +224,7 @@ class SequencesTest {
             LOG.info(loggingPrefix + "Start reading sequences.");
             List<SequenceMetadata> listSequencesResults = new ArrayList<>();
             client.sequences()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("new-key", "new-value"))
                     .forEachRemaining(sequences -> listSequencesResults.addAll(sequences));
             LOG.info(loggingPrefix + "Finished reading sequences. Duration: {}",
@@ -305,7 +304,7 @@ class SequencesTest {
             LOG.info(loggingPrefix + "Start listing sequences.");
             List<SequenceMetadata> listSequencesResults = new ArrayList<>();
             client.sequences()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(sequences -> listSequencesResults.addAll(sequences));
             LOG.info(loggingPrefix + "Finished listing sequences. Duration: {}",
@@ -369,7 +368,7 @@ class SequencesTest {
 
             LOG.info(loggingPrefix + "Start aggregating sequences.");
             Aggregate aggregateResult = client.sequences()
-                    .aggregate(RequestParameters.create()
+                    .aggregate(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue));
             LOG.info(loggingPrefix + "Aggregate results: {}", aggregateResult);
             LOG.info(loggingPrefix + "Finished aggregating sequences. Duration: {}",
@@ -378,7 +377,7 @@ class SequencesTest {
             LOG.info(loggingPrefix + "Start reading sequences.");
             List<SequenceMetadata> listSequencesResults = new ArrayList<>();
             client.sequences()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterMetadataParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(sequences -> listSequencesResults.addAll(sequences));
             LOG.info(loggingPrefix + "Finished reading sequences. Duration: {}",

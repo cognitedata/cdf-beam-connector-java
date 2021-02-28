@@ -16,36 +16,35 @@
 
 package com.cognite.client.servicesV1.request;
 
-import com.cognite.beam.io.RequestParameters;
-import okhttp3.Request;
+import com.cognite.client.Request;
 
 import java.util.Optional;
 
 public interface RequestProvider {
 
   /**
-   * Set the baseline <code>RequestParameters</code> to build requests from. This is typically the application-provided
-   * <code>RequestParameters</code> that kicks off a potential series of requests (in the case of iterating
+   * Set the baseline <code>Request</code> to build requests from. This is typically the application-provided
+   * <code>Request</code> that kicks off a potential series of requests (in the case of iterating
    * over a results set).
    *
-   * This baseline <code>RequestParameters</code> do not change over the life-cycle of a request-response series.
+   * This baseline <code>Request</code> do not change over the life-cycle of a request-response series.
    *
    * @param requestParameters
    * @return
    */
-  RequestProvider withRequestParameters(RequestParameters requestParameters);
+  RequestProvider withRequest(Request requestParameters);
 
   /**
    * Builds a request based on the basline <code>RequestParameters</code> provided via the <code>withRequestParameters</code>
    * method.
    *
    * If a cursor is provided, this will typically lead the <code>RequestProvider</code> to modify the underlying
-   * <code>RequestParameters</code>. In order to get the exact <code>RequestParameters</code> used to build the latest
+   * <code>Request</code>. In order to get the exact <code>Request</code> used to build the latest
    * request, call the <code>getEffectiveRequestParameters</code> method.
    *
    * @param cursor
    * @return
    * @throws Exception
    */
-  Request buildRequest(Optional<String> cursor) throws Exception;
+  okhttp3.Request buildRequest(Optional<String> cursor) throws Exception;
 }

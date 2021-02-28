@@ -17,26 +17,22 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import okhttp3.HttpUrl;
-import okhttp3.Request;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Optional;
 
 @AutoValue
-@DefaultCoder(AvroCoder.class)
 public abstract class RawReadRowsRequestProvider extends GenericRequestProvider{
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_RawReadRowsRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -45,7 +41,7 @@ public abstract class RawReadRowsRequestProvider extends GenericRequestProvider{
 
     public abstract Builder toBuilder();
 
-    public RawReadRowsRequestProvider withRequestParameters(RequestParameters parameters) {
+    public RawReadRowsRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("dbName")
                 && parameters.getRequestParameters().get("dbName") instanceof String,
@@ -53,12 +49,12 @@ public abstract class RawReadRowsRequestProvider extends GenericRequestProvider{
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("tableName")
                         && parameters.getRequestParameters().get("tableName") instanceof String,
                 "Request parameters must include tableName");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        RequestParameters requestParameters = getRequestParameters();
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        Request requestParameters = getRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
         ImmutableList<String> rootParameters = ImmutableList.of("limit", "cursor", "columns", "minLastUpdatedTime",
                 "maxLastUpdatedTime");

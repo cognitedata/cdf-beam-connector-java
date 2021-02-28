@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.SecurityCategory;
 import com.cognite.client.dto.Item;
@@ -71,14 +70,14 @@ public abstract class SecurityCategories extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SecurityCategory>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<SecurityCategory>> list(Request requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
     /**
-     * Returns all {@link SecurityCategory} objects that matches the filters set in the {@link RequestParameters} for
+     * Returns all {@link SecurityCategory} objects that matches the filters set in the {@link Request} for
      * the specified partitions. This method is intended for advanced use cases you need direct control over the
      * individual partitions. For example, when using the SDK in a distributed environment.
      *
@@ -91,7 +90,7 @@ public abstract class SecurityCategories extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SecurityCategory>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+    public Iterator<List<SecurityCategory>> list(Request requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.SECURITY_CATEGORY, requestParameters, partitions), this::parseSecurityCategories);
     }
 
@@ -108,7 +107,7 @@ public abstract class SecurityCategories extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<SecurityCategory> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+        UpsertItems<SecurityCategory> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withIdFunction(this::getSecurityCategoryName);
 
         return upsertItems.create(securityCategories).stream()
@@ -148,7 +147,7 @@ public abstract class SecurityCategories extends ApiBase {
                 }
                 items.add(item.getId().getValue());
             }
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                     .withRootParameter("items", items));
             ResponseItems<String> response = deleteItemWriter.writeItems(request);
             if (!response.isSuccessful()) {

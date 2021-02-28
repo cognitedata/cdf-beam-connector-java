@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.TimeseriesMetadata;
 import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.v1.timeseries.proto.AggregateDatapoint;
@@ -38,7 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.cognite.beam.io.CogniteIO.MAX_LOG_ELEMENT_LENGTH;
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing timeseries object between Cognite api representations
@@ -243,7 +242,7 @@ public class TimeseriesParser {
     public static TimeseriesMetadata parseTimeseriesMetadata(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         TimeseriesMetadata.Builder builder = TimeseriesMetadata.newBuilder();
-        String itemExerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String itemExerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         // A TS metadata object must contain an id, isStep and isString.
         if (root.path("id").isIntegralNumber()) {
