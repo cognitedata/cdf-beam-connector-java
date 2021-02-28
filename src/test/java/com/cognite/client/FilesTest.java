@@ -1,12 +1,9 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
-import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
 import com.cognite.client.util.DataGenerator;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.StringValue;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -18,7 +15,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,7 +72,7 @@ class FilesTest {
             LOG.info(loggingPrefix + "Start reading file metadata.");
             List<FileMetadata> listFilesResults = new ArrayList<>();
             client.files()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(files -> listFilesResults.addAll(files));
             LOG.info(loggingPrefix + "Finished reading files. Duration: {}",
@@ -84,7 +80,7 @@ class FilesTest {
             LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
             LOG.info(loggingPrefix + "Start reading file aggregates.");
-            Aggregate fileAggregate = client.files().aggregate(RequestParameters.create()
+            Aggregate fileAggregate = client.files().aggregate(Request.create()
                     .withFilterParameter("source", DataGenerator.sourceValue));
             LOG.info(loggingPrefix + "Aggregate : {}",
                     fileAggregate.toString());

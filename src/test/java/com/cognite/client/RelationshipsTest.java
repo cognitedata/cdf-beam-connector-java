@@ -1,6 +1,5 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
@@ -51,7 +50,7 @@ class RelationshipsTest {
             LOG.info(loggingPrefix + "Start listing relationships.");
             List<Relationship> listRelationshipsResults = new ArrayList<>();
             client.relationships()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             )
                     .forEachRemaining(relationships -> listRelationshipsResults.addAll(relationships));
             LOG.info(loggingPrefix + "Finished listing relationships. Duration: {}",
@@ -115,7 +114,7 @@ class RelationshipsTest {
             LOG.info(loggingPrefix + "Start deleting relationships.");
             List<Relationship> listRelationshipsResults = new ArrayList<>();
             client.relationships()
-                    .list(RequestParameters.create())
+                    .list(Request.create())
                     .forEachRemaining(relationships -> listRelationshipsResults.addAll(relationships));
 
             List<Item> deleteItemsInput = new ArrayList<>();
@@ -173,7 +172,7 @@ class RelationshipsTest {
             LOG.info(loggingPrefix + "Start listing relationships.");
             List<Relationship> listRelationshipsResults = new ArrayList<>();
             client.relationships()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                     )
                     .forEachRemaining(relationships -> listRelationshipsResults.addAll(relationships));
             LOG.info(loggingPrefix + "Finished listing relationships. Duration: {}",

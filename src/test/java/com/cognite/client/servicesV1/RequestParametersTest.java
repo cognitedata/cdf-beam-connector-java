@@ -1,6 +1,6 @@
 package com.cognite.client.servicesV1;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -22,7 +22,7 @@ class RequestParametersTest {
 
     @Test
     void testJsonInput() throws Exception {
-        RequestParameters parameters3 = RequestParameters.create()
+        Request parameters3 = Request.create()
                 .withRequestJson(generateJsonString());
 
         System.out.println("From Json input");
@@ -33,10 +33,10 @@ class RequestParametersTest {
 
     @Test
     void getRequestParametersAsJson() throws Exception {
-        RequestParameters parameters = RequestParameters.create()
+        Request parameters = Request.create()
                 .withRequestParameters(generateRequestParameters());
 
-        RequestParameters parameters1 = RequestParameters.create()
+        Request parameters1 = Request.create()
                 .withRootParameter("filter", ImmutableMap.<String, Object>of("startTime", 123454321,
                         "description", "descriptionValue",
                         "metadata", ImmutableMap.<String, Object>of("metaA", "valueMetaA",
@@ -44,7 +44,7 @@ class RequestParametersTest {
                         "assetIds", ImmutableList.<Long>of(1L, 2L, 3L)))
                 .withRootParameter("limit", 1000);
 
-        RequestParameters parameters2 = RequestParameters.create()
+        Request parameters2 = Request.create()
                 .withFilterParameter("startTime", 12345432)
                 .withFilterParameter("description", "descriptionValue")
                 .withFilterParameter("assetIds", ImmutableList.<Long>of(1L, 2L, 3L))
@@ -65,17 +65,17 @@ class RequestParametersTest {
 
     @Test
     void getRequestParameters() {
-        RequestParameters parameters = RequestParameters.create()
+        Request parameters = Request.create()
                 .withRequestParameters(generateRequestParameters());
 
-        RequestParameters parameters1 = RequestParameters.create()
+        Request parameters1 = Request.create()
                 .withRootParameter("filter", ImmutableMap.<String, Object>of("startTime", 123454321,
                         "metadata", ImmutableMap.<String, Object>of("metaA", "valueMetaA",
                                 "metaB", "valueMetaB"),
                         "assetIds", ImmutableList.<Long>of(1L, 2L, 3L)))
                 .withRootParameter("limit", 1000);
 
-        RequestParameters parameters2 = RequestParameters.create()
+        Request parameters2 = Request.create()
                 .withFilterParameter("startTime", 123454321)
                 .withFilterParameter("assetIds", ImmutableList.<Long>of(1L, 2L, 3L))
                 .withFilterMetadataParameter("metaA", "ValueMetaA")
@@ -109,7 +109,7 @@ class RequestParametersTest {
                 .build();
         ImmutableList<Struct> items = ImmutableList.of(entityA, entityB, entityC);
 
-        RequestParameters requestParameters = RequestParameters.create()
+        Request requestParameters = Request.create()
                 .withRootParameter("modelId", 1111L)
                 .withRootParameter("matchFrom", items)
                 .withRootParameter("numMatches", 4);

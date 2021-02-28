@@ -1,14 +1,11 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Asset;
 import com.cognite.client.dto.Item;
 import com.cognite.client.util.DataGenerator;
-import com.google.protobuf.StringValue;
-import org.checkerframework.checker.units.qual.A;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -51,7 +48,7 @@ class AssetsTest {
             LOG.info(loggingPrefix + "Start reading assets.");
             List<Asset> listAssetsResults = new ArrayList<>();
             client.assets()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listAssetsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished reading assets. Duration: {}",
@@ -125,7 +122,7 @@ class AssetsTest {
             LOG.info(loggingPrefix + "Start deleting events.");
             List<Asset> listAssetsResults = new ArrayList<>();
             client.assets()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listAssetsResults.addAll(events));
             List<Item> deleteItemsInput = new ArrayList<>();
@@ -199,7 +196,7 @@ class AssetsTest {
             LOG.info(loggingPrefix + "Start listing assets.");
             List<Asset> listAssetsResults = new ArrayList<>();
             client.assets()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listAssetsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished listing assets. Duration: {}",
@@ -261,7 +258,7 @@ class AssetsTest {
 
             LOG.info(loggingPrefix + "Start aggregating assets.");
             Aggregate aggregateResult = client.assets()
-                    .aggregate(RequestParameters.create()
+                    .aggregate(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue));
             LOG.info(loggingPrefix + "Aggregate results: {}", aggregateResult);
             LOG.info(loggingPrefix + "Finished aggregating assets. Duration: {}",
@@ -270,7 +267,7 @@ class AssetsTest {
             LOG.info(loggingPrefix + "Start listing assets.");
             List<Asset> listAssetsResults = new ArrayList<>();
             client.assets()
-                    .list(RequestParameters.create()
+                    .list(Request.create()
                             .withFilterParameter("source", DataGenerator.sourceValue))
                     .forEachRemaining(events -> listAssetsResults.addAll(events));
             LOG.info(loggingPrefix + "Finished listing assets. Duration: {}",

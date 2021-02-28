@@ -1,0 +1,191 @@
+260  [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Start test. Creating Cognite client.
+807  [main] INFO  com.cognite.client.CogniteClient - CogniteClient - setting up default worker pool with 8 workers.
+807  [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Finished creating the Cognite client. Duration : PT0.5544809S
+807  [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -----------------------------------------------------------------------
+807  [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Start upserting events.
+5542 [main] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch 6OQfM - Successfully upserted 11800 items within a duration of PT3.9272529S.
+5711 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Finished upserting events. Duration: PT5.4585383S
+5711 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -----------------------------------------------------------------------
+20714 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Start reading events.
+22235 [main] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch heRg9 - Retrieved 8000 results items across 8 requests in PT1.480684S.
+22630 [main] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch pQLDq - Retrieved 3800 results items across 8 requests in PT0.2926925S.
+22694 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Finished reading events. Duration: PT22.4418779S
+22694 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -----------------------------------------------------------------------
+22694 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Start deleting events.
+23576 [main] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch r4sLv - Successfully deleted 11800 items within a duration of PT0.8422032S.
+23576 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -Finished deleting events. Duration: PT23.3240429S
+23576 [main] INFO  com.cognite.client.EventsTest - UnitTest - writeReadAndDeleteEvents() -----------------------------------------------------------------------
+1106 [main] INFO  c.c.beam.io.AutoValue_Events_Write - Starting Cognite writer.
+1116 [main] INFO  c.c.b.i.t.i.AutoValue_ReadProjectConfigFile - Starting read project config file transform.
+1116 [main] INFO  c.c.b.i.t.t.AutoValue_ReadTomlFile - Starting read TOML config file transform.
+1659 [main] INFO  c.c.b.i.t.AutoValue_GroupIntoBatches - Setting up the batching component.
+1659 [main] INFO  c.c.b.i.t.AutoValue_GroupIntoBatches - Max batch size: 4000
+Max latency: PT5S
+3347 [direct-runner-worker] INFO  org.apache.beam.sdk.io.FileIO - Matched 1 files for pattern .
+3724 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [GQeg41] - Project config found via parameters.
+3724 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [GQeg41] - Api key specified via parameters
+4679 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [GQeg41] - Project identified for the api key. Project: kjetilh-greenfield
+4679 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [GQeg41] - Project config after processing: ProjectConfig{project=kjetilh-greenfield, apiKey=*********, host=https://greenfield.cognitedata.com, GcpSecretConfig=null, configured=true}
+5485 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 915 items for key [3]
+5485 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 925 items for key [0]
+5485 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 923 items for key [1]
+5485 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 983 items for key [4]
+5485 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 977 items for key [6]
+5493 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 969 items for key [2]
+5501 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 967 items for key [7]
+5509 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 985 items for key [9]
+5509 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 962 items for key [5]
+5525 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 962 items for key [8]
+5669 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - CogniteClient - setting up default worker pool with 8 workers.
+5677 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5677 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5701 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5701 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5709 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5709 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5733 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5733 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5749 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5749 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5781 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5781 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5797 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5797 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5797 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5797 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5833 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5833 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5907 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5907 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+10888 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch pTaII - Successfully upserted 967 items within a duration of PT5.1625487S.
+10891 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch L36dU - Successfully upserted 985 items within a duration of PT5.093588S.
+10919 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: caHteS - Upserted 985 items in PT5.1206736S}.
+10919 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: a6KoIe - Upserted 967 items in PT5.2166781S}.
+11398 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch 7Aljd - Successfully upserted 977 items within a duration of PT5.6731423S.
+11398 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: XQyDuI - Upserted 977 items in PT5.6891465S}.
+11589 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch SJkb8 - Successfully upserted 923 items within a duration of PT5.8714743S.
+11593 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: FWHH5g - Upserted 923 items in PT5.9315518S}.
+11779 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch GYlIO - Successfully upserted 925 items within a duration of PT5.9819012S.
+11781 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: zklMXl - Upserted 925 items in PT5.9839721S}.
+11884 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch hwW5n - Successfully upserted 915 items within a duration of PT6.1423988S.
+11884 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: ENeZp0 - Upserted 915 items in PT6.1503983S}.
+12279 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch 36wo2 - Successfully upserted 983 items within a duration of PT6.5301366S.
+12279 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: FJNJhn - Upserted 983 items in PT6.5301696S}.
+13005 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch Z35aS - Successfully upserted 962 items within a duration of PT7.0976768S.
+13008 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: PWw04W - Upserted 962 items in PT7.1006492S}.
+13059 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch HtF2n - Successfully upserted 969 items within a duration of PT7.2258297S.
+13059 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: pw3Nmd - Upserted 969 items in PT7.2258297S}.
+13523 [direct-runner-worker] INFO  c.c.client.ApiBase$UpsertItems - upsertViaCreateAndUpdate() - batch C0O4Y - Successfully upserted 962 items within a duration of PT7.7416895S.
+13523 [direct-runner-worker] INFO  c.c.beam.io.fn.write.UpsertEventFn - Batch: BHvpwm - Upserted 962 items in PT7.7416895S}.
+817  [main] INFO  c.c.beam.io.AutoValue_Events_Read - Starting Cognite reader.
+1522 [main] INFO  c.c.b.io.AutoValue_Events_ReadAll - Starting Cognite reader.
+1522 [main] INFO  c.c.b.i.t.i.AutoValue_ReadProjectConfigFile - Starting read project config file transform.
+1530 [main] INFO  c.c.b.i.t.t.AutoValue_ReadTomlFile - Starting read TOML config file transform.
+1648 [main] INFO  c.c.b.io.AutoValue_Events_ReadAll - Setting up batch mode
+1656 [main] INFO  c.c.b.i.t.i.AutoValue_ApplyProjectConfig - Starting apply project config transform.
+1656 [main] INFO  c.c.b.i.t.i.AutoValue_ReadProjectConfigFile - Starting read project config file transform.
+1656 [main] INFO  c.c.b.i.t.t.AutoValue_ReadTomlFile - Starting read TOML config file transform.
+1686 [main] INFO  c.c.b.i.t.i.AutoValue_ApplyDeltaTimestamp - Starting AddDeltaTimestamp transform.
+1686 [main] INFO  c.c.b.i.t.i.AutoValue_ApplyDeltaTimestamp - Delta read disabled. Delta timestamp will not be added to the request.
+1723 [main] INFO  c.c.b.i.t.i.AutoValue_RecordDeltaTimestamp - Starting RecordDeltaTimestamp transform.
+1723 [main] INFO  c.c.b.i.t.i.AutoValue_RecordDeltaTimestamp - Delta read disabled. Delta timestamp will not be recorded.
+1734 [main] INFO  c.c.beam.io.AutoValue_Events_Delete - Starting Cognite writer.
+1734 [main] INFO  c.c.b.i.t.i.AutoValue_ReadProjectConfigFile - Starting read project config file transform.
+1734 [main] INFO  c.c.b.i.t.t.AutoValue_ReadTomlFile - Starting read TOML config file transform.
+1763 [main] INFO  c.c.b.i.t.i.AutoValue_ItemsShardAndBatch - Starting Item shard and batch transform.
+1768 [main] INFO  c.c.b.i.t.AutoValue_GroupIntoBatches - Setting up the batching component.
+1768 [main] INFO  c.c.b.i.t.AutoValue_GroupIntoBatches - Max batch size: 1000
+Max latency: PT5S
+3609 [direct-runner-worker] INFO  org.apache.beam.sdk.io.FileIO - Matched 1 files for pattern .
+3609 [direct-runner-worker] INFO  org.apache.beam.sdk.io.FileIO - Matched 1 files for pattern .
+3609 [direct-runner-worker] INFO  org.apache.beam.sdk.io.FileIO - Matched 1 files for pattern .
+3823 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [pKtUqA] - Project config found via parameters.
+3823 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [dmQIdc] - Project config found via parameters.
+3823 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [yTJe5Q] - Project config found via parameters.
+3823 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [pKtUqA] - Api key specified via parameters
+3823 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [dmQIdc] - Api key specified via parameters
+3823 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [yTJe5Q] - Api key specified via parameters
+4634 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [dmQIdc] - Project identified for the api key. Project: kjetilh-greenfield
+4634 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [dmQIdc] - Project config after processing: ProjectConfig{project=kjetilh-greenfield, apiKey=*********, host=https://greenfield.cognitedata.com, GcpSecretConfig=null, configured=true}
+4655 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [pKtUqA] - Project identified for the api key. Project: kjetilh-greenfield
+4655 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [pKtUqA] - Project config after processing: ProjectConfig{project=kjetilh-greenfield, apiKey=*********, host=https://greenfield.cognitedata.com, GcpSecretConfig=null, configured=true}
+4655 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [yTJe5Q] - Project identified for the api key. Project: kjetilh-greenfield
+4655 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_BuildProjectConfig - BuildProjectConfig [yTJe5Q] - Project config after processing: ProjectConfig{project=kjetilh-greenfield, apiKey=*********, host=https://greenfield.cognitedata.com, GcpSecretConfig=null, configured=true}
+4690 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_ApplyProjectConfig - Request id: 7Nueq0 - Received request to process ProjectConfig{project=null, apiKey=*********, host=https://api.cognitedata.com, GcpSecretConfig=null, configured=false}
+4690 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_ApplyProjectConfig - Request id: 7Nueq0 - Project config is not set in the request parameters. Sourcing from the config builder.
+4690 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_ApplyProjectConfig - Request id: 7Nueq0 - Project config identified.
+4690 [direct-runner-worker] INFO  c.c.b.i.t.i.AutoValue_ApplyProjectConfig - Request id: 7Nueq0 - Request after processing ProjectConfig{project=kjetilh-greenfield, apiKey=*********, host=https://greenfield.cognitedata.com, GcpSecretConfig=null, configured=true}
+4723 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - CogniteClient - setting up default worker pool with 8 workers.
+4731 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+5770 [direct-runner-worker] INFO  com.cognite.client.ApiBase - aggregate() - batch bfI1N - Successfully retrieved aggregate within a duration of PT1.038905S.
+5780 [direct-runner-worker] INFO  c.c.beam.io.fn.read.AddPartitionsFn - Batch: NOytgn - Counted 9567 items in total. Will split into 1 total partitions with 4 (parallel) partitions per worker. Duration: PT1.0653804S
+5859 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+7131 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch tB5NH - Retrieved 1000 results items across 1 requests in PT1.2560203S.
+8335 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch T3Bif - Retrieved 1000 results items across 1 requests in PT1.0852903S.
+8732 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch qaWMf - Retrieved 1000 results items across 1 requests in PT0.3667566S.
+9065 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch uVTQl - Retrieved 1000 results items across 1 requests in PT0.3023335S.
+9290 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch l51yI - Retrieved 1000 results items across 1 requests in PT0.2022049S.
+9574 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch OYJWo - Retrieved 1000 results items across 1 requests in PT0.2620296S.
+9982 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch AUNic - Retrieved 1000 results items across 1 requests in PT0.3875861S.
+10230 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch gXdlb - Retrieved 1000 results items across 1 requests in PT0.22787S.
+10492 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch NlhFS - Retrieved 1000 results items across 1 requests in PT0.2455546S.
+10689 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_FanOutIterator - next() - batch mLqvT - Retrieved 567 results items across 1 requests in PT0.1605255S.
+10697 [direct-runner-worker] INFO  c.c.beam.io.fn.read.ListEventsFn - Batch: tLqnz4 - Retrieved 9567 items in PT4.8374122S}.
+11897 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Buffer full. Writing batch of 1000 items for key [3]
+11924 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 2 items for key [3]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 919 items for key [1]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 909 items for key [4]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 923 items for key [0]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 991 items for key [7]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 966 items for key [8]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 959 items for key [9]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 963 items for key [6]
+11932 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 962 items for key [2]
+11948 [direct-runner-worker] INFO  c.c.beam.io.fn.GroupIntoBatchesFn - Window expiring. Writing batch of 973 items for key [5]
+11972 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12020 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12020 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12020 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12020 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12020 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12020 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12028 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12028 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12036 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12044 [direct-runner-worker] INFO  com.cognite.client.CogniteClient - Setting up client with 8 worker threads and 8 list partitions
+12052 [direct-runner-worker] INFO  org.apache.beam.sdk.io.WriteFiles - Opening writer af0d5510-4665-4788-afc4-f71008526d70 for window org.apache.beam.sdk.transforms.windowing.GlobalWindow@109d724c pane PaneInfo{isFirst=true, isLast=true, timing=ON_TIME, index=0, onTimeIndex=0} destination null
+12114 [direct-runner-worker] INFO  o.a.b.sdk.io.FileBasedSink$Writer - Successfully wrote temporary file C:\dev\cognite\cdf-beam-connector-java\.temp-beam-fb1f3ed7-152c-4754-9ef5-9aa547f232e2\af0d5510-4665-4788-afc4-f71008526d70
+12122 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch n9sG1 - Successfully deleted 2 items within a duration of PT0.1345646S.
+12122 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: d7GSzJ - Deleted 2 items in PT0.1505607S}.
+12163 [direct-runner-worker] INFO  org.apache.beam.sdk.io.WriteFiles - Finalizing 1 file results
+12163 [direct-runner-worker] INFO  o.apache.beam.sdk.io.FileBasedSink - Finalizing for destination null num shards 1.
+12163 [direct-runner-worker] INFO  o.apache.beam.sdk.io.FileBasedSink - Will copy temporary file FileResult{tempFilename=C:\dev\cognite\cdf-beam-connector-java\.temp-beam-fb1f3ed7-152c-4754-9ef5-9aa547f232e2\af0d5510-4665-4788-afc4-f71008526d70, shard=0, window=org.apache.beam.sdk.transforms.windowing.GlobalWindow@109d724c, paneInfo=PaneInfo{isFirst=true, isLast=true, timing=ON_TIME, index=0, onTimeIndex=0}} to final location C:\dev\cognite\cdf-beam-connector-java\UnitTest_event_deleteItems_event_output.txt
+12163 [direct-runner-worker] INFO  o.apache.beam.sdk.io.FileBasedSink - Will remove known temporary file C:\dev\cognite\cdf-beam-connector-java\.temp-beam-fb1f3ed7-152c-4754-9ef5-9aa547f232e2\af0d5510-4665-4788-afc4-f71008526d70
+12179 [direct-runner-worker] WARN  o.apache.beam.sdk.io.FileBasedSink - Failed to match temporary files under: [C:\dev\cognite\cdf-beam-connector-java\.temp-beam-fb1f3ed7-152c-4754-9ef5-9aa547f232e2\].
+12392 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch YJvVs - Successfully deleted 919 items within a duration of PT0.37184S.
+12392 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: Oqw1ew - Deleted 919 items in PT0.37184S}.
+12496 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch lR9YV - Successfully deleted 973 items within a duration of PT0.4601275S.
+12496 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: 6Tel76 - Deleted 973 items in PT0.4681294S}.
+12505 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch vIjMm - Successfully deleted 1000 items within a duration of PT0.4771286S.
+12505 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: cPLY7o - Deleted 1000 items in PT0.4771286S}.
+12506 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch nlroo - Successfully deleted 966 items within a duration of PT0.4861655S.
+12506 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: 21XQxC - Deleted 966 items in PT0.4861655S}.
+12570 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch SubFm - Successfully deleted 963 items within a duration of PT0.5502189S.
+12570 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: blOqoo - Deleted 963 items in PT0.5502189S}.
+12572 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch RWfH7 - Successfully deleted 991 items within a duration of PT0.5522193S.
+12572 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: pqwVw1 - Deleted 991 items in PT0.5522193S}.
+12588 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch bPChG - Successfully deleted 962 items within a duration of PT0.5681974S.
+12588 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch R4c3W - Successfully deleted 923 items within a duration of PT0.5681974S.
+12588 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: ewVpJ3 - Deleted 962 items in PT0.5681974S}.
+12588 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: 9ailT0 - Deleted 923 items in PT0.5762033S}.
+12603 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch KCj7E - Successfully deleted 959 items within a duration of PT0.5592414S.
+12603 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: W1fvKR - Deleted 959 items in PT0.5592414S}.
+12770 [direct-runner-worker] INFO  c.c.c.AutoValue_ApiBase_DeleteItems - deleteItems() - batch 3mq8y - Successfully deleted 909 items within a duration of PT0.7421526S.
+12770 [direct-runner-worker] INFO  c.c.beam.io.fn.delete.DeleteItemsFn - Batch: 1tTBsS - Deleted 909 items in PT0.7421526S}.
+12801 [direct-runner-worker] INFO  org.apache.beam.sdk.io.WriteFiles - Opening writer cfcf858e-f352-4442-8d0a-77c8612ba05e for window org.apache.beam.sdk.transforms.windowing.GlobalWindow@109d724c pane PaneInfo{isFirst=true, isLast=true, timing=ON_TIME, index=0, onTimeIndex=0} destination null
+12805 [direct-runner-worker] INFO  o.a.b.sdk.io.FileBasedSink$Writer - Successfully wrote temporary file C:\dev\cognite\cdf-beam-connector-java\.temp-beam-5af287d8-ca65-465e-b3fb-a24711643180\cfcf858e-f352-4442-8d0a-77c8612ba05e
+12822 [direct-runner-worker] INFO  org.apache.beam.sdk.io.WriteFiles - Finalizing 1 file results
+12822 [direct-runner-worker] INFO  o.apache.beam.sdk.io.FileBasedSink - Finalizing for destination null num shards 1.
+12822 [direct-runner-worker] INFO  o.apache.beam.sdk.io.FileBasedSink - Will copy temporary file FileResult{tempFilename=C:\dev\cognite\cdf-beam-connector-java\.temp-beam-5af287d8-ca65-465e-b3fb-a24711643180\cfcf858e-f352-4442-8d0a-77c8612ba05e, shard=0, window=org.apache.beam.sdk.transforms.windowing.GlobalWindow@109d724c, paneInfo=PaneInfo{isFirst=true, isLast=true, timing=ON_TIME, index=0, onTimeIndex=0}} to final location C:\dev\cognite\cdf-beam-connector-java\UnitTest_event_deleteItems_output.txt
+12830 [direct-runner-worker] INFO  o.apache.beam.sdk.io.FileBasedSink - Will remove known temporary file C:\dev\cognite\cdf-beam-connector-java\.temp-beam-5af287d8-ca65-465e-b3fb-a24711643180\cfcf858e-f352-4442-8d0a-77c8612ba05e
+12830 [direct-runner-worker] WARN  o.apache.beam.sdk.io.FileBasedSink - Failed to match temporary files under: [C:\dev\cognite\cdf-beam-connector-java\.temp-beam-5af287d8-ca65-465e-b3fb-a24711643180\].
