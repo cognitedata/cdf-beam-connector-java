@@ -16,14 +16,11 @@
 
 package com.cognite.client.servicesV1.request;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.cognite.client.servicesV1.ConnectorConstants;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
-import okhttp3.Request;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 
 import java.net.URISyntaxException;
 import java.util.Optional;
@@ -33,15 +30,14 @@ import java.util.Optional;
  *
  * Used by various context api services as most context services are based on an async api pattern.
  *
- * Job id is specified via the {@link RequestParameters}.
+ * Job id is specified via the {@link Request}.
  */
 @AutoValue
-@DefaultCoder(AvroCoder.class)
 public abstract class GetIdRequestProvider extends GenericRequestProvider{
 
     static Builder builder() {
         return new AutoValue_GetIdRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -61,24 +57,23 @@ public abstract class GetIdRequestProvider extends GenericRequestProvider{
 
     public abstract Builder toBuilder();
 
-    public GetIdRequestProvider withRequestParameters(RequestParameters parameters) {
+    public GetIdRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("id")
                 && (parameters.getRequestParameters().get("id") instanceof Integer
                         || parameters.getRequestParameters().get("id") instanceof Long),
                 "Request parameters must include id with an int/long value");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws URISyntaxException {
-        RequestParameters requestParameters = getRequestParameters();
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws URISyntaxException {
+        Request requestParameters = getRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
 
         // Build path
         urlBuilder
                 .addPathSegment(String.valueOf(requestParameters.getRequestParameters().get("id")));
-
         requestBuilder.url(urlBuilder.build());
 
         return requestBuilder.url(urlBuilder.build()).build();

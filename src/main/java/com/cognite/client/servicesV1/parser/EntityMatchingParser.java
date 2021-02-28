@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.EntityMatch;
 import com.cognite.client.dto.EntityMatchModel;
 import com.cognite.client.dto.EntityMatchResult;
@@ -25,6 +24,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.*;
 import com.google.protobuf.util.JsonFormat;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * Methods for parsing entity matching results json into typed objects.
@@ -89,7 +90,7 @@ public class EntityMatchingParser {
     public static EntityMatchModel parseEntityMatchModel(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         EntityMatchModel.Builder responseBuilder = EntityMatchModel.newBuilder();
-        String jsonExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String jsonExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         if (root.path("id").isIntegralNumber()) {
             responseBuilder.setId(Int64Value.of(root.get("id").longValue()));

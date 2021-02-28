@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +28,8 @@ import com.google.protobuf.Value;
 import com.google.protobuf.util.Values;
 
 import java.util.*;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing {@code Sequence} objects between Cognite api representations
@@ -55,7 +56,7 @@ public class SequenceParser {
     public static SequenceMetadata parseSequenceMetadata(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         SequenceMetadata.Builder builder = SequenceMetadata.newBuilder();
-        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         // A Sequence metadata object must contain an id and columns.
         if (root.path("id").isIntegralNumber()) {
@@ -123,7 +124,7 @@ public class SequenceParser {
     public static SequenceBody parseSequenceBody(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         SequenceBody.Builder builder = SequenceBody.newBuilder();
-        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         // A Sequence metadata object must contain an id and columns.
         if (root.path("id").isIntegralNumber()) {
@@ -176,7 +177,7 @@ public class SequenceParser {
     private static SequenceColumn parseSequenceColumn(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         SequenceColumn.Builder builder = SequenceColumn.newBuilder();
-        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         // A Sequence column object must contain an externalId.
         if (root.path("externalId").isTextual()) {
@@ -230,7 +231,7 @@ public class SequenceParser {
     private static SequenceRow parseSequenceRow(String json) throws Exception {
         JsonNode root = objectMapper.readTree(json);
         SequenceRow.Builder builder = SequenceRow.newBuilder();
-        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        String itemExcerpt = json.substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH));
 
         // A Sequence row object must contain a row number and a set of values.
         if (root.path("rowNumber").isIntegralNumber()) {

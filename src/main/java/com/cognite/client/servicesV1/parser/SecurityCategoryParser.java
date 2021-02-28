@@ -16,15 +16,15 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.SecurityCategory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Int64Value;
-import com.google.protobuf.StringValue;
 
 import java.util.Map;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing security category objects between Cognite api representations
@@ -44,7 +44,7 @@ public class SecurityCategoryParser {
         } else {
             throw new Exception(logPrefix + "Unable to parse attribute: id. Item excerpt: "
                     + json
-                    .substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH)));
+                    .substring(0, Math.min(json.length() - 1, MAX_LOG_ELEMENT_LENGTH)));
         }
         if (root.path("name").isTextual()) {
             securityCategoryBuilder.setName(root.get("name").textValue());

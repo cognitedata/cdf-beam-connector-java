@@ -42,7 +42,7 @@ public class ListLabelsFn extends ListItemsBaseFn<Label> {
     protected Iterator<List<Label>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.labels().list(requestParameters, partitions);
+        return client.labels().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

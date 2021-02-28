@@ -112,7 +112,7 @@ public class ReadCursorsFn extends IOBaseFn<RequestParameters, RequestParameters
                     Duration.between(batchStartInstant, Instant.now()).toString());
 
             List<String> cursors = getClient(projectConfig, readerConfig).raw().rows()
-                    .retrieveCursors(dbName, tableName, totalNoPartitions, requestParameters);
+                    .retrieveCursors(dbName, tableName, totalNoPartitions, requestParameters.getRequest());
 
             List<String> partitions = new ArrayList<>();
             for (String cursor : cursors) {

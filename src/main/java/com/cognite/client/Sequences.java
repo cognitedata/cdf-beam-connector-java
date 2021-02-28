@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.Aggregate;
@@ -86,14 +85,14 @@ public abstract class Sequences extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SequenceMetadata>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<SequenceMetadata>> list(Request requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
     /**
-     * Returns all {@link SequenceMetadata} objects that matches the filters set in the {@link RequestParameters} for
+     * Returns all {@link SequenceMetadata} objects that matches the filters set in the {@link Request} for
      * the specified partitions. This method is intended for advanced use cases you need direct control over the
      * individual partitions. For example, when using the SDK in a distributed environment.
      *
@@ -106,7 +105,7 @@ public abstract class Sequences extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<SequenceMetadata>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+    public Iterator<List<SequenceMetadata>> list(Request requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.SEQUENCE_HEADER, requestParameters, partitions), this::parseSequences);
     }
 
@@ -135,7 +134,7 @@ public abstract class Sequences extends ApiBase {
      * @throws Exception
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
-    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+    public Aggregate aggregate(Request requestParameters) throws Exception {
         return aggregate(ResourceType.SEQUENCE_HEADER, requestParameters);
     }
 
@@ -158,7 +157,7 @@ public abstract class Sequences extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        UpsertItems<SequenceMetadata> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildProjectConfig())
+        UpsertItems<SequenceMetadata> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)
                 .withUpdateMappingFunction(this::toRequestUpdateItem)
                 .withIdFunction(this::getSequenceId);
@@ -187,7 +186,7 @@ public abstract class Sequences extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig());
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig());
 
         return deleteItems.deleteItems(sequences);
     }

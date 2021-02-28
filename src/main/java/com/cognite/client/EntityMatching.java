@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.EntityMatchModel;
 import com.cognite.client.dto.EntityMatchResult;
 import com.cognite.client.dto.Item;
@@ -141,7 +140,7 @@ public abstract class EntityMatching extends ApiBase {
                 targets.size());
 
         // Build the baseline request.
-        RequestParameters request = RequestParameters.create()
+        Request request = Request.create()
                 .withRootParameter("externalId", modelExternalId)
                 .withRootParameter("numMatches", numMatches)
                 .withRootParameter("scoreThreshold", scoreThreshold);
@@ -151,7 +150,7 @@ public abstract class EntityMatching extends ApiBase {
             request = request.withRootParameter("targets", targets);
         }
 
-        List<RequestParameters> requestBatches = new ArrayList<>();
+        List<Request> requestBatches = new ArrayList<>();
         // Batch the source entities if any
         if (sources.size() > 0) {
             List<List<Struct>> sourceBatches =
@@ -234,7 +233,7 @@ public abstract class EntityMatching extends ApiBase {
                 targets.size());
 
         // Build the baseline request.
-        RequestParameters request = RequestParameters.create()
+        Request request = Request.create()
                 .withRootParameter("id", modelId)
                 .withRootParameter("numMatches", numMatches)
                 .withRootParameter("scoreThreshold", scoreThreshold);
@@ -244,7 +243,7 @@ public abstract class EntityMatching extends ApiBase {
             request = request.withRootParameter("targets", targets);
         }
 
-        List<RequestParameters> requestBatches = new ArrayList<>();
+        List<Request> requestBatches = new ArrayList<>();
         // Batch the source entities if any
         if (sources.size() > 0) {
             List<List<Struct>> sourceBatches =
@@ -270,7 +269,7 @@ public abstract class EntityMatching extends ApiBase {
      * @return The entity match results.
      * @throws Exception
      */
-    public List<EntityMatchResult> predict(Collection<RequestParameters> requests) throws Exception {
+    public List<EntityMatchResult> predict(Collection<Request> requests) throws Exception {
         final String loggingPrefix = "predict() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
         Instant startInstant = Instant.now();
@@ -285,7 +284,7 @@ public abstract class EntityMatching extends ApiBase {
         ItemReader<String> entityMatcher = getClient().getConnectorService().entityMatcherPredict();
 
         List<CompletableFuture<ResponseItems<String>>> resultFutures = new ArrayList<>();
-        for (RequestParameters request : requests) {
+        for (Request request : requests) {
             resultFutures.add(entityMatcher.getItemsAsync(addAuthInfo(request)));
         }
         LOG.info(loggingPrefix + "Submitted {} entity matching jobs within a duration of {}.",
@@ -332,7 +331,7 @@ public abstract class EntityMatching extends ApiBase {
      * @return The created entity match models
      * @throws Exception
      */
-    public List<EntityMatchModel> create(Collection<RequestParameters> requests) throws Exception {
+    public List<EntityMatchModel> create(Collection<Request> requests) throws Exception {
         final String loggingPrefix = "create() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(requests, loggingPrefix + "Requests cannot be null.");
         Instant startInstant = Instant.now();
@@ -347,7 +346,7 @@ public abstract class EntityMatching extends ApiBase {
         Connector<String> entityMatcher = getClient().getConnectorService().entityMatcherFit();
 
         List<CompletableFuture<ResponseItems<String>>> resultFutures = new ArrayList<>();
-        for (RequestParameters request : requests) {
+        for (Request request : requests) {
             resultFutures.add(entityMatcher.executeAsync(addAuthInfo(request)));
         }
         LOG.info(loggingPrefix + "Submitted {} create model jobs within a duration of {}.",
@@ -399,7 +398,7 @@ public abstract class EntityMatching extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 //.addParameter("ignoreUnknownIds", true)
                 ;
 

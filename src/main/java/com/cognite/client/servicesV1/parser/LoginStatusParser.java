@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.LoginStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing item object between Cognite api representations
@@ -124,6 +125,6 @@ public class LoginStatusParser {
     }
 
     private static String getJsonExcerpt(String json) {
-        return json.substring(0, Math.min(json.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+        return json.substring(0, Math.min(json.length(), MAX_LOG_ELEMENT_LENGTH));
     }
 }

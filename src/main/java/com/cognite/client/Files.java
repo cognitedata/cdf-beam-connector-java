@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.config.UpsertMode;
 import com.cognite.client.dto.*;
@@ -76,7 +75,7 @@ public abstract class Files extends ApiBase {
     }
 
     /**
-     * Returns all {@link FileMetadata} objects that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link FileMetadata} objects that matches the filters set in the {@link Request}.
      *
      * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
@@ -89,14 +88,14 @@ public abstract class Files extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<FileMetadata>> list(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<FileMetadata>> list(Request requestParameters) throws Exception {
         List<String> partitions = buildPartitionsList(getClient().getClientConfig().getNoListPartitions());
 
         return this.list(requestParameters, partitions.toArray(new String[partitions.size()]));
     }
 
     /**
-     * Returns all {@link Event} objects that matches the filters set in the {@link RequestParameters} for the
+     * Returns all {@link Event} objects that matches the filters set in the {@link Request} for the
      * specified partitions. This is method is intended for advanced use cases where you need direct control over
      * the individual partitions. For example, when using the SDK in a distributed computing environment.
      *
@@ -109,7 +108,7 @@ public abstract class Files extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<FileMetadata>> list(RequestParameters requestParameters, String... partitions) throws Exception {
+    public Iterator<List<FileMetadata>> list(Request requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.FILE_HEADER, requestParameters, partitions), this::parseFileMetadata);
     }
 
@@ -138,7 +137,7 @@ public abstract class Files extends ApiBase {
      * @throws Exception
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
-    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+    public Aggregate aggregate(Request requestParameters) throws Exception {
         return aggregate(ResourceType.FILE_HEADER, requestParameters);
     }
 
@@ -504,7 +503,7 @@ public abstract class Files extends ApiBase {
         // Write files async
         for (FileContainer file : fileContainerList) {
             CompletableFuture<ResponseItems<String>> future = fileWriter.writeFileAsync(
-                    addAuthInfo(RequestParameters.create()
+                    addAuthInfo(Request.create()
                             .withProtoRequestBody(file))
             );
             resultFutures.add(future);
@@ -838,7 +837,7 @@ public abstract class Files extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig());
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig());
 
         return deleteItems.deleteItems(files);
     }
@@ -868,7 +867,7 @@ public abstract class Files extends ApiBase {
 
         // Process all batches.
         for (List<Item> batch : itemBatches) {
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                             .withItems(toRequestItems(deDuplicate(batch))));
 
             responseMap.put(reader.readFileBinaries(request), batch);
@@ -1006,7 +1005,7 @@ public abstract class Files extends ApiBase {
         LOG.debug(loggingPrefix + "Received file metadata item / header to create.");
 
         // build request object
-        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+        Request postSeqBody = addAuthInfo(Request.create()
                 .withRequestParameters(toRequestInsertItem(fileMetadata)));
 
         // post write request
@@ -1041,7 +1040,7 @@ public abstract class Files extends ApiBase {
         }
 
         // build request object
-        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+        Request postSeqBody = addAuthInfo(Request.create()
                 .withItems(insertItemsBuilder.build()));
 
         // post write request
@@ -1072,7 +1071,7 @@ public abstract class Files extends ApiBase {
         }
 
         // build request object
-        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+        Request postSeqBody = addAuthInfo(Request.create()
                 .withItems(insertItemsBuilder.build()));
 
         // post write request

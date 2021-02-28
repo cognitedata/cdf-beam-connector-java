@@ -42,7 +42,7 @@ public class ListRelationshipsFn extends ListItemsBaseFn<Relationship> {
     protected Iterator<List<Relationship>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.relationships().list(requestParameters, partitions);
+        return client.relationships().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

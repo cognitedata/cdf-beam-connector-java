@@ -17,12 +17,11 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
-import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
@@ -40,7 +39,7 @@ public abstract class RawDeleteRowsRequestProvider extends GenericRequestProvide
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_RawDeleteRowsRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -49,7 +48,7 @@ public abstract class RawDeleteRowsRequestProvider extends GenericRequestProvide
 
     public abstract Builder toBuilder();
 
-    public RawDeleteRowsRequestProvider withRequestParameters(RequestParameters parameters) {
+    public RawDeleteRowsRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("dbName")
                 && parameters.getRequestParameters().get("dbName") instanceof String,
@@ -57,25 +56,25 @@ public abstract class RawDeleteRowsRequestProvider extends GenericRequestProvide
         Preconditions.checkArgument(parameters.getRequestParameters().containsKey("tableName")
                         && parameters.getRequestParameters().get("tableName") instanceof String,
                 "Request parameters must include tableName");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
 
         // Build path
-        urlBuilder.addPathSegment((String) getRequestParameters().getRequestParameters().get("dbName"));
+        urlBuilder.addPathSegment((String) getRequest().getRequestParameters().get("dbName"));
         urlBuilder.addPathSegment("tables");
-        urlBuilder.addPathSegment((String) getRequestParameters().getRequestParameters().get("tableName"));
+        urlBuilder.addPathSegment((String) getRequest().getRequestParameters().get("tableName"));
         urlBuilder.addPathSegment("rows");
         urlBuilder.addPathSegment("delete");
 
         requestBuilder.url(urlBuilder.build());
 
         // Build a "clean" request parameter object containing only the items from the input.
-        RequestParameters requestParameters = RequestParameters.create()
-                .withItems(getRequestParameters().getItems());
+        Request requestParameters = Request.create()
+                .withItems(getRequest().getItems());
 
         String outputJson = requestParameters.getRequestParametersAsJson();
         return requestBuilder.post(RequestBody.Companion.create(outputJson, MediaType.get("application/json"))).build();

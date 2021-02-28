@@ -16,17 +16,14 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.client.config.AuthConfig;
 import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.AggregateParser;
-import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
@@ -101,7 +98,7 @@ abstract class ApiBase {
      * @throws Exception
      */
     protected Iterator<List<String>> listJson(ResourceType resourceType,
-                                        RequestParameters requestParameters,
+                                        Request requestParameters,
                                         String... partitions) throws Exception {
         return listJson(resourceType, requestParameters, "partition", partitions);
     }
@@ -126,7 +123,7 @@ abstract class ApiBase {
      * @throws Exception
      */
     protected Iterator<List<String>> listJson(ResourceType resourceType,
-                                              RequestParameters requestParameters,
+                                              Request requestParameters,
                                               String partitionKey,
                                               String... partitions) throws Exception {
         // Check constraints
@@ -137,7 +134,7 @@ abstract class ApiBase {
         }
 
         // Add auth info
-        RequestParameters requestParams = addAuthInfo(requestParameters);
+        Request requestParams = addAuthInfo(requestParameters);
 
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<String>>>> iterators = new ArrayList<>();
@@ -233,7 +230,7 @@ abstract class ApiBase {
         List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
         for (List<Item> batch : itemBatches) {
             // build initial request object
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                     .withItems(toRequestItems(batch))
                     .withRootParameter("ignoreUnknownIds", true));
 
@@ -277,7 +274,7 @@ abstract class ApiBase {
      * @throws Exception
      * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
      */
-    protected Aggregate aggregate(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
+    protected Aggregate aggregate(ResourceType resourceType, Request requestParameters) throws Exception {
         String batchLogPrefix =
                 "aggregate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         ConnectorServiceV1 connector = getClient().getConnectorService();
@@ -285,7 +282,7 @@ abstract class ApiBase {
         Instant startInstant = Instant.now();
 
         // Add auth info
-        RequestParameters requestParams = addAuthInfo(requestParameters);
+        Request requestParams = addAuthInfo(requestParameters);
 
         switch (resourceType) {
             case ASSET:
@@ -337,6 +334,7 @@ abstract class ApiBase {
      * @return The request parameters with auth info added to it.
      * @throws Exception
      */
+    /*
     protected RequestParameters addAuthInfo(RequestParameters requestParameters) throws Exception {
         // Check if there already is auth info.
         if (null != requestParameters.getProjectConfig().getProject()
@@ -349,6 +347,8 @@ abstract class ApiBase {
                 .withProjectConfig(getClient().buildProjectConfig())
                 .withRequest(addAuthInfo(requestParameters.getRequest()));
     }
+
+     */
 
     /**
      * Adds the required authentication information into the request object. If the request object already have
@@ -378,7 +378,7 @@ abstract class ApiBase {
     Builds a single stream iterator to page through a query to a list/filter endpoint.
      */
     protected Iterator<CompletableFuture<ResponseItems<String>>>
-            getListResponseIterator(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
+            getListResponseIterator(ResourceType resourceType, Request requestParameters) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
 
         Iterator<CompletableFuture<ResponseItems<String>>> results;
@@ -772,17 +772,17 @@ abstract class ApiBase {
          * @param createWriter The item writer for create requests.
          * @param createMappingFunction A mapping function that will translate types objects
          *                              into JSON create/insert objects.
-         * @param projectConfig The authorization info for api requests.
+         * @param authConfig The authorization info for api requests.
          * @param <T> The object type of the objects to upsert.
          * @return the {@link UpsertItems} for upserts.
          */
         public static <T extends Message> UpsertItems<T> of(ConnectorServiceV1.ItemWriter createWriter,
                                          Function<T, Map<String, Object>> createMappingFunction,
-                                         ProjectConfig projectConfig)  {
+                                         AuthConfig authConfig)  {
             return UpsertItems.<T>builder()
                     .setCreateItemWriter(createWriter)
                     .setCreateMappingFunction(createMappingFunction)
-                    .setProjectConfig(projectConfig)
+                    .setAuthConfig(authConfig)
                     .build();
         }
 
@@ -800,7 +800,7 @@ abstract class ApiBase {
         abstract Builder<T> toBuilder();
 
         abstract int getMaxBatchSize();
-        abstract ProjectConfig getProjectConfig();
+        abstract AuthConfig getAuthConfig();
         abstract Function<T, Optional<String>> getIdFunction();
         abstract Function<T, Map<String, Object>> getCreateMappingFunction();
         @Nullable
@@ -1276,7 +1276,7 @@ abstract class ApiBase {
             }
 
             // Configure the delete handler
-            DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getProjectConfig())
+            DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getAuthConfig())
                     .setParameters(getDeleteParameters());
 
             // Insert, update, completed lists
@@ -1531,7 +1531,7 @@ abstract class ApiBase {
             }
 
             // Configure the delete handler
-            DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getProjectConfig())
+            DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getAuthConfig())
                     .setParameters(getDeleteParameters());
 
             // Insert, update, completed lists
@@ -1726,9 +1726,9 @@ abstract class ApiBase {
             for (T item : items) {
                 insertItemsBuilder.add(getCreateMappingFunction().apply(item));
             }
-            RequestParameters writeItemsRequest = RequestParameters.create()
+            Request writeItemsRequest = Request.create()
                     .withItems(insertItemsBuilder.build())
-                    .withProjectConfig(getProjectConfig());
+                    .withAuthConfig(getAuthConfig());
 
             return getCreateItemWriter().writeItemsAsync(writeItemsRequest);
         }
@@ -1748,9 +1748,9 @@ abstract class ApiBase {
             for (T item : items) {
                 insertItemsBuilder.add(getUpdateMappingFunction().apply(item));
             }
-            RequestParameters writeItemsRequest = RequestParameters.create()
+            Request writeItemsRequest = Request.create()
                     .withItems(insertItemsBuilder.build())
-                    .withProjectConfig(getProjectConfig());
+                    .withAuthConfig(getAuthConfig());
 
             return getUpdateItemWriter().writeItemsAsync(writeItemsRequest);
         }
@@ -1802,7 +1802,7 @@ abstract class ApiBase {
         @AutoValue.Builder
         abstract static class Builder<T extends Message> {
             abstract Builder<T> setMaxBatchSize(int value);
-            abstract Builder<T> setProjectConfig(ProjectConfig value);
+            abstract Builder<T> setAuthConfig(AuthConfig value);
             abstract Builder<T> setIdFunction(Function<T, Optional<String>> value);
             abstract Builder<T> setCreateMappingFunction(Function<T, Map<String, Object>> value);
             abstract Builder<T> setUpdateMappingFunction(Function<T, Map<String, Object>> value);
@@ -1859,21 +1859,21 @@ abstract class ApiBase {
          * Creates a new {@link DeleteItems} that will perform upsert actions.
          *
          * @param deleteWriter The item writer for delete requests.
-         * @param projectConfig The authorization info for api requests.
+         * @param authConfig The authorization info for api requests.
          * @return the {@link DeleteItems} for delete requests.
          */
         public static DeleteItems of(ConnectorServiceV1.ItemWriter deleteWriter,
-                                     ProjectConfig projectConfig)  {
+                                     AuthConfig authConfig)  {
             return DeleteItems.builder()
                     .setDeleteItemWriter(deleteWriter)
-                    .setProjectConfig(projectConfig)
+                    .setAuthConfig(authConfig)
                     .build();
         }
 
         abstract Builder toBuilder();
 
         abstract int getMaxBatchSize();
-        abstract ProjectConfig getProjectConfig();
+        abstract AuthConfig getAuthConfig();
         abstract Function<Item, Map<String, Object>> getDeleteItemMappingFunction();
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
         abstract ImmutableMap<String, Object> getParameters();
@@ -2091,9 +2091,9 @@ abstract class ApiBase {
             for (Item item : items) {
                 insertItemsBuilder.add(getDeleteItemMappingFunction().apply(item));
             }
-            RequestParameters writeItemsRequest = RequestParameters.create()
+            Request writeItemsRequest = Request.create()
                     .withItems(insertItemsBuilder.build())
-                    .withProjectConfig(getProjectConfig());
+                    .withAuthConfig(getAuthConfig());
 
             // Add any extra attributes
             for (Map.Entry<String, Object> parameter : getParameters().entrySet()) {
@@ -2157,7 +2157,7 @@ abstract class ApiBase {
         @AutoValue.Builder
         abstract static class Builder {
             abstract Builder setMaxBatchSize(int value);
-            abstract Builder setProjectConfig(ProjectConfig value);
+            abstract Builder setAuthConfig(AuthConfig value);
             abstract Builder setDeleteItemMappingFunction(Function<Item, Map<String, Object>> value);
             abstract Builder setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder setParameters(Map<String, Object> value);

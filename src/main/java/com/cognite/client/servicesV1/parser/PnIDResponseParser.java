@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +25,7 @@ import com.google.protobuf.StringValue;
 import com.google.protobuf.Struct;
 import com.google.protobuf.util.JsonFormat;
 
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 public class PnIDResponseParser {
     static final String logPrefix = "PnIDStatusParser - ";
@@ -138,6 +138,6 @@ public class PnIDResponseParser {
 
     private static String buildErrorMessage(String fieldName, String inputElement) {
         return logPrefix + "Unable to parse attribute: "+ fieldName + ". Item payload: "
-                + inputElement.substring(0, Math.min(inputElement.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+                + inputElement.substring(0, Math.min(inputElement.length() - 1, MAX_LOG_ELEMENT_LENGTH));
     }
 }

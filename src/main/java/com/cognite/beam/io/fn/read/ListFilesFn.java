@@ -42,7 +42,7 @@ public class ListFilesFn extends ListItemsBaseFn<FileMetadata> {
     protected Iterator<List<FileMetadata>> listItems(CogniteClient client,
                                           RequestParameters requestParameters,
                                           String... partitions) throws Exception {
-        return client.files().list(requestParameters, partitions);
+        return client.files().list(requestParameters.getRequest(), partitions);
     }
 
     @Override

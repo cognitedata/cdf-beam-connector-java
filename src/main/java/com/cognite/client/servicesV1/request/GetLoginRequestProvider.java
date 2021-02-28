@@ -17,13 +17,10 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.HttpUrl;
-import okhttp3.Request;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 
 import java.io.IOException;
 import java.net.URI;
@@ -31,13 +28,12 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 
 @AutoValue
-@DefaultCoder(AvroCoder.class)
 public abstract class GetLoginRequestProvider extends GenericRequestProvider{
     private static final String DEFAULT_API_ENDPOINT = "status";
 
     public static Builder builder() {
         return new AutoValue_GetLoginRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -47,13 +43,13 @@ public abstract class GetLoginRequestProvider extends GenericRequestProvider{
 
     public abstract Builder toBuilder();
 
-    public GetLoginRequestProvider withRequestParameters(RequestParameters parameters) {
+    public GetLoginRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         //HttpUrl.Builder urlBuilder = buildGenericUrl();
 
         //return requestBuilder.url(urlBuilder.build()).build();
@@ -63,7 +59,7 @@ public abstract class GetLoginRequestProvider extends GenericRequestProvider{
     /*
     Overloaded to build the request without checking for valid project parameters.
      */
-    protected Request.Builder buildGenericRequest() throws URISyntaxException {
+    protected okhttp3.Request.Builder buildGenericRequest() throws URISyntaxException {
         Preconditions.checkState(this.getAppIdentifier().length() < 40
                 , "App identifier out of range. Length must be < 40.");
         Preconditions.checkState(this.getSdkIdentifier().length() < 40
@@ -72,9 +68,9 @@ public abstract class GetLoginRequestProvider extends GenericRequestProvider{
                 , "Session identifier out of range. Length must be < 40.");
 
         // build standard part of the request.
-        return new Request.Builder()
+        return new okhttp3.Request.Builder()
                 .header("Accept", "application/json")
-                .header("api-key", this.getRequestParameters().getProjectConfig().getApiKey().get())
+                .header("api-key", this.getRequest().getAuthConfig().getApiKey())
                 .header("x-cdp-sdk", this.getSdkIdentifier())
                 .header("x-cdp-app", this.getAppIdentifier())
                 .header("x-cdp-clienttag", this.getSessionIdentifier())
@@ -85,8 +81,7 @@ public abstract class GetLoginRequestProvider extends GenericRequestProvider{
     Overloaded to build a URL specific to the login service.
      */
     protected HttpUrl.Builder buildGenericUrl() throws URISyntaxException {
-        URI uri = null;
-        uri = new URI(this.getRequestParameters().getProjectConfig().getHost().get());
+        URI uri = new URI(this.getRequest().getAuthConfig().getHost());
         return new HttpUrl.Builder()
                 .scheme(uri.getScheme())
                 .host(uri.getHost())

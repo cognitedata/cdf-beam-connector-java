@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -34,7 +34,7 @@ public interface ItemReader<T> {
      * @param requestParameters
      * @return
      */
-    ResponseItems<T> getItems(RequestParameters requestParameters) throws Exception;
+    ResponseItems<T> getItems(Request requestParameters) throws Exception;
 
     /**
      * Executes a request against the api endpoint on a separate thread. The response is wrapped in a
@@ -43,5 +43,5 @@ public interface ItemReader<T> {
      * @param requestParameters
      * @return
      */
-    CompletableFuture<ResponseItems<T>> getItemsAsync(RequestParameters requestParameters) throws Exception;
+    CompletableFuture<ResponseItems<T>> getItemsAsync(Request requestParameters) throws Exception;
 }

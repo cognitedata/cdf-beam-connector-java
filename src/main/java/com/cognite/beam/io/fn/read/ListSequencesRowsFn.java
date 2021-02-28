@@ -45,7 +45,7 @@ public class ListSequencesRowsFn extends ListItemsBaseFn<SequenceBody> {
                                           String... partitions) throws Exception {
         Preconditions.checkArgument(partitions.length == 0,
                 "Partitions is not supported for Sequence rows");
-        return client.sequences().rows().retrieve(requestParameters);
+        return client.sequences().rows().retrieve(requestParameters.getRequest());
     }
 
     @Override

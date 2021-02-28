@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.cognite.client.servicesV1.util.TSIterationUtilities;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,7 +27,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import okhttp3.MediaType;
-import okhttp3.Request;
 import okhttp3.RequestBody;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -42,7 +41,7 @@ public abstract class TSPointsReadProtoRequestProvider extends GenericRequestPro
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_TSPointsReadProtoRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -51,7 +50,7 @@ public abstract class TSPointsReadProtoRequestProvider extends GenericRequestPro
 
     public abstract Builder toBuilder();
 
-    public TSPointsReadProtoRequestProvider withRequestParameters(RequestParameters parameters) {
+    public TSPointsReadProtoRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
         Preconditions.checkArgument(parameters.getItems().size() <= MAX_TS_ITEMS,
                 "Datapoints can only be requested for maximum " + MAX_TS_ITEMS + " time series per request.");
@@ -61,14 +60,14 @@ public abstract class TSPointsReadProtoRequestProvider extends GenericRequestPro
         for (Map<String, Object> item : parameters.getItems()) {
             checkItemPreconditions(item);
         }
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws Exception {
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws Exception {
         final String randomString = RandomStringUtils.randomAlphanumeric(5);
         final String logPrefix = "Build read TS datapoints request - ";
-        RequestParameters requestParameters = getRequestParameters();
-        Request.Builder requestBuilder = buildGenericRequest();
+        Request requestParameters = getRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
 
         // Check for limit
         if (!requestParameters.getRequestParameters().containsKey("limit")) {

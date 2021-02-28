@@ -16,7 +16,6 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.ConnectorConstants;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
@@ -99,7 +98,7 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
-     * Returns all {@link TimeseriesPoint} objects that matches the filters set in the {@link RequestParameters}.
+     * Returns all {@link TimeseriesPoint} objects that matches the filters set in the {@link Request}.
      *
      * Please note that only root-level filter and aggregate specifications are supported. That is, per-item
      * specifications of time filters and/or aggregations are not supported. If you need to apply different time
@@ -114,7 +113,7 @@ public abstract class DataPoints extends ApiBase {
      * @return an {@link Iterator} to page through the results set.
      * @throws Exception
      */
-    public Iterator<List<TimeseriesPoint>> retrieve(RequestParameters requestParameters) throws Exception {
+    public Iterator<List<TimeseriesPoint>> retrieve(Request requestParameters) throws Exception {
         String loggingPrefix = "retrieve() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
         if (requestParameters.getItems().isEmpty()) {
             LOG.warn(loggingPrefix + "No items specified in the request. Will skip the read request.");
@@ -131,7 +130,7 @@ public abstract class DataPoints extends ApiBase {
 
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
-        for (RequestParameters request : splitRetrieveRequest(requestParameters)) {
+        for (Request request : splitRetrieveRequest(requestParameters)) {
             iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
                     .withExecutorService(getClient().getExecutorService())
                     .withHttpClient(getClient().getHttpClient()));
@@ -173,7 +172,7 @@ public abstract class DataPoints extends ApiBase {
             }
         }
 
-        return this.retrieve(RequestParameters.create()
+        return this.retrieve(Request.create()
                 .withItems(itemsList)
                 .withRootParameter(START_KEY, 0L)
                 .withRootParameter(END_KEY, endTimestamp)
@@ -395,7 +394,7 @@ public abstract class DataPoints extends ApiBase {
                 requestItems.add(requestItem);
             }
 
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                     .withItems(requestItems)
                     .withRootParameter("ignoreUnknownIds", true));
 
@@ -471,7 +470,7 @@ public abstract class DataPoints extends ApiBase {
 
         // Build request objects
         long defaultStart = 0L;
-        List<RequestParameters> requestList = new ArrayList<>();
+        List<Request> requestList = new ArrayList<>();
         for (List<Item> batch : itemBatches) {
             // build initial request object
             List<Map<String, Object>> requestItems = new ArrayList<>();
@@ -486,7 +485,7 @@ public abstract class DataPoints extends ApiBase {
                 requestItems.add(requestItem);
             }
 
-            RequestParameters request = addAuthInfo(RequestParameters.create()
+            Request request = addAuthInfo(Request.create()
                     .withItems(requestItems)
                     .withRootParameter(START_KEY, defaultStart)
                     .withRootParameter("limit", 1));
@@ -496,7 +495,7 @@ public abstract class DataPoints extends ApiBase {
 
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
-        for (RequestParameters request : requestList) {
+        for (Request request : requestList) {
             iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
                     .withExecutorService(getClient().getExecutorService())
                     .withHttpClient(getClient().getHttpClient()));
@@ -532,7 +531,7 @@ public abstract class DataPoints extends ApiBase {
                 .withHttpClient(getClient().getHttpClient())
                 .withExecutorService(getClient().getExecutorService());
 
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
+        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .withDeleteItemMappingFunction(this::toRequestDeleteItem);
 
         return deleteItems.deleteItems(dataPoints);
@@ -551,9 +550,9 @@ public abstract class DataPoints extends ApiBase {
      * @return
      * @throws Exception
      */
-    private List<RequestParameters> splitRetrieveRequest(RequestParameters requestParameters) throws Exception {
+    private List<Request> splitRetrieveRequest(Request requestParameters) throws Exception {
         String loggingPrefix = "splitRetrieveRequest - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
-        List<RequestParameters> splitsByItems = new ArrayList<>();
+        List<Request> splitsByItems = new ArrayList<>();
 
         // First, perform a split by items.
         if (requestParameters.getItems().size() > MAX_ITEMS_PER_REQUEST) {
@@ -635,7 +634,7 @@ public abstract class DataPoints extends ApiBase {
             return splitsByItems;
         }
 
-        List<RequestParameters> splitByTimeWindow = new ArrayList<>();
+        List<Request> splitByTimeWindow = new ArrayList<>();
 
         if (requestParameters.getRequestParameters().containsKey(GRANULARITY_KEY)) {
             // Run the aggregate split
@@ -715,7 +714,7 @@ public abstract class DataPoints extends ApiBase {
                     // We are on the final iteration, so make sure we include the rest of the time range.
                     deltaEnd = endTimestamp;
                 }
-                for (RequestParameters request : splitsByItems) {
+                for (Request request : splitsByItems) {
                     LOG.debug(loggingPrefix + "Adding time based split with start {} and end {}",
                             deltaStart,
                             deltaEnd);
@@ -848,7 +847,7 @@ public abstract class DataPoints extends ApiBase {
         DataPointInsertionRequest requestPayload = toRequestProto(dataPointsBatch);
 
         // build request object
-        RequestParameters postSeqBody = addAuthInfo(RequestParameters.create()
+        Request postSeqBody = addAuthInfo(Request.create()
                 .withProtoRequestBody(requestPayload));
 
         // post write request
@@ -1072,7 +1071,7 @@ public abstract class DataPoints extends ApiBase {
      * @return
      * @throws Exception
      */
-    private double getMaxFrequency(RequestParameters requestParameters,
+    private double getMaxFrequency(Request requestParameters,
                                    Instant startOfWindow,
                                    Instant endOfWindow) throws Exception {
         final String loggingPrefix = "getMaxFrequency() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
@@ -1112,7 +1111,7 @@ public abstract class DataPoints extends ApiBase {
             return frequency;
         }
 
-        RequestParameters request = requestParameters
+        Request request = requestParameters
                 .withItems(toRequestItems(numericItems));
 
 
@@ -1130,7 +1129,7 @@ public abstract class DataPoints extends ApiBase {
                     Instant.ofEpochMilli(from).toString(),
                     Instant.ofEpochMilli(to).toString());
 
-            RequestParameters statsQuery = request
+            Request statsQuery = request
                     .withRootParameter(START_KEY, from)
                     .withRootParameter(END_KEY, to)
                     .withRootParameter(GRANULARITY_KEY, "d")
@@ -1148,7 +1147,7 @@ public abstract class DataPoints extends ApiBase {
                     Instant.ofEpochMilli(from).toString(),
                     Instant.ofEpochMilli(to).toString());
 
-            RequestParameters statsQuery = request
+            Request statsQuery = request
                     .withRootParameter(START_KEY, from)
                     .withRootParameter(END_KEY, to)
                     .withRootParameter(GRANULARITY_KEY, "h")
@@ -1169,7 +1168,7 @@ public abstract class DataPoints extends ApiBase {
      * @return
      * @throws Exception
      */
-    private double getMaxAverageCount(RequestParameters query) throws Exception {
+    private double getMaxAverageCount(Request query) throws Exception {
         String loggingPrefix = "getMaxAverageCount() - ";
         Preconditions.checkArgument(query.getRequestParameters().containsKey(AGGREGATES_KEY)
                         && query.getRequestParameters().get(AGGREGATES_KEY) instanceof List
@@ -1225,7 +1224,7 @@ public abstract class DataPoints extends ApiBase {
      * @param end
      * @return
      */
-    private RequestParameters buildRequestParameters(RequestParameters requestParameters,
+    private Request buildRequestParameters(Request requestParameters,
                                                      long start,
                                                      long end) {
         String loggingPrefix = "buildRequestParameters() - ";

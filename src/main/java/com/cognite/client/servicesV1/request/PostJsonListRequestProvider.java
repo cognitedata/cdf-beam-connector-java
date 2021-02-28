@@ -17,11 +17,10 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.MediaType;
-import okhttp3.Request;
 import okhttp3.RequestBody;
 
 import java.io.IOException;
@@ -33,7 +32,7 @@ public abstract class PostJsonListRequestProvider extends GenericRequestProvider
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_PostJsonListRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -43,14 +42,14 @@ public abstract class PostJsonListRequestProvider extends GenericRequestProvider
 
     public abstract Builder toBuilder();
 
-    public PostJsonListRequestProvider withRequestParameters(RequestParameters parameters) {
+    public PostJsonListRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        RequestParameters requestParameters = getRequestParameters();
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        Request requestParameters = getRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
 
         // Check for limit
         if (!requestParameters.getRequestParameters().containsKey("limit")) {

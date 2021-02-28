@@ -17,12 +17,11 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.cognite.v1.timeseries.proto.DataPointInsertionRequest;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import okhttp3.MediaType;
-import okhttp3.Request;
 import okhttp3.RequestBody;
 
 import java.io.IOException;
@@ -35,7 +34,7 @@ public abstract class TSPointsWriteProtoRequestProvider extends GenericRequestPr
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_TSPointsWriteProtoRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER)
@@ -44,21 +43,21 @@ public abstract class TSPointsWriteProtoRequestProvider extends GenericRequestPr
 
     public abstract Builder toBuilder();
 
-    public TSPointsWriteProtoRequestProvider withRequestParameters(RequestParameters parameters) {
+    public TSPointsWriteProtoRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
 
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        Preconditions.checkNotNull(getRequestParameters().getProtoRequestBody(),
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        Preconditions.checkNotNull(getRequest().getProtoRequestBody(),
                 "No protobuf request body found.");
-        Preconditions.checkArgument(getRequestParameters().getProtoRequestBody() instanceof DataPointInsertionRequest,
+        Preconditions.checkArgument(getRequest().getProtoRequestBody() instanceof DataPointInsertionRequest,
                 "The protobuf request body is not of type DataPointInsertionRequest");
-        DataPointInsertionRequest requestPayload = (DataPointInsertionRequest) getRequestParameters().getProtoRequestBody();
+        DataPointInsertionRequest requestPayload = (DataPointInsertionRequest) getRequest().getProtoRequestBody();
         LOG.debug(logMessagePrefix + "Building write request for {} time series",
                 requestPayload.getItemsCount());
-        Request.Builder requestBuilder = buildGenericRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
 
         return requestBuilder.post(RequestBody.Companion.create(requestPayload.toByteArray(),
                 MediaType.get("application/protobuf"))).build();

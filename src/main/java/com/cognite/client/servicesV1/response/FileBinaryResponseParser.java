@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.response;
 
 import com.cognite.client.dto.FileBinary;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -46,22 +46,22 @@ public abstract class FileBinaryResponseParser implements ResponseParser<FileBin
 
     public static FileBinaryResponseParser create() {
         return FileBinaryResponseParser.builder()
-                .setRequestParameters(RequestParameters.create()
+                .setRequest(Request.create()
                         .withItemExternalId("defaultBeamId"))
                 .build();
     }
 
-    public static FileBinaryResponseParser of(RequestParameters requestParameters) {
+    public static FileBinaryResponseParser of(Request requestParameters) {
         return FileBinaryResponseParser.builder()
-                .setRequestParameters(requestParameters)
+                .setRequest(requestParameters)
                 .build();
     }
 
     public abstract FileBinaryResponseParser.Builder toBuilder();
-    abstract RequestParameters getRequestParameters();
+    abstract Request getRequest();
 
-    public FileBinaryResponseParser withRequestParameters(RequestParameters requestParameters) {
-        return toBuilder().setRequestParameters(requestParameters).build();
+    public FileBinaryResponseParser withRequest(Request requestParameters) {
+        return toBuilder().setRequest(requestParameters).build();
     }
 
     /**
@@ -89,7 +89,7 @@ public abstract class FileBinaryResponseParser implements ResponseParser<FileBin
         FileBinary.Builder fileBinaryBuilder = FileBinary.newBuilder();
 
         // Get the id from the request
-        Map<String, Object> item = getRequestParameters().getItems().get(0);
+        Map<String, Object> item = getRequest().getItems().get(0);
         Preconditions.checkState(item != null && (item.containsKey("id") || item.containsKey("externalId")),
                 "Request parameters does not contain a valid item.");
         if (item.containsKey("externalId")) {
@@ -106,14 +106,14 @@ public abstract class FileBinaryResponseParser implements ResponseParser<FileBin
 
     @AutoValue.Builder
     public abstract static class Builder {
-        public abstract FileBinaryResponseParser.Builder setRequestParameters(RequestParameters value);
+        public abstract FileBinaryResponseParser.Builder setRequest(Request value);
 
         abstract FileBinaryResponseParser autoBuild();
 
         public FileBinaryResponseParser build() {
             FileBinaryResponseParser parser = autoBuild();
 
-            Preconditions.checkState(parser.getRequestParameters().getItems().size() == 1,
+            Preconditions.checkState(parser.getRequest().getItems().size() == 1,
                     "The request parameters must contain a single item");
 
             return parser;

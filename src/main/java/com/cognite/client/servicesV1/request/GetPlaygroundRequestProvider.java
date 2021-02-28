@@ -17,26 +17,22 @@
 package com.cognite.client.servicesV1.request;
 
 import com.cognite.client.servicesV1.ConnectorConstants;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import okhttp3.HttpUrl;
-import okhttp3.Request;
-import org.apache.beam.sdk.coders.AvroCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Optional;
 
 @AutoValue
-@DefaultCoder(AvroCoder.class)
 public abstract class GetPlaygroundRequestProvider extends GenericPlaygroundRequestProvider{
 
     public static Builder builder() {
         return new com.cognite.client.servicesV1.request.AutoValue_GetPlaygroundRequestProvider.Builder()
-                .setRequestParameters(RequestParameters.create())
+                .setRequest(Request.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(ConnectorConstants.DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER);
@@ -44,14 +40,14 @@ public abstract class GetPlaygroundRequestProvider extends GenericPlaygroundRequ
 
     public abstract Builder toBuilder();
 
-    public GetPlaygroundRequestProvider withRequestParameters(RequestParameters parameters) {
+    public GetPlaygroundRequestProvider withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null.");
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
-    public Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
-        RequestParameters requestParameters = getRequestParameters();
-        Request.Builder requestBuilder = buildGenericRequest();
+    public okhttp3.Request buildRequest(Optional<String> cursor) throws IOException, URISyntaxException {
+        Request requestParameters = getRequest();
+        okhttp3.Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
         ImmutableList<String> rootParameters = ImmutableList.of("limit", "cursor", "divisions");
         ImmutableList<Class> validClasses = ImmutableList.of(String.class, Integer.class, Long.class,

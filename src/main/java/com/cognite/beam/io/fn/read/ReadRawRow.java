@@ -54,7 +54,7 @@ public class ReadRawRow extends ListItemsBaseFn<RawRow> {
         String dbName = (String) requestParameters.getRequestParameters().get("dbName");
         String tableName = (String) requestParameters.getRequestParameters().get("tableName");
 
-        return client.raw().rows().list(dbName, tableName, requestParameters, partitions);
+        return client.raw().rows().list(dbName, tableName, requestParameters.getRequest(), partitions);
     }
 
     @Override

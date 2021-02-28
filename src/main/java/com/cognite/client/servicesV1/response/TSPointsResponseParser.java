@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.response;
 
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.Request;
 import com.cognite.client.servicesV1.util.DurationParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.auto.value.AutoValue;
@@ -37,17 +37,17 @@ public abstract class TSPointsResponseParser extends DefaultResponseParser {
 
     public static TSPointsResponseParser.Builder builder() {
         return new com.cognite.client.servicesV1.response.AutoValue_TSPointsResponseParser.Builder()
-                .setRequestParameters(RequestParameters.create());
+                .setRequest(Request.create());
     }
 
     public abstract TSPointsResponseParser.Builder toBuilder();
 
-    public abstract RequestParameters getRequestParameters();
+    public abstract Request getRequest();
 
-    public TSPointsResponseParser withRequestParameters(RequestParameters parameters) {
+    public TSPointsResponseParser withRequest(Request parameters) {
         Preconditions.checkNotNull(parameters, "Request parameters cannot be null");
 
-        return toBuilder().setRequestParameters(parameters).build();
+        return toBuilder().setRequest(parameters).build();
     }
 
     /**
@@ -68,7 +68,7 @@ public abstract class TSPointsResponseParser extends DefaultResponseParser {
             if (datapoints.isArray()) {
                 LOG.debug("Extracting next cursor. Found datapoints in items Json array.");
                 // first check the length of the json response to see if we received *limit* number of points
-                final int limit = (Integer) getRequestParameters().getRequestParameters()
+                final int limit = (Integer) getRequest().getRequestParameters()
                                 .getOrDefault("limit", DEFAULT_PARAMETER_LIMIT);
                 LOG.debug("Extracting next cursor. Limit parameter in request: {}.", limit);
                 if (datapoints.size() >= limit) {
@@ -79,26 +79,26 @@ public abstract class TSPointsResponseParser extends DefaultResponseParser {
                     LOG.debug("Extracting next cursor. Last datapoint timestamp: {}.", lastTimestamp);
                     long endTimestamp = Instant.now().toEpochMilli();
                     // check if we have an end time (otherwise it was now)
-                    if (getRequestParameters().getRequestParameters().containsKey(END_KEY)) {
+                    if (getRequest().getRequestParameters().containsKey(END_KEY)) {
                         LOG.debug("Extracting next cursor. Request contains end key: {}",
-                                getRequestParameters().getRequestParameters().containsKey(END_KEY));
+                                getRequest().getRequestParameters().containsKey(END_KEY));
 
                         // if end is String, we need to parse it
-                        if (getRequestParameters().getRequestParameters().get(END_KEY) instanceof String) {
+                        if (getRequest().getRequestParameters().get(END_KEY) instanceof String) {
                             LOG.debug("Extracting next cursor. Trying to parse end key");
                             endTimestamp = System.currentTimeMillis() - durationParser
-                                    .parseDuration((String) getRequestParameters().getRequestParameters().get(END_KEY))
+                                    .parseDuration((String) getRequest().getRequestParameters().get(END_KEY))
                                     .toMillis();
 
-                        } else if (getRequestParameters().getRequestParameters().get(END_KEY) instanceof Number) {
+                        } else if (getRequest().getRequestParameters().get(END_KEY) instanceof Number) {
                             LOG.debug("Extracting next cursor. End key matched epoch timestamp");
-                            endTimestamp = (Long) getRequestParameters().getRequestParameters().get(END_KEY);
+                            endTimestamp = (Long) getRequest().getRequestParameters().get(END_KEY);
                         } else {
                             // no compatible type.
                             LOG.error("Parameter end is not a compatible type: "
-                                    + getRequestParameters().getRequestParameters().get(END_KEY).getClass().getCanonicalName());
+                                    + getRequest().getRequestParameters().get(END_KEY).getClass().getCanonicalName());
                             throw new Exception("Parameter end is not a compatible type: "
-                                    + getRequestParameters().getRequestParameters().get(END_KEY).getClass().getCanonicalName());
+                                    + getRequest().getRequestParameters().get(END_KEY).getClass().getCanonicalName());
                         }
                     }
                     // if we do have an end time, check that the latest point is not past it
@@ -113,22 +113,22 @@ public abstract class TSPointsResponseParser extends DefaultResponseParser {
                     long nextDelta = 1;
 
                     // Check if this is an aggregation
-                    if (getRequestParameters().getRequestParameters().containsKey(GRANULARITY_KEY)) {
+                    if (getRequest().getRequestParameters().containsKey(GRANULARITY_KEY)) {
                         LOG.debug("Extracting next cursor. Request is an aggregation request: {}",
-                                getRequestParameters().getRequestParameters().get(GRANULARITY_KEY));
+                                getRequest().getRequestParameters().get(GRANULARITY_KEY));
                         // Parse the granularity specification
-                        if (getRequestParameters().getRequestParameters().get(GRANULARITY_KEY) instanceof String) {
+                        if (getRequest().getRequestParameters().get(GRANULARITY_KEY) instanceof String) {
                             LOG.debug("Extracting next cursor. Trying to parse the granularity key.");
-                            String granularityString = (String) getRequestParameters().getRequestParameters().get(GRANULARITY_KEY);
+                            String granularityString = (String) getRequest().getRequestParameters().get(GRANULARITY_KEY);
                             nextDelta = durationParser.parseDuration(granularityString).toMillis();
 
                         } else {
                             // no compatible type.
                             LOG.error("Parameter " + GRANULARITY_KEY + " is not a compatible type: "
-                                    + getRequestParameters().getRequestParameters().get(GRANULARITY_KEY)
+                                    + getRequest().getRequestParameters().get(GRANULARITY_KEY)
                                             .getClass().getCanonicalName());
                             throw new Exception("Parameter " + GRANULARITY_KEY + " is not a compatible type: "
-                                    + getRequestParameters().getRequestParameters().get(GRANULARITY_KEY)
+                                    + getRequest().getRequestParameters().get(GRANULARITY_KEY)
                                     .getClass().getCanonicalName());
                         }
                     }
@@ -145,7 +145,7 @@ public abstract class TSPointsResponseParser extends DefaultResponseParser {
 
     @AutoValue.Builder
     public abstract static class Builder {
-        public abstract TSPointsResponseParser.Builder setRequestParameters(RequestParameters value);
+        public abstract TSPointsResponseParser.Builder setRequest(Request value);
 
         public abstract TSPointsResponseParser build();
     }

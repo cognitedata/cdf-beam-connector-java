@@ -1,6 +1,5 @@
 package com.cognite.client;
 
-import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.config.AuthConfig;
 import com.cognite.client.dto.LoginStatus;
 import com.cognite.client.config.ClientConfig;
@@ -272,6 +271,7 @@ public abstract class CogniteClient implements Serializable {
      * @return project config with auth info populated
      * @throws Exception
      */
+    /*
     protected ProjectConfig buildProjectConfig() throws Exception {
         String cdfProject = null;
         if (null != getProject()) {
@@ -298,6 +298,8 @@ public abstract class CogniteClient implements Serializable {
                 .withApiKey(getApiKey())
                 .withProject(cdfProject);
     }
+
+     */
 
     /**
      * Returns a auth info for api requests

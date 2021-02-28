@@ -16,7 +16,6 @@
 
 package com.cognite.client.servicesV1.parser;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.client.dto.FileMetadata;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static com.cognite.client.servicesV1.ConnectorConstants.MAX_LOG_ELEMENT_LENGTH;
 
 /**
  * This class contains a set of methods to help parsing file objects between Cognite api representations
@@ -385,6 +386,6 @@ public class FileParser {
 
     private static String buildErrorMessage(String fieldName, String inputElement) {
         return logPrefix + "Unable to parse attribute: "+ fieldName + ". Item exerpt: "
-                + inputElement.substring(0, Math.min(inputElement.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
+                + inputElement.substring(0, Math.min(inputElement.length() - 1, MAX_LOG_ELEMENT_LENGTH));
     }
 }
