@@ -20,23 +20,10 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
-import com.cognite.client.dto.FileBinary;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.PnIDResponse;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.PnIDResponseParser;
-import com.cognite.beam.io.util.internal.MetricsUtil;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.BytesValue;
-import com.google.protobuf.Int64Value;
 import com.google.protobuf.Struct;
-import com.google.protobuf.util.Values;
-import org.apache.beam.sdk.metrics.Distribution;
-import org.apache.beam.sdk.metrics.Metrics;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
@@ -45,12 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
 
 /**
  * Detects annotations and builds interactive P&ID (svg and png) from single-page PDF.

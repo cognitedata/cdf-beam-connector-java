@@ -22,7 +22,6 @@ import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
 import com.cognite.client.servicesV1.parser.PnIDResponseParser;
-import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BytesValue;
@@ -220,11 +219,11 @@ public abstract class PnID extends ApiBase {
      * Convert a single-page P&ID in PDF format to an interactive SVG where the provided annotations are highlighted.
      *
      * @param annotationsList Original P&ID with annotations.
-     * @param greyscale Set to {@code true} to return the SVG in greyscale (reduces the file size).
+     * @param grayscale Set to {@code true} to return the SVG in greyscale (reduces the file size).
      * @return Annotations together with an interactive SVG binary
      * @throws Exception
      */
-    public List<PnIDResponse> convertPnID(Collection<PnIDResponse> annotationsList, boolean greyscale) throws Exception {
+    public List<PnIDResponse> convertPnID(Collection<PnIDResponse> annotationsList, boolean grayscale) throws Exception {
         final String loggingPrefix = "convertPnID() - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         Preconditions.checkNotNull(annotationsList, loggingPrefix + "Requests cannot be null.");
         Instant startInstant = Instant.now();
@@ -242,7 +241,7 @@ public abstract class PnID extends ApiBase {
         for (PnIDResponse annotations : annotationsList) {
             RequestParameters interactiveFilesRequest = RequestParameters.create()
                     .withRootParameter("items", annotations.getItemsList())
-                    .withRootParameter("greyscale", greyscale);
+                    .withRootParameter("grayscale", grayscale);
 
             if (annotations.hasFileExternalId()) {
                 interactiveFilesRequest = interactiveFilesRequest
@@ -323,30 +322,6 @@ public abstract class PnID extends ApiBase {
                 Duration.between(startInstant, Instant.now()).toString());
 
         return results;
-    }
-
-    /**
-     * Deletes a set of entity matching models.
-     *
-     * The models to delete are identified via their {@code externalId / id} by submitting a list of
-     * {@link Item}.
-     *
-     * @param entityMatchingModels a list of {@link Item} representing the entity matching models (externalId / id)
-     *                             to be deleted
-     * @return The deleted models via {@link Item}
-     * @throws Exception
-     */
-    public List<Item> delete(List<Item> entityMatchingModels) throws Exception {
-        ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEntityMatcherModels()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-
-        DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                //.addParameter("ignoreUnknownIds", true)
-                ;
-
-        return deleteItems.deleteItems(entityMatchingModels);
     }
 
     /*
