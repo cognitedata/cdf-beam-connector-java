@@ -17,18 +17,23 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.LoginStatus;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Event;
+import com.cognite.client.dto.Item;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.servicesV1.ItemReader;
 import com.cognite.client.servicesV1.ResponseItems;
+import com.cognite.client.servicesV1.parser.AggregateParser;
+import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.servicesV1.parser.ItemParser;
 import com.cognite.client.util.Partition;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.Message;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,12 +52,15 @@ import java.util.stream.Collectors;
  *
  * This class collects the set of common attributes across all apis. The individual api
  * implementations will automatically pick these up via the AutoValue generator.
+ *
+ * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
  */
 abstract class ApiBase {
     private static final ImmutableList<ResourceType> resourcesSupportingPartitions =
-            ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT, ResourceType.FILE, ResourceType.TIMESERIES_HEADER);
+            ImmutableList.of(ResourceType.ASSET, ResourceType.EVENT, ResourceType.FILE, ResourceType.TIMESERIES_HEADER,
+                    ResourceType.RAW_ROW);
 
-    protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+    protected static final Logger LOG = LoggerFactory.getLogger(ApiBase.class);
 
     public abstract CogniteClient getClient();
 
@@ -95,6 +103,32 @@ abstract class ApiBase {
     protected Iterator<List<String>> listJson(ResourceType resourceType,
                                         RequestParameters requestParameters,
                                         String... partitions) throws Exception {
+        return listJson(resourceType, requestParameters, "partition", partitions);
+    }
+
+    /**
+     * Will return the results from a {@code list / filter} api endpoint. For example, the {@code filter assets}
+     * endpoint.
+     *
+     * The results are paged through / iterated over via an {@link Iterator}--the entire results set is not buffered in
+     * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
+     * have to stream these results into your own data structure.
+     *
+     * This method support parallel retrieval via a set of {@code partition} specifications. The specified partitions
+     * will be collected and merged together before being returned via the {@link Iterator}.
+     *
+     * @param resourceType The resource type to query / filter / list. Ex. {@code event, asset, time series}.
+     * @param requestParameters The query / filter specification. Follows the Cognite api request parameters.
+     * @param partitionKey The key to use for the partitions in the read request. For example {@code partition}
+     *                     or {@code cursor}.
+     * @param partitions An optional set of partitions to read via.
+     * @return an {@link Iterator} over the results set.
+     * @throws Exception
+     */
+    protected Iterator<List<String>> listJson(ResourceType resourceType,
+                                              RequestParameters requestParameters,
+                                              String partitionKey,
+                                              String... partitions) throws Exception {
         // Check constraints
         if (partitions.length > 0 && !resourcesSupportingPartitions.contains(resourceType)) {
             LOG.warn(String.format("The resource type %s does not support partitions. Will ignore the partitions.",
@@ -117,11 +151,177 @@ abstract class ApiBase {
                     partitions.length));
             for (String partition : partitions) {
                 iterators.add(getListResponseIterator(resourceType,
-                        requestParams.withRootParameter("partition", partition)));
+                        requestParams.withRootParameter(partitionKey, partition)));
             }
         }
 
         return FanOutIterator.of(iterators);
+    }
+
+    /**
+     * Retrieve items by id.
+     *
+     * @param resourceType The item resource type ({@link com.cognite.client.dto.Event},
+     * {@link com.cognite.client.dto.Asset}, etc.) to retrieve.
+     *
+     * @param items The item(s) {@code externalId / id} to retrieve.
+     * @return The items in Json representation.
+     * @throws Exception
+     */
+    protected List<String> retrieveJson(ResourceType resourceType, Collection<Item> items) throws Exception {
+        String batchLogPrefix =
+                "retrieveJson() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+        Instant startInstant = Instant.now();
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ItemReader<String> itemReader;
+
+        // Check that ids are provided + remove duplicate ids
+        Map<Long, Item> internalIdMap = new HashMap<>(items.size());
+        Map<String, Item> externalIdMap = new HashMap<>(items.size());
+        for (Item value : items) {
+            if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                externalIdMap.put(value.getExternalId(), value);
+            } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                internalIdMap.put(value.getId(), value);
+            } else {
+                String message = batchLogPrefix + "Item does not contain id nor externalId: " + value.toString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+        }
+        LOG.debug(batchLogPrefix + "Received {} items to read.", internalIdMap.size() + externalIdMap.size());
+        if (internalIdMap.isEmpty() && externalIdMap.isEmpty()) {
+            // Should not happen, but need to safeguard against it
+            LOG.info(batchLogPrefix + "Empty input. Will skip the read process.");
+            return Collections.emptyList();
+        }
+
+        // Select the appropriate item reader
+        switch (resourceType) {
+            case ASSET:
+                itemReader = connector.readAssetsById();
+                break;
+            case EVENT:
+                itemReader = connector.readEventsById();
+                break;
+            case SEQUENCE_HEADER:
+                itemReader = connector.readSequencesById();
+                break;
+            case FILE_HEADER:
+                itemReader = connector.readFilesById();
+                break;
+            case TIMESERIES_HEADER:
+                itemReader = connector.readTsById();
+                break;
+            case RELATIONSHIP:
+                itemReader = connector.readRelationshipsById();
+                break;
+            case DATA_SET:
+                itemReader = connector.readDataSetsById();
+                break;
+            default:
+                LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
+                throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
+        }
+
+        List<Item> deduplicatedItems = new ArrayList<>(items.size());
+        deduplicatedItems.addAll(externalIdMap.values());
+        deduplicatedItems.addAll(internalIdMap.values());
+        List<List<Item>> itemBatches = Partition.ofSize(deduplicatedItems, 1000);
+
+        // Submit all batches
+        List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
+        for (List<Item> batch : itemBatches) {
+            // build initial request object
+            RequestParameters request = addAuthInfo(RequestParameters.create()
+                    .withItems(toRequestItems(batch))
+                    .withRootParameter("ignoreUnknownIds", true));
+
+            futureList.add(itemReader.getItemsAsync(request));
+        }
+
+        // Wait for all requests futures to complete
+        CompletableFuture<Void> allFutures =
+                CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
+        allFutures.join(); // Wait for all futures to complete
+
+        // Collect the response items
+        List<String> responseItems = new ArrayList<>(deduplicatedItems.size());
+        for (CompletableFuture<ResponseItems<String>> responseItemsFuture : futureList) {
+            if (!responseItemsFuture.join().isSuccessful()) {
+                // something went wrong with the request
+                String message = batchLogPrefix + "Error while reading the results from Cognite Data Fusion: "
+                        + responseItemsFuture.join().getResponseBodyAsString();
+                LOG.error(message);
+                throw new Exception(message);
+            }
+            responseItemsFuture.join().getResultsItems().forEach(result -> responseItems.add(result));
+        }
+
+        LOG.info(batchLogPrefix + "Successfully retrieved {} items across {} requests within a duration of {}.",
+                responseItems.size(),
+                futureList.size(),
+                Duration.between(startInstant, Instant.now()).toString());
+        return responseItems;
+    }
+
+    /**
+     * Performs an item aggregation request to Cognite Data Fusion.
+     *
+     * The default aggregation is a total item count based on the (optional) filters in the request. Some
+     * resource types, for example {@link com.cognite.client.dto.Event}, supports multiple types of aggregation.
+     *
+     * @param resourceType The resource type to perform aggregation of.
+     * @param requestParameters The request containing filters.
+     * @return The aggregation result.
+     * @throws Exception
+     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
+     */
+    protected Aggregate aggregate(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
+        String batchLogPrefix =
+                "aggregate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+        ConnectorServiceV1 connector = getClient().getConnectorService();
+        ItemReader<String> itemReader;
+        Instant startInstant = Instant.now();
+
+        // Add auth info
+        RequestParameters requestParams = addAuthInfo(requestParameters);
+
+        switch (resourceType) {
+            case ASSET:
+                itemReader = connector.readAssetsAggregates();
+                break;
+            case EVENT:
+                itemReader = connector.readEventsAggregates();
+                break;
+            case SEQUENCE_HEADER:
+                itemReader = connector.readSequencesAggregates();
+                break;
+            case FILE_HEADER:
+                itemReader = connector.readFilesAggregates();
+                break;
+            case TIMESERIES_HEADER:
+                itemReader = connector.readTsAggregates();
+                break;
+            case DATA_SET:
+                itemReader = connector.readDataSetsAggregates();
+                break;
+            default:
+                LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);
+                throw new Exception(batchLogPrefix + "Not a supported resource type: " + resourceType);
+        }
+        ResponseItems<String> responseItems = itemReader.getItems(requestParams);
+
+        if (!responseItems.isSuccessful()) {
+            // something went wrong with the request
+            String message = batchLogPrefix + "Error when sending request to Cognite Data Fusion: "
+                    + responseItems.getResponseBodyAsString();
+            LOG.error(message);
+            throw new Exception(message);
+        }
+        LOG.info(batchLogPrefix + "Successfully retrieved aggregate within a duration of {}.",
+                Duration.between(startInstant, Instant.now()).toString());
+        return AggregateParser.parseAggregate(responseItems.getResultsItems().get(0));
     }
 
     /**
@@ -137,7 +337,7 @@ abstract class ApiBase {
      * @return The request parameters with auth info added to it.
      * @throws Exception
      */
-    private RequestParameters addAuthInfo(RequestParameters requestParameters) throws Exception {
+    protected RequestParameters addAuthInfo(RequestParameters requestParameters) throws Exception {
         // Check if there already is auth info.
         if (null != requestParameters.getProjectConfig().getProject()
                 && null != requestParameters.getProjectConfig().getHost()
@@ -145,13 +345,39 @@ abstract class ApiBase {
             return requestParameters;
         }
 
-        return requestParameters.withProjectConfig(getClient().buildProjectConfig());
+        return requestParameters
+                .withProjectConfig(getClient().buildProjectConfig())
+                .withRequest(addAuthInfo(requestParameters.getRequest()));
+    }
+
+    /**
+     * Adds the required authentication information into the request object. If the request object already have
+     * complete auth info nothing will be added.
+     *
+     * The following authentication schemes are supported:
+     * 1) API key.
+     *
+     * When using an api key, this service will look up the corresponding project/tenant to issue requests to.
+     *
+     * @param request The request to enrich with auth information.
+     * @return The request parameters with auth info added to it.
+     * @throws Exception
+     */
+    protected Request addAuthInfo(Request request) throws Exception {
+        // Check if there already is auth info.
+        if (null != request.getAuthConfig()
+                && null != request.getAuthConfig().getProject()
+                && null != request.getAuthConfig().getApiKey()) {
+            return request;
+        }
+
+        return request.withAuthConfig(getClient().buildAuthConfig());
     }
 
     /*
     Builds a single stream iterator to page through a query to a list/filter endpoint.
      */
-    private Iterator<CompletableFuture<ResponseItems<String>>>
+    protected Iterator<CompletableFuture<ResponseItems<String>>>
             getListResponseIterator(ResourceType resourceType, RequestParameters requestParameters) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
 
@@ -170,25 +396,58 @@ abstract class ApiBase {
                 // TODO move the executor and client spec up to the connector
                 break;
             case SEQUENCE_HEADER:
-                results = connector.readSequencesHeaders(requestParameters);
+                results = connector.readSequencesHeaders(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case SEQUENCE_BODY:
-                results = connector.readSequencesRows(requestParameters);
+                results = connector.readSequencesRows(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case TIMESERIES_HEADER:
-                results = connector.readTsHeaders(requestParameters);
+                results = connector.readTsHeaders(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case FILE_HEADER:
-                results = connector.readFileHeaders(requestParameters);
+                results = connector.readFileHeaders(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case DATA_SET:
-                results = connector.readDataSets(requestParameters);
+                results = connector.readDataSets(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case RELATIONSHIP:
-                results = connector.readRelationships(requestParameters);
+                results = connector.readRelationships(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             case LABEL:
-                results = connector.readLabels(requestParameters);
+                results = connector.readLabels(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
+                break;
+            case SECURITY_CATEGORY:
+                results = connector.readSecurityCategories(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
+                break;
+            case RAW_ROW:
+                results = connector.readRawRows(requestParameters)
+                        .withExecutorService(getClient().getExecutorService())
+                        .withHttpClient(getClient().getHttpClient());
+                // TODO move the executor and client spec up to the connector
                 break;
             default:
                 throw new Exception("Not a supported resource type: " + resourceType);
@@ -196,6 +455,130 @@ abstract class ApiBase {
 
         return results;
     }
+
+    /**
+     * Parses a list of item object in json representation to typed objects.
+     *
+     * @param input the item list in Json string representation
+     * @return the parsed item objects
+     * @throws Exception
+     */
+    protected List<Item> parseItems(List<String> input) throws Exception {
+        ImmutableList.Builder<Item> listBuilder = ImmutableList.builder();
+        for (String item : input) {
+            listBuilder.add(ItemParser.parseItem(item));
+        }
+        return listBuilder.build();
+    }
+
+    /**
+     * Converts a list of {@link Item} to a request object structure (that can later be parsed to Json).
+     *
+     * @param itemList The items to parse.
+     * @return The items in request item object form.
+     */
+    protected List<Map<String, Object>> toRequestItems(Collection<Item> itemList) {
+        List<Map<String, Object>> requestItems = new ArrayList<>();
+        for (Item item : itemList) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                requestItems.add(ImmutableMap.of("externalId", item.getExternalId()));
+            } else {
+                requestItems.add(ImmutableMap.of("id", item.getId()));
+            }
+        }
+        return requestItems;
+    }
+
+    /**
+     * De-duplicates a collection of {@link Item}.
+     * @param itemList
+     * @return
+     */
+    protected List<Item> deDuplicate(Collection<Item> itemList) {
+        Map<String, Item> idMap = new HashMap<>();
+        for (Item item : itemList) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                idMap.put(item.getExternalId(), item);
+            } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+                idMap.put(String.valueOf(item.getId()), item);
+            } else {
+                idMap.put("", item);
+            }
+        }
+        List<Item> deDuplicated = new ArrayList<>(idMap.values());
+
+        return deDuplicated;
+    }
+
+    /**
+     * Returns true if all items contain either an externalId or id.
+     * @param items
+     * @return
+     */
+    protected boolean itemsHaveId(Collection<Item> items) {
+        for (Item item : items) {
+            if (!getItemId(item).isPresent()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Maps all items to their externalId (primary) or id (secondary). If the id function does not return any
+     * identity, the item will be mapped to the empty string.
+     *
+     * Via the identity mapping, this function will also perform deduplication of the input items.
+     *
+     * @param items the items to map to externalId / id.
+     * @return the {@link Map} with all items mapped to externalId / id.
+     */
+    protected Map<String, Item> mapItemToId(Collection<Item> items) {
+        Map<String, Item> resultMap = new HashMap<>((int) (items.size() * 1.35));
+        for (Item item : items) {
+            resultMap.put(getItemId(item).orElse(""), item);
+        }
+        return resultMap;
+    }
+
+    /**
+     * Try parsing the specified Json path as a {@link String}.
+     *
+     * @param itemJson The Json string
+     * @param fieldName The Json path to parse
+     * @return The Json path as a {@link String}.
+     */
+    protected String parseString(String itemJson, String fieldName) {
+        try {
+            return ItemParser.parseString(itemJson, fieldName).orElse("");
+        } catch (Exception e)  {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Returns the name attribute value from a json input.
+     *
+     * @param json the json to parse
+     * @return The name value
+     */
+    protected String parseName(String json) {
+        return parseString(json, "name");
+    }
+
+    /*
+    Returns the id of an Item.
+     */
+    private Optional<String> getItemId(Item item) {
+        Optional<String> returnValue = Optional.empty();
+        if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+            returnValue = Optional.of(item.getExternalId());
+        } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+            returnValue = Optional.of(String.valueOf(item.getId()));
+        }
+        return returnValue;
+    }
+
 
     /**
      * An iterator that uses multiple input iterators and combines them into a single stream / collection.
@@ -371,20 +754,16 @@ abstract class ApiBase {
      * @param <T> The object type of the objects to upsert.
      */
     @AutoValue
-    public abstract static class UpsertItems<T> {
+    public abstract static class UpsertItems<T extends Message> {
         private static final int DEFAULT_MAX_BATCH_SIZE = 1000;
         private static final int maxUpsertLoopIterations = 4;
 
-        protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+        protected static final Logger LOG = LoggerFactory.getLogger(UpsertItems.class);
 
-        private static <T> Builder<T> builder() {
+        private static <T extends Message> Builder<T> builder() {
             return new AutoValue_ApiBase_UpsertItems.Builder<T>()
                     .setMaxBatchSize(DEFAULT_MAX_BATCH_SIZE)
                     .setIdFunction(UpsertItems::getId);
-        }
-
-        private static <T> Optional<String> getId(T item) {
-            return Optional.<String>empty();
         }
 
         /**
@@ -397,7 +776,7 @@ abstract class ApiBase {
          * @param <T> The object type of the objects to upsert.
          * @return the {@link UpsertItems} for upserts.
          */
-        public static <T> UpsertItems<T> of(ConnectorServiceV1.ItemWriter createWriter,
+        public static <T extends Message> UpsertItems<T> of(ConnectorServiceV1.ItemWriter createWriter,
                                          Function<T, Map<String, Object>> createMappingFunction,
                                          ProjectConfig projectConfig)  {
             return UpsertItems.<T>builder()
@@ -405,6 +784,17 @@ abstract class ApiBase {
                     .setCreateMappingFunction(createMappingFunction)
                     .setProjectConfig(projectConfig)
                     .build();
+        }
+
+        /**
+         * Get id via the common dto methods {@code getExternalId} and {@code getId}.
+         *
+         * @param item The item to interrogate for id
+         * @param <T> The object type of the item. Must be a protobuf object.
+         * @return The (external)Id if found. An empty {@link Optional} if no id is found.
+         */
+        private static <T> Optional<String> getId(T item) {
+            return Optional.<String>empty();
         }
 
         abstract Builder<T> toBuilder();
@@ -415,11 +805,14 @@ abstract class ApiBase {
         abstract Function<T, Map<String, Object>> getCreateMappingFunction();
         @Nullable
         abstract Function<T, Map<String, Object>> getUpdateMappingFunction();
+        @Nullable
+        abstract Function<T, Item> getItemMappingFunction();
         abstract ConnectorServiceV1.ItemWriter getCreateItemWriter();
         @Nullable
         abstract ConnectorServiceV1.ItemWriter getUpdateItemWriter();
         @Nullable
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
+        abstract ImmutableMap<String, Object> getDeleteParameters();
 
         /**
          * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for update request.
@@ -443,6 +836,39 @@ abstract class ApiBase {
         }
 
         /**
+         * Sets the {@link com.cognite.client.servicesV1.ConnectorServiceV1.ItemWriter} for delete request.
+         *
+         * @param deleteWriter The item writer for delete requests
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> withDeleteItemWriter(ConnectorServiceV1.ItemWriter deleteWriter) {
+            return toBuilder().setDeleteItemWriter(deleteWriter).build();
+        }
+
+        /**
+         * Adds an attribute to the delete items request.
+         *
+         * This is typically used to add attributes such as {@code ignoreUnknownIds} and / or {@code recursive}.
+         * @param key The name of the attribute.
+         * @param value The value of the attribute
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> addDeleteParameter(String key, Object value) {
+            return toBuilder().addDeleteParameter(key, value).build();
+        }
+
+        /**
+         * Sets the mapping function for translating from the typed objects an {@link Item} object. This function
+         * is used when deleting objects (which is done via the Item representation).
+         *
+         * @param function The {@link Item} mapping function.
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> withItemMappingFunction(Function<T, Item> function) {
+            return toBuilder().setItemMappingFunction(function).build();
+        }
+
+        /**
          * Sets the id function for reading the {@code externalId / id} from the input items. This function
          * is used when orchestrating upserts--in order to identify duplicates and missing items.
          *
@@ -457,6 +883,16 @@ abstract class ApiBase {
         }
 
         /**
+         * Configures the max batch size for the individual api requests. The default batch size is 1000 items.
+         *
+         * @param maxBatchSize The maximum batch size per api request.
+         * @return The {@link UpsertItems} object with the configuration applied.
+         */
+        public UpsertItems<T> withMaxBatchSize(int maxBatchSize) {
+            return toBuilder().setMaxBatchSize(maxBatchSize).build();
+        }
+
+        /**
          * Upserts a set of items via create and update.
          *
          * This function will first try to write the items as new items. In case the items already exists
@@ -467,13 +903,13 @@ abstract class ApiBase {
          * @throws Exception
          */
         public List<String> upsertViaCreateAndUpdate(List<T> items) throws Exception {
+            Instant startInstant = Instant.now();
             String batchLogPrefix =
                     "upsertViaCreateAndUpdate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
             Preconditions.checkArgument(itemsHaveId(items),
                     batchLogPrefix + "All items must have externalId or id.");
-            LOG.debug(String.format(batchLogPrefix + "Received %d items to upsert",
-                    items.size()));
-            Instant startInstant = Instant.now();
+            LOG.debug(batchLogPrefix + "Received {} items to upsert",
+                    items.size());
 
             // Should not happen--but need to guard against empty input
             if (items.isEmpty()) {
@@ -623,6 +1059,585 @@ abstract class ApiBase {
                 throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
                         + " %d items completed upsert. %n " + exceptionMessage,
                         elementListCreate.size() + elementListUpdate.size(),
+                        elementListCompleted.size()));
+            }
+
+            return elementListCompleted;
+        }
+
+        /**
+         * Upserts a set of items via update and create.
+         *
+         * This function will first try to update the items. In case the items do not exist
+         * (based on externalId or Id), the items will be created. Effectively this results in an upsert.
+         *
+         * @param items The items to be upserted.
+         * @return The upserted items.
+         * @throws Exception
+         */
+        public List<String> upsertViaUpdateAndCreate(List<T> items) throws Exception {
+            String batchLogPrefix =
+                    "upsertViaUpdateAndCreate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+            Preconditions.checkArgument(itemsHaveId(items),
+                    batchLogPrefix + "All items must have externalId or id.");
+            Preconditions.checkState(null != getUpdateItemWriter(),
+                    "The update item writer is not configured.");
+            Preconditions.checkState(null != getUpdateMappingFunction(),
+                    "The update mapping function is not configured.");
+            LOG.debug(String.format(batchLogPrefix + "Received %d items to upsert",
+                    items.size()));
+            Instant startInstant = Instant.now();
+
+            // Should not happen--but need to guard against empty input
+            if (items.isEmpty()) {
+                LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+                return Collections.<String>emptyList();
+            }
+
+            // Insert, update, completed lists
+            List<T> elementListUpdate = deduplicate(items);
+            List<T> elementListCreate = new ArrayList<>(items.size() / 2);
+            List<String> elementListCompleted = new ArrayList<>(elementListUpdate.size());
+
+            if (elementListUpdate.size() != items.size()) {
+                LOG.debug(batchLogPrefix + "Identified {} duplicate items in the input.",
+                        items.size() - elementListUpdate.size());
+            }
+
+            /*
+            The upsert loop. If there are items left to insert or update:
+            1. Update elements
+            2. If conflicts move missing items into the insert maps
+            3. Update elements
+            4. If conflict, remove duplicates into the update maps
+            */
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            String exceptionMessage = "";
+            for (int i = 0; i < maxUpsertLoopIterations && (elementListCreate.size() + elementListUpdate.size()) > 0;
+                 i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+                LOG.debug(batchLogPrefix + "Start upsert loop {} with {} items to update, {} items to create and "
+                                + "{} completed items at duration {}",
+                        i,
+                        elementListUpdate.size(),
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+
+                /*
+                Update items
+                 */
+                if (elementListUpdate.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Update items list is empty. Skipping update.");
+                } else {
+                    Map<ResponseItems<String>, List<T>> updateResponseMap = splitAndUpdateItems(elementListUpdate);
+                    LOG.debug(batchLogPrefix + "Completed update items requests for {} items across {} batches at duration {}",
+                            elementListUpdate.size(),
+                            updateResponseMap.size(),
+                            Duration.between(startInstant, Instant.now()).toString());
+                    elementListUpdate.clear(); // Must prepare the list for possible new entries.
+
+                    for (ResponseItems<String> response : updateResponseMap.keySet()) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                            LOG.debug(batchLogPrefix + "Update items request success. Adding {} update result items to result collection.",
+                                    response.getResultsItems().size());
+                        } else {
+                            exceptionMessage = response.getResponseBodyAsString();
+                            LOG.debug(batchLogPrefix + "Update items request failed: {}", response.getResponseBodyAsString());
+                            if (i == maxUpsertLoopIterations - 1) {
+                                // Add the error message to std logging
+                                LOG.error(batchLogPrefix + "Update items request failed. {}", response.getResponseBodyAsString());
+                            }
+                            LOG.debug(batchLogPrefix + "Converting missing items to create and retrying the request");
+                            List<Item> missing = ItemParser.parseItems(response.getMissingItems());
+                            LOG.debug(batchLogPrefix + "Number of missing entries reported by CDF: {}", missing.size());
+
+                            // Move missing items from update to the create request
+                            Map<String, T> itemsMap = mapToId(updateResponseMap.get(response));
+                            for (Item value : missing) {
+                                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                                    elementListCreate.add(itemsMap.get(value.getExternalId()));
+                                    itemsMap.remove(value.getExternalId());
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                                    elementListCreate.add(itemsMap.get(value.getId()));
+                                    itemsMap.remove(value.getId());
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.LEGACY_NAME) {
+                                    // Special case for v1 TS headers.
+                                    elementListCreate.add(itemsMap.get(value.getLegacyName()));
+                                    itemsMap.remove(value.getLegacyName());
+                                }
+                            }
+                            elementListUpdate.addAll(itemsMap.values()); // Add remaining items to be re-updated
+                        }
+                    }
+                }
+
+                /*
+                Insert / create items
+                 */
+                if (elementListCreate.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Create items list is empty. Skipping create.");
+                } else {
+                    Map<ResponseItems<String>, List<T>> createResponseMap = splitAndCreateItems(elementListCreate);
+                    LOG.debug(batchLogPrefix + "Completed create items requests for {} items across {} batches at duration {}",
+                            elementListCreate.size(),
+                            createResponseMap.size(),
+                            Duration.between(startInstant, Instant.now()).toString());
+                    elementListCreate.clear(); // Must prepare the list for possible new entries.
+
+                    for (ResponseItems<String> response : createResponseMap.keySet()) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                            LOG.debug(batchLogPrefix + "Create items request success. Adding {} create result items to result collection.",
+                                    response.getResultsItems().size());
+                        } else {
+                            exceptionMessage = response.getResponseBodyAsString();
+                            LOG.debug(batchLogPrefix + "Create items request failed: {}", response.getResponseBodyAsString());
+                            if (i == maxUpsertLoopIterations - 1) {
+                                // Add the error message to std logging
+                                LOG.error(batchLogPrefix + "Create items request failed. {}", response.getResponseBodyAsString());
+                            }
+                            LOG.debug(batchLogPrefix + "Converting duplicates to update and retrying the request");
+                            List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                            LOG.debug(batchLogPrefix + "Number of duplicate entries reported by CDF: {}", duplicates.size());
+
+                            // Move duplicates from insert to the update request
+                            Map<String, T> itemsMap = mapToId(createResponseMap.get(response));
+                            for (Item value : duplicates) {
+                                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                                    elementListUpdate.add(itemsMap.get(value.getExternalId()));
+                                    itemsMap.remove(value.getExternalId());
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                                    elementListUpdate.add(itemsMap.get(value.getId()));
+                                    itemsMap.remove(value.getId());
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.LEGACY_NAME) {
+                                    // Special case for v1 TS headers.
+                                    elementListUpdate.add(itemsMap.get(value.getLegacyName()));
+                                    itemsMap.remove(value.getLegacyName());
+                                }
+                            }
+                            elementListCreate.addAll(itemsMap.values()); // Add remaining items to be re-inserted
+                        }
+                    }
+                }
+            }
+
+            // Check if all elements completed the upsert requests
+            if (elementListCreate.isEmpty() && elementListUpdate.isEmpty()) {
+                LOG.info(batchLogPrefix + "Successfully upserted {} items within a duration of {}.",
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+            } else {
+                LOG.error(batchLogPrefix + "Failed to upsert items. {} items remaining. {} items completed upsert."
+                                + System.lineSeparator() + "{}",
+                        elementListCreate.size() + elementListUpdate.size(),
+                        elementListCompleted.size(),
+                        exceptionMessage);
+                throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
+                                + " %d items completed upsert. %n " + exceptionMessage,
+                        elementListCreate.size() + elementListUpdate.size(),
+                        elementListCompleted.size()));
+            }
+
+            return elementListCompleted;
+        }
+
+        /**
+         * Upserts a set of items via delete and create.
+         *
+         * This function will first try to delete the items (in case they already exist in CDF)
+         * before creating them. Effectively this results in an upsert.
+         *
+         * This method is used for resource types that do not support updates natively
+         * in the CDF api.
+         *
+         * @param items The items to be upserted.
+         * @return The upserted items.
+         * @throws Exception
+         */
+        public List<String> upsertViaDeleteAndCreate(List<T> items) throws Exception {
+            String batchLogPrefix =
+                    "upsertViaDeleteAndCreate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+            Preconditions.checkState(null != getDeleteItemWriter(),
+                    batchLogPrefix + "The delete item writer is not configured.");
+            Preconditions.checkState(null != getItemMappingFunction(),
+                    batchLogPrefix + "The item mapping function is not configured.");
+            Preconditions.checkArgument(itemsHaveId(items),
+                    batchLogPrefix + "All items must have externalId or id.");
+            LOG.debug(String.format(batchLogPrefix + "Received %d items to upsert",
+                    items.size()));
+
+            Instant startInstant = Instant.now();
+
+            // Should not happen--but need to guard against empty input
+            if (items.isEmpty()) {
+                LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+                return Collections.<String>emptyList();
+            }
+
+            // Configure the delete handler
+            DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getProjectConfig())
+                    .setParameters(getDeleteParameters());
+
+            // Insert, update, completed lists
+            List<T> elementListCreate = deduplicate(items);
+            List<T> elementListDelete = deduplicate(items);
+            List<String> elementListCompleted = new ArrayList<>(elementListCreate.size());
+
+            if (elementListCreate.size() != items.size()) {
+                LOG.debug(batchLogPrefix + "Identified {} duplicate items in the input.",
+                        items.size() - elementListCreate.size());
+            }
+
+            /*
+            The upsert loop. If there are items left to insert or delete:
+            1. Delete elements.
+            2. Create elements.
+            3. If conflicts, move duplicates to delete elements.
+            */
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            String exceptionMessage = "";
+            for (int i = 0; i < maxUpsertLoopIterations && (elementListCreate.size() + elementListDelete.size()) > 0;
+                 i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+                LOG.debug(batchLogPrefix + "Start upsert loop {} with {} items to delete, {} items to create and "
+                                + "{} completed items at duration {}",
+                        i,
+                        elementListDelete.size(),
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+
+                /*
+                Delete items
+                 */
+                if (elementListDelete.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Delete items list is empty. Skipping delete.");
+                } else {
+                    // Convert input elements to Item and submit the delete requests.
+                    List<Item> deleteItems = new ArrayList<>(elementListDelete.size());
+                    elementListDelete.forEach(element -> deleteItems.add(getItemMappingFunction().apply(element)));
+                    deleteItemsHandler.deleteItems(deleteItems);
+                    elementListDelete.clear();
+                }
+
+                /*
+                Insert / create items
+                 */
+                if (elementListCreate.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Create items list is empty. Skipping create.");
+                } else {
+                    Map<ResponseItems<String>, List<T>> createResponseMap = splitAndCreateItems(elementListCreate);
+                    LOG.debug(batchLogPrefix + "Completed create items requests for {} items across {} batches at duration {}",
+                            elementListCreate.size(),
+                            createResponseMap.size(),
+                            Duration.between(startInstant, Instant.now()).toString());
+                    elementListCreate.clear(); // Must prepare the list for possible new entries.
+
+                    for (ResponseItems<String> response : createResponseMap.keySet()) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                            LOG.debug(batchLogPrefix + "Create items request success. Adding {} create result items to result collection.",
+                                    response.getResultsItems().size());
+                        } else {
+                            exceptionMessage = response.getResponseBodyAsString();
+                            LOG.debug(batchLogPrefix + "Create items request failed: {}", response.getResponseBodyAsString());
+                            if (i == maxUpsertLoopIterations - 1) {
+                                // Add the error message to std logging
+                                LOG.error(batchLogPrefix + "Create items request failed. {}", response.getResponseBodyAsString());
+                            }
+                            LOG.debug(batchLogPrefix + "Copy duplicates to delete collection and retrying the request");
+                            List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                            LOG.debug(batchLogPrefix + "Number of duplicate entries reported by CDF: {}", duplicates.size());
+
+                            // Copy duplicates from insert to the delete request
+                            Map<String, T> itemsMap = mapToId(createResponseMap.get(response));
+                            for (Item value : duplicates) {
+                                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                                    elementListDelete.add(itemsMap.get(value.getExternalId()));
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                                    elementListDelete.add(itemsMap.get(value.getId()));
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.LEGACY_NAME) {
+                                    // Special case for v1 TS headers.
+                                    elementListDelete.add(itemsMap.get(value.getLegacyName()));
+                                }
+                            }
+                            elementListCreate.addAll(itemsMap.values()); // Add remaining items to be re-inserted
+                        }
+                    }
+                }
+            }
+
+            // Check if all elements completed the upsert requests
+            if (elementListCreate.isEmpty() && elementListDelete.isEmpty()) {
+                LOG.info(batchLogPrefix + "Successfully upserted {} items within a duration of {}.",
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+            } else {
+                LOG.error(batchLogPrefix + "Failed to upsert items. {} items remaining. {} items completed upsert."
+                                + System.lineSeparator() + "{}",
+                        elementListCreate.size() + elementListDelete.size(),
+                        elementListCompleted.size(),
+                        exceptionMessage);
+                throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
+                                + " %d items completed upsert. %n " + exceptionMessage,
+                        elementListCreate.size() + elementListDelete.size(),
+                        elementListCompleted.size()));
+            }
+
+            return elementListCompleted;
+        }
+
+        /**
+         * Upserts a set of items via create.
+         *
+         * This function will first try to write the items as new items.
+         *
+         * @param items The items to be created.
+         * @return The created items.
+         * @throws Exception
+         */
+        public List<String> create(List<T> items) throws Exception {
+            Instant startInstant = Instant.now();
+            String batchLogPrefix =
+                    "create() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+            /*
+            In the case of Security Categories this checks if the items have a name, as security categories do not have
+            external ids, and the id is assigned by the api on creation and accepted as input the api.
+             */
+            Preconditions.checkArgument(itemsHaveId(items),
+                    batchLogPrefix + "All items must have externalId or id.");
+
+            // Should not happen--but need to guard against empty input
+            if (items.isEmpty()) {
+                LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+                return Collections.<String>emptyList();
+            }
+
+            // Insert, completed lists
+            List<T> elementListCreate = deduplicate(items);
+            List<String> elementListCompleted = new ArrayList<>(elementListCreate.size());
+
+            if (elementListCreate.size() != items.size()) {
+                LOG.debug(batchLogPrefix + "Identified {} duplicate items in the input.",
+                        items.size() - elementListCreate.size());
+            }
+
+            /*
+            The upsert loop. If there are items left to insert or update:
+            1. Insert elements
+            2. If conflict, report to client
+
+            PS: This will only run once. The elementListCreate is cleared, but not filled again.
+            */
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            String exceptionMessage = "";
+            for (int i = 0; i < maxUpsertLoopIterations && (elementListCreate.size()) > 0;
+                 i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+                LOG.debug(batchLogPrefix + "Start create loop {} with {} items to create and "
+                                + "{} completed items at duration {}",
+                        i,
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+
+                /*
+                Insert / create items
+                 */
+                if (elementListCreate.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Create items list is empty. Skipping create.");
+                } else {
+                    Map<ResponseItems<String>, List<T>> createResponseMap = splitAndCreateItems(elementListCreate);
+                    LOG.debug(batchLogPrefix + "Completed create items requests for {} items across {} batches at duration {}",
+                            elementListCreate.size(),
+                            createResponseMap.size(),
+                            Duration.between(startInstant, Instant.now()).toString());
+                    elementListCreate.clear(); // Must prepare the list for possible new entries.
+
+                    for (ResponseItems<String> response : createResponseMap.keySet()) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                            LOG.debug(batchLogPrefix + "Create items request success. Adding {} create result items to result collection.",
+                                    response.getResultsItems().size());
+                        } else {
+                            exceptionMessage = response.getResponseBodyAsString();
+                            LOG.debug(batchLogPrefix + "Create items request failed: {}", response.getResponseBodyAsString());
+                            if (i == maxUpsertLoopIterations - 1) {
+                                // Add the error message to std logging
+                                LOG.error(batchLogPrefix + "Create items request failed. {}", response.getResponseBodyAsString());
+                            }
+                            LOG.debug(batchLogPrefix + "Converting duplicates to update and retrying the request");
+                            List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                            LOG.debug(batchLogPrefix + "Number of duplicate entries reported by CDF: {}", duplicates.size());
+                            throw new Exception(String.format(batchLogPrefix + "Failed to create items. "
+                                            + "Number of duplicate entries reported by CDF: %d. %n" + exceptionMessage,
+                                    duplicates.size()));
+                        }
+                    }
+                }
+            }
+
+            // Check if all elements completed the upsert requests
+            if (elementListCreate.isEmpty()) {
+                LOG.info(batchLogPrefix + "Successfully created {} items within a duration of {}.",
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+            } else {
+                LOG.error(batchLogPrefix + "Failed to create items. {} items remaining. {} items completed upsert."
+                                + System.lineSeparator() + "{}",
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        exceptionMessage);
+                throw new Exception(String.format(batchLogPrefix + "Failed to create items. %d items remaining. "
+                                + " %d items completed upsert. %n " + exceptionMessage,
+                        elementListCreate.size(),
+                        elementListCompleted.size()));
+            }
+
+            return elementListCompleted;
+        }
+
+        /**
+         * Upserts a set of items via create and delete.
+         *
+         * This function will first try to create the items, in case the items already exists
+         * (based on externalId or Id) the items will be deleted and created again.
+         * Effectively this results in an upsert.
+         *
+         * This method is used for resource types that do not support updates natively
+         * in the CDF api and that do not have the ability to ignore unknown ids.
+         *
+         * @param items The items to be upserted.
+         * @return The upserted items.
+         * @throws Exception
+         */
+        public List<String> upsertViaCreateAndDelete(List<T> items) throws Exception {
+            String batchLogPrefix =
+                    "upsertViaDeleteAndCreate() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
+            Preconditions.checkState(null != getDeleteItemWriter(),
+                    batchLogPrefix + "The delete item writer is not configured.");
+            Preconditions.checkState(null != getItemMappingFunction(),
+                    batchLogPrefix + "The item mapping function is not configured.");
+            Preconditions.checkArgument(itemsHaveId(items),
+                    batchLogPrefix + "All items must have externalId or id.");
+            LOG.debug(String.format(batchLogPrefix + "Received %d items to upsert",
+                    items.size()));
+
+            Instant startInstant = Instant.now();
+
+            // Should not happen--but need to guard against empty input
+            if (items.isEmpty()) {
+                LOG.debug(batchLogPrefix + "Received an empty input list. Will just output an empty list.");
+                return Collections.<String>emptyList();
+            }
+
+            // Configure the delete handler
+            DeleteItems deleteItemsHandler = DeleteItems.of(getDeleteItemWriter(), getProjectConfig())
+                    .setParameters(getDeleteParameters());
+
+            // Insert, update, completed lists
+            List<T> elementListCreate = deduplicate(items);
+            List<T> elementListDelete = new ArrayList<>(1000);
+            List<String> elementListCompleted = new ArrayList<>(elementListCreate.size());
+
+            if (elementListCreate.size() != items.size()) {
+                LOG.debug(batchLogPrefix + "Identified {} duplicate items in the input.",
+                        items.size() - elementListCreate.size());
+            }
+
+            /*
+            The upsert loop. If there are items left to insert or delete:
+            1. Create elements.
+            2. If conflict, remove duplicates into the delete maps
+            2. Delete elements.
+            3. If conflicts, move missing to create elements.
+            */
+            ThreadLocalRandom random = ThreadLocalRandom.current();
+            String exceptionMessage = "";
+            for (int i = 0; i < maxUpsertLoopIterations && (elementListCreate.size() + elementListDelete.size()) > 0;
+                 i++, Thread.sleep(Math.min(500L, (10L * (long) Math.exp(i)) + random.nextLong(5)))) {
+                LOG.debug(batchLogPrefix + "Start upsert loop {} with {} items to delete, {} items to create and "
+                                + "{} completed items at duration {}",
+                        i,
+                        elementListDelete.size(),
+                        elementListCreate.size(),
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+
+                /*
+                Insert / create items
+                 */
+                if (elementListCreate.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Create items list is empty. Skipping create.");
+                } else {
+                    Map<ResponseItems<String>, List<T>> createResponseMap = splitAndCreateItems(elementListCreate);
+                    LOG.debug(batchLogPrefix + "Completed create items requests for {} items across {} batches at duration {}",
+                            elementListCreate.size(),
+                            createResponseMap.size(),
+                            Duration.between(startInstant, Instant.now()).toString());
+                    elementListCreate.clear(); // Must prepare the list for possible new entries.
+
+                    for (ResponseItems<String> response : createResponseMap.keySet()) {
+                        if (response.isSuccessful()) {
+                            elementListCompleted.addAll(response.getResultsItems());
+                            LOG.debug(batchLogPrefix + "Create items request success. Adding {} create result items to result collection.",
+                                    response.getResultsItems().size());
+                        } else {
+                            exceptionMessage = response.getResponseBodyAsString();
+                            LOG.debug(batchLogPrefix + "Create items request failed: {}", response.getResponseBodyAsString());
+                            if (i == maxUpsertLoopIterations - 1) {
+                                // Add the error message to std logging
+                                LOG.error(batchLogPrefix + "Create items request failed. {}", response.getResponseBodyAsString());
+                            }
+                            LOG.debug(batchLogPrefix + "Copy duplicates to delete collection and retrying the request");
+                            List<Item> duplicates = ItemParser.parseItems(response.getDuplicateItems());
+                            LOG.debug(batchLogPrefix + "Number of duplicate entries reported by CDF: {}", duplicates.size());
+
+                            // Copy duplicates from insert to the delete request
+                            Map<String, T> itemsMap = mapToId(createResponseMap.get(response));
+                            for (Item value : duplicates) {
+                                if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                                    elementListDelete.add(itemsMap.get(value.getExternalId()));
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
+                                    elementListDelete.add(itemsMap.get(value.getId()));
+                                } else if (value.getIdTypeCase() == Item.IdTypeCase.LEGACY_NAME) {
+                                    // Special case for v1 TS headers.
+                                    elementListDelete.add(itemsMap.get(value.getLegacyName()));
+                                }
+                            }
+                            elementListCreate.addAll(itemsMap.values()); // Add batch items to be re-inserted
+                        }
+                    }
+                }
+
+                /*
+                Delete items
+                 */
+                if (elementListDelete.isEmpty()) {
+                    LOG.debug(batchLogPrefix + "Delete items list is empty. Skipping delete.");
+                } else {
+                    // Convert input elements to Item and submit the delete requests.
+                    List<Item> deleteItems = new ArrayList<>(elementListDelete.size());
+                    elementListDelete.forEach(element -> deleteItems.add(getItemMappingFunction().apply(element)));
+                    deleteItemsHandler.deleteItems(deleteItems);
+                    elementListCreate = elementListDelete;
+                    elementListDelete.clear();
+                }
+            }
+
+            // Check if all elements completed the upsert requests
+            if (elementListCreate.isEmpty() && elementListDelete.isEmpty()) {
+                LOG.info(batchLogPrefix + "Successfully upserted {} items within a duration of {}.",
+                        elementListCompleted.size(),
+                        Duration.between(startInstant, Instant.now()).toString());
+            } else {
+                LOG.error(batchLogPrefix + "Failed to upsert items. {} items remaining. {} items completed upsert."
+                                + System.lineSeparator() + "{}",
+                        elementListCreate.size() + elementListDelete.size(),
+                        elementListCompleted.size(),
+                        exceptionMessage);
+                throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
+                                + " %d items completed upsert. %n " + exceptionMessage,
+                        elementListCreate.size() + elementListDelete.size(),
                         elementListCompleted.size()));
             }
 
@@ -785,15 +1800,22 @@ abstract class ApiBase {
         }
 
         @AutoValue.Builder
-        abstract static class Builder<T> {
+        abstract static class Builder<T extends Message> {
             abstract Builder<T> setMaxBatchSize(int value);
             abstract Builder<T> setProjectConfig(ProjectConfig value);
             abstract Builder<T> setIdFunction(Function<T, Optional<String>> value);
             abstract Builder<T> setCreateMappingFunction(Function<T, Map<String, Object>> value);
             abstract Builder<T> setUpdateMappingFunction(Function<T, Map<String, Object>> value);
+            abstract Builder<T> setItemMappingFunction(Function<T, Item> value);
             abstract Builder<T> setCreateItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder<T> setUpdateItemWriter(ConnectorServiceV1.ItemWriter value);
             abstract Builder<T> setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
+
+            abstract ImmutableMap.Builder<String, Object> deleteParametersBuilder();
+            UpsertItems.Builder<T> addDeleteParameter(String key, Object value) {
+                deleteParametersBuilder().put(key, value);
+                return this;
+            }
 
             abstract UpsertItems<T> build();
         }
@@ -814,7 +1836,23 @@ abstract class ApiBase {
 
         private static Builder builder() {
             return new AutoValue_ApiBase_DeleteItems.Builder()
-                    .setMaxBatchSize(DEFAULT_MAX_BATCH_SIZE);
+                    .setMaxBatchSize(DEFAULT_MAX_BATCH_SIZE)
+                    .setDeleteItemMappingFunction(DeleteItems::toDeleteItem);
+        }
+
+        /**
+         * The default function for translating an Item to a delete items object.
+         * @param item
+         * @return
+         */
+        private static Map<String, Object> toDeleteItem(Item item) {
+            if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
+                return ImmutableMap.of("externalId", item.getExternalId());
+            } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
+                return ImmutableMap.of("id", item.getId());
+            } else {
+                throw new RuntimeException("Item contains neither externalId nor id.");
+            }
         }
 
         /**
@@ -836,6 +1874,7 @@ abstract class ApiBase {
 
         abstract int getMaxBatchSize();
         abstract ProjectConfig getProjectConfig();
+        abstract Function<Item, Map<String, Object>> getDeleteItemMappingFunction();
         abstract ConnectorServiceV1.ItemWriter getDeleteItemWriter();
         abstract ImmutableMap<String, Object> getParameters();
 
@@ -857,8 +1896,32 @@ abstract class ApiBase {
          * @param value The value of the attribute
          * @return The {@link DeleteItems} object with the configuration applied.
          */
-        public DeleteItems withParameter(String key, Object value) {
+        public DeleteItems addParameter(String key, Object value) {
             return toBuilder().addParameter(key, value).build();
+        }
+
+        /**
+         * Sets the delete item mapping function.
+         *
+         * This function builds the delete item object based on the input {@link Item}. The default function
+         * builds delete items based on {@code externalId / id}.
+         *
+         * @param mappingFunction The mapping function
+         * @return The {@link DeleteItems} object with the configuration applied.
+         */
+        public DeleteItems withDeleteItemMappingFunction(Function<Item, Map<String, Object>> mappingFunction) {
+            return toBuilder().setDeleteItemMappingFunction(mappingFunction).build();
+        }
+
+        /**
+         * Sets the delete parameters map.
+         *
+         * This is typically used to add attributes such as {@code ignoreUnknownIds} and / or {@code recursive}.
+         * @param parameters The parameter map.
+         * @return The {@link DeleteItems} object with the configuration applied.
+         */
+        public DeleteItems setParameters(Map<String, Object> parameters) {
+            return toBuilder().setParameters(parameters).build();
         }
 
         /**
@@ -869,13 +1932,13 @@ abstract class ApiBase {
          * @throws Exception
          */
         public List<Item> deleteItems(List<Item> items) throws Exception {
+            Instant startInstant = Instant.now();
             String batchLogPrefix =
                     "deleteItems() - batch " + RandomStringUtils.randomAlphanumeric(5) + " - ";
             Preconditions.checkArgument(itemsHaveId(items),
                     batchLogPrefix + "All items must have externalId or id.");
             LOG.debug(String.format(batchLogPrefix + "Received %d items to delete",
                     items.size()));
-            Instant startInstant = Instant.now();
 
             // Should not happen--but need to guard against empty input
             if (items.isEmpty()) {
@@ -943,7 +2006,7 @@ abstract class ApiBase {
                             if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                                 itemsMap.remove(value.getExternalId());
                             } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                                itemsMap.remove(value.getId());
+                                itemsMap.remove(String.valueOf(value.getId()));
                             }
                         }
 
@@ -952,7 +2015,7 @@ abstract class ApiBase {
                             if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                                 itemsMap.remove(value.getExternalId());
                             } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                                itemsMap.remove(value.getId());
+                                itemsMap.remove(String.valueOf(value.getId()));
                             }
                         }
 
@@ -967,13 +2030,13 @@ abstract class ApiBase {
                         elementListCompleted.size(),
                         Duration.between(startInstant, Instant.now()).toString());
             } else {
-                LOG.error(batchLogPrefix + "Failed to delete items. {} items remaining. {} items completed delete."
+                LOG.error(batchLogPrefix + "Failed to delete items. {} items remaining. {} items deleted."
                                 + System.lineSeparator() + "{}",
                         elementListDelete.size(),
                         elementListCompleted.size(),
                         exceptionMessage);
-                throw new Exception(String.format(batchLogPrefix + "Failed to upsert items. %d items remaining. "
-                                + " %d items completed upsert. %n " + exceptionMessage,
+                throw new Exception(String.format(batchLogPrefix + "Failed to delete items. %d items remaining. "
+                                + " %d items deleted. %n " + exceptionMessage,
                         elementListDelete.size(),
                         elementListCompleted.size()));
             }
@@ -1026,11 +2089,7 @@ abstract class ApiBase {
         private CompletableFuture<ResponseItems<String>> deleteBatch(List<Item> items) throws Exception {
             ImmutableList.Builder<Map<String, Object>> insertItemsBuilder = ImmutableList.builder();
             for (Item item : items) {
-                if (item.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
-                    insertItemsBuilder.add(ImmutableMap.of("externalId", item.getExternalId()));
-                } else if (item.getIdTypeCase() == Item.IdTypeCase.ID) {
-                    insertItemsBuilder.add(ImmutableMap.of("id", item.getId()));
-                }
+                insertItemsBuilder.add(getDeleteItemMappingFunction().apply(item));
             }
             RequestParameters writeItemsRequest = RequestParameters.create()
                     .withItems(insertItemsBuilder.build())
@@ -1099,7 +2158,9 @@ abstract class ApiBase {
         abstract static class Builder {
             abstract Builder setMaxBatchSize(int value);
             abstract Builder setProjectConfig(ProjectConfig value);
+            abstract Builder setDeleteItemMappingFunction(Function<Item, Map<String, Object>> value);
             abstract Builder setDeleteItemWriter(ConnectorServiceV1.ItemWriter value);
+            abstract Builder setParameters(Map<String, Object> value);
 
             abstract ImmutableMap.Builder<String, Object> parametersBuilder();
             Builder addParameter(String key, Object value) {

@@ -16,8 +16,8 @@
 
 package com.cognite.beam.io.transform.internal;
 
-import com.cognite.beam.io.dto.SequenceBody;
-import com.cognite.beam.io.dto.TimeseriesPointPost;
+import com.cognite.client.dto.SequenceBody;
+import com.cognite.client.dto.TimeseriesPointPost;
 import com.cognite.beam.io.fn.GroupIntoBatchesDatapointsFn;
 import com.cognite.beam.io.fn.GroupIntoBatchesSequencesBodiesFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;

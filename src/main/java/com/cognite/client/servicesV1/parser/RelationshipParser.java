@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.Relationship;
+import com.cognite.client.dto.Relationship;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -77,7 +77,7 @@ public class RelationshipParser {
             throw new Exception(RelationshipParser.buildParsingExceptionString("sourceType", jsonExcerpt));
         }
         if (root.path("targetExternalId").isTextual()) {
-            relationshipBuilder.setSourceExternalId(root.get("targetExternalId").textValue());
+            relationshipBuilder.setTargetExternalId(root.get("targetExternalId").textValue());
         } else {
             throw new Exception(RelationshipParser.buildParsingExceptionString("targetExternalId", jsonExcerpt));
         }
@@ -119,6 +119,53 @@ public class RelationshipParser {
      * @return
      */
     public static Map<String, Object> toRequestInsertItem(Relationship element) {
+        Preconditions.checkNotNull(element, "Input cannot be null.");
+
+        // Add all the mandatory attributes
+        ImmutableMap.Builder<String, Object> mapBuilder = ImmutableMap.<String, Object>builder()
+                .put("externalId", element.getExternalId())
+                .put("sourceExternalId", element.getSourceExternalId())
+                .put("sourceType", resourceTypeMap.inverse().get(element.getSourceType()))
+                .put("targetExternalId", element.getTargetExternalId())
+                .put("targetType", resourceTypeMap.inverse().get(element.getTargetType()));
+
+        // Add optional attributes
+        if (element.hasStartTime()) {
+            mapBuilder.put("startTime", element.getStartTime().getValue());
+        }
+        if (element.hasEndTime()) {
+            mapBuilder.put("endTime", element.getEndTime().getValue());
+        }
+        if (element.hasConfidence()) {
+            mapBuilder.put("confidence", element.getConfidence().getValue());
+        }
+        if (element.hasDataSetId()) {
+            mapBuilder.put("dataSetId", element.getDataSetId().getValue());
+        }
+        if (element.hasDataSetId()) {
+            mapBuilder.put("dataSetId", element.getDataSetId().getValue());
+        }
+        if (element.getLabelsCount() > 0) {
+            List<Map<String, String>> labels = new ArrayList<>();
+            for (String label : element.getLabelsList()) {
+                labels.add(ImmutableMap.of("externalId", label));
+            }
+            mapBuilder.put("labels", labels);
+        }
+
+        return mapBuilder.build();
+    }
+
+    /**
+     * Builds a request update item object from {@link Relationship}.
+     *
+     * An update item object updates an existing relationship object with new values for all provided fields.
+     * Fields that are not in the update object retain their original value.
+     *
+     * @param element
+     * @return
+     */
+    public static Map<String, Object> toRequestUpdateItem(Relationship element) {
         Preconditions.checkNotNull(element, "Input cannot be null.");
 
         // Add all the mandatory attributes

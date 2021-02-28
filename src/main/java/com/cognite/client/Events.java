@@ -16,14 +16,17 @@
 
 package com.cognite.client;
 
-import com.cognite.beam.io.dto.Event;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Event;
+import com.cognite.client.dto.Item;
+import com.cognite.client.config.ResourceType;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.client.servicesV1.parser.EventParser;
 import com.cognite.client.config.UpsertMode;
 import com.google.auto.value.AutoValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +42,8 @@ public abstract class Events extends ApiBase {
     private static Builder builder() {
         return new AutoValue_Events.Builder();
     }
+
+    protected static final Logger LOG = LoggerFactory.getLogger(Events.class);
 
     /**
      * Constructs a new {@link Events} object using the provided client configuration.
@@ -62,7 +67,7 @@ public abstract class Events extends ApiBase {
      * memory, but streamed in "pages" from the Cognite api. If you need to buffer the entire results set, then you
      * have to stream these results into your own data structure.
      *
-     * The assets are retrieved using multiple, parallel request streams towards the Cognite api. The number of
+     * The events are retrieved using multiple, parallel request streams towards the Cognite api. The number of
      * parallel streams are set in the {@link com.cognite.client.config.ClientConfig}.
      *
      * @param requestParameters the filters to use for retrieving the assets.
@@ -91,6 +96,35 @@ public abstract class Events extends ApiBase {
      */
     public Iterator<List<Event>> list(RequestParameters requestParameters, String... partitions) throws Exception {
         return AdapterIterator.of(listJson(ResourceType.EVENT, requestParameters, partitions), this::parseEvent);
+    }
+
+    /**
+     * Retrieve events by id.
+     *
+     * @param items The item(s) {@code externalId / id} to retrieve.
+     * @return The retrieved events.
+     * @throws Exception
+     */
+    public List<Event> retrieve(List<Item> items) throws Exception {
+        return retrieveJson(ResourceType.EVENT, items).stream()
+                .map(this::parseEvent)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Performs an item aggregation request to Cognite Data Fusion.
+     *
+     * The default aggregation is a total item count based on the (optional) filters in the request.
+     * Multiple aggregation types are supported. Please refer to the Cognite API specification for more information
+     * on the possible settings.
+     *
+     * @param requestParameters The filtering and aggregates specification
+     * @return The aggregation results.
+     * @throws Exception
+     * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
+     */
+    public Aggregate aggregate(RequestParameters requestParameters) throws Exception {
+        return aggregate(ResourceType.EVENT, requestParameters);
     }
 
     /**
@@ -145,7 +179,7 @@ public abstract class Events extends ApiBase {
                 .withExecutorService(getClient().getExecutorService());
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildProjectConfig())
-                .withParameter("ignoreUnknownIds", true);
+                .addParameter("ignoreUnknownIds", true);
 
         return deleteItems.deleteItems(events);
     }

@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.transform.internal;
 
-import com.cognite.beam.io.dto.TimeseriesPointPost;
+import com.cognite.client.dto.TimeseriesPointPost;
 import com.cognite.beam.io.fn.GroupIntoBatchesDatapointsFn;
 import com.google.auto.value.AutoValue;
 import org.apache.beam.sdk.transforms.PTransform;

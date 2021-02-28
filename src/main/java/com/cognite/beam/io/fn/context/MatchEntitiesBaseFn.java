@@ -19,21 +19,12 @@ package com.cognite.beam.io.fn.context;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.EntityMatch;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.util.JsonUtil;
-import com.cognite.beam.io.util.internal.MetricsUtil;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.google.protobuf.DoubleValue;
+import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.EntityMatch;
+import com.cognite.client.dto.EntityMatchResult;
 import com.google.protobuf.Struct;
-import com.google.protobuf.util.JsonFormat;
-import org.apache.beam.sdk.metrics.Distribution;
-import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.ValueProvider;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -45,9 +36,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.stream.Collectors;
 
 /**
  * Base class for matching a set of entities using an entity matcher ML model.
@@ -60,12 +48,9 @@ import java.util.stream.Collectors;
  * candidates are also specified as {@link Struct} within the {@link EntityMatch} container object.
  *
  */
-public abstract class MatchEntitiesBaseFn extends DoFn<Iterable<Struct>, KV<Struct, List<EntityMatch>>> {
+public abstract class MatchEntitiesBaseFn extends IOBaseFn<Iterable<Struct>, KV<Struct, List<EntityMatch>>> {
 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
-    protected final ObjectReader objectReader = JsonUtil.getObjectMapperInstance().reader();
-    protected final ConnectorServiceV1 connector;
-    protected final Hints hints;
     protected final ReaderConfig readerConfig;
     protected final PCollectionView<List<ProjectConfig>> projectConfigView;
     protected final int maxNumMatches;
@@ -75,10 +60,6 @@ public abstract class MatchEntitiesBaseFn extends DoFn<Iterable<Struct>, KV<Stru
     protected final ValueProvider<Long> modelId;
     @Nullable
     protected final ValueProvider<String> modelExternalId;
-
-    private final Distribution apiBatchSize = Metrics.distribution("cognite", "apiBatchSize");
-    private final Distribution jobQueueDuration = Metrics.distribution("cognite", "jobQueueDuration");
-    private final Distribution jobExecutionDuration = Metrics.distribution("cognite", "jobExecutionDuration");
 
     public MatchEntitiesBaseFn(Hints hints,
                                ReaderConfig readerConfig,
@@ -95,12 +76,7 @@ public abstract class MatchEntitiesBaseFn extends DoFn<Iterable<Struct>, KV<Stru
                                @Nullable ValueProvider<String> modelExternalId,
                                int maxNumMatches,
                                double scoreThreshold) {
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(readerConfig.getAppIdentifier())
-                .setSessionIdentifier(readerConfig.getSessionIdentifier())
-                .build();
-        this.hints = hints;
+        super(hints);
         this.readerConfig = readerConfig;
         this.projectConfigView = projectConfigView;
         this.modelId = modelId;
@@ -109,18 +85,13 @@ public abstract class MatchEntitiesBaseFn extends DoFn<Iterable<Struct>, KV<Stru
         this.scoreThreshold = scoreThreshold;
     }
 
-    @Setup
-    public void setup() {
-        LOG.info("Setting up matchEntitiesBaseFn.");
-    }
-
     @ProcessElement
     public void processElement(@Element Iterable<Struct> element,
                                OutputReceiver<KV<Struct, List<EntityMatch>>> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "matchEntitiesBaseFn - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         LOG.info(batchLogPrefix + "Received a batch of entities to match.");
-        Instant startInstant = Instant.now();
+        Instant batchStartInstant = Instant.now();
 
         // Identify the project config to use
         ProjectConfig projectConfig;
@@ -132,64 +103,21 @@ public abstract class MatchEntitiesBaseFn extends DoFn<Iterable<Struct>, KV<Stru
             throw new Exception(message);
         }
 
-        // Process the entities in batches.
-        List<CompletableFuture<ResponseItems<String>>> futures = new ArrayList<>();
-        int elementCount = 0;
-        int totalElementCount = 0;
-        List<Struct> writeBatch = new ArrayList<>(hints.getContextMaxBatchSize());
-        for (Struct item : element) {
-            writeBatch.add(item);
-            elementCount++;
-            totalElementCount++;
-            if (elementCount >= hints.getContextMaxBatchSize()) {
-                try {
-                    futures.add(this.processBatch(writeBatch, projectConfig, context, batchLogPrefix));
-                    writeBatch = new ArrayList<>(hints.getContextMaxBatchSize());
-                    elementCount = 0;
-                } catch (Exception e) {
-                    LOG.error(batchLogPrefix + "Error reading results from the Cognite connector.", e);
-                    throw e;
-                }
-            }
-        }
-        if (writeBatch.size() > 0) {
-            try {
-                futures.add(this.processBatch(writeBatch, projectConfig, context, batchLogPrefix));
-            } catch (Exception e) {
-                LOG.error(batchLogPrefix + "Error reading results from the Cognite connector.", e);
-                throw e;
-            }
-        }
-
-        LOG.info(batchLogPrefix + "Submitted {} entities across {} batches to the entity matcher.",
-                totalElementCount,
-                futures.size());
-
+        // Read the items
+        List<Struct> elementList = new ArrayList<>();
+        element.forEach(item -> elementList.add(item));
         try {
-            CompletableFuture<Void> allDoneFuture =
-                    CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
-
-            List<ResponseItems<String>> completed =  allDoneFuture.thenApply(v ->
-                    futures.stream()
-                            .map(future -> future.join())
-                            .collect(Collectors.toList()))
-                    .get();
-
-            for (ResponseItems<String> result : completed) {
-                if (readerConfig.isMetricsEnabled()) {
-                    MetricsUtil.recordApiBatchSize(result, apiBatchSize);
-                    MetricsUtil.recordApiJobQueueDuration(result, jobQueueDuration);
-                    MetricsUtil.recordApiJobExecutionDuration(result, jobExecutionDuration);
-                }
-
-                for (String item : result.getResultsItems()) {
-                    outputReceiver.output(KV.of(parseEntityMatcherResultItemMatchFrom(item),
-                            parseEntityMatcherResultItemMatchTo(item)));
-                }
+            List<EntityMatchResult> resultsItems = predictMatches(getClient(projectConfig, readerConfig), elementList, context);
+            if (readerConfig.isMetricsEnabled()) {
+                apiBatchSize.update(resultsItems.size());
+                apiLatency.update(Duration.between(batchStartInstant, Instant.now()).toMillis());
             }
+
             LOG.info(batchLogPrefix + "Completed matching {} items within a duration of {}.",
-                    totalElementCount,
-                    Duration.between(startInstant, Instant.now()).toString());
+                    resultsItems.size(),
+                    Duration.between(batchStartInstant, Instant.now()).toString());
+
+            resultsItems.forEach(result -> outputReceiver.output(KV.of(result.getSource(), result.getMatchesList())));
         } catch (Exception e) {
             LOG.error("Error reading results from the Cognite connector.", e);
             throw e;
@@ -197,109 +125,14 @@ public abstract class MatchEntitiesBaseFn extends DoFn<Iterable<Struct>, KV<Stru
     }
 
     /**
-     * The main processing logic for a single request.
+     * Perform the entity matching.
      *
-     * @param element
-     * @param config
-     * @param context
-     * @param batchLogPrefix
-     * @return
-     * @throws Exception
-     */
-    private CompletableFuture<ResponseItems<String>> processBatch(List<Struct> element,
-                                                                  ProjectConfig config,
-                                                                  ProcessContext context,
-                                                                  String batchLogPrefix) throws Exception {
-        return connector.entityMatcherPredict()
-                .getItemsAsync(this.buildRequestParameters(element, context).withProjectConfig(config))
-                .thenApply(responseItems -> {
-                    if (!responseItems.isSuccessful()) {
-                        LOG.error(batchLogPrefix + "Api job did not complete successfully. Response body: {}",
-                                responseItems.getResponseBodyAsString());
-                        throw new CompletionException(
-                                new Throwable("Api job did not complete successfully. Response body: "
-                                        + responseItems.getResponseBodyAsString()));
-                    }
-
-                    return responseItems;
-                })
-                ;
-    }
-
-    /**
-     * Extract the [source] entry from a result item. The result item contains a single [source]
-     * object that is mapped to a {@link Struct}.
-     *
-     * @param item
-     * @return
-     * @throws Exception
-     */
-    private Struct parseEntityMatcherResultItemMatchFrom(String item) throws Exception {
-        JsonNode root = objectReader.readTree(item);
-
-        if (root.path("source").isObject()) {
-            Struct.Builder structBuilder = Struct.newBuilder();
-            JsonFormat.parser().merge(root.path("source").toString(), structBuilder);
-            return structBuilder.build();
-        } else {
-            throw new Exception("Unable to parse result item. "
-                    + "Result does not contain a valid [source] node. "
-                    + "Source: " + root.path("source").getNodeType());
-        }
-    }
-
-    /**
-     * Extract the [target] entries from a result item. The result item contains 0..N
-     * [target] entries.
-     *
-     * @param item
-     * @return
-     * @throws Exception
-     */
-    private List<EntityMatch> parseEntityMatcherResultItemMatchTo(String item) throws Exception {
-        JsonNode root = objectReader.readTree(item);
-        List<EntityMatch> matches = new ArrayList<>(10);
-
-        if (root.path("matches").isArray()) {
-            for (JsonNode node : root.path("matches")) {
-                if (node.isObject()) {
-                    EntityMatch.Builder entityMatchBuilder = EntityMatch.newBuilder();
-                    if (node.path("target").isObject()) {
-                        Struct.Builder structBuilder = Struct.newBuilder();
-                        JsonFormat.parser().merge(node.path("target").toString(), structBuilder);
-                        entityMatchBuilder.setMatchTo(structBuilder.build());
-                    } else {
-                        throw new Exception("Unable to parse result item. "
-                                + "Result does not contain a valid [target] node. "
-                                + "Target: " + node.path("target").getNodeType());
-                    }
-
-                    if (node.path("score").isNumber()) {
-                        entityMatchBuilder.setScore(DoubleValue.of(node.path("score").doubleValue()));
-                    }
-                    matches.add(entityMatchBuilder.build());
-                } else {
-                    throw new Exception("Unable to parse result item. "
-                            + "Result does not contain a valid [matches] entry node. "
-                            + "maches: " + node.getNodeType());
-                }
-            }
-        } else {
-            throw new Exception("Unable to parse result item. "
-                    + "Result does not contain a valid [matches] array node. "
-                    + "matches array: " + root.path("matches").getNodeType());
-        }
-
-        return matches;
-    }
-
-    /**
-     * Build the request for the entity matcher.
-     *
+     * @param client The {@link CogniteClient} to use for writing the items.
      * @param element The list of entities to try and match from.
      * @param context The {@link ProcessContext}, offering access to side inputs.
      * @return The request for the entity matcher.
      */
-    protected abstract RequestParameters buildRequestParameters(List<Struct> element,
-                                                     ProcessContext context);
+    protected abstract List<EntityMatchResult> predictMatches(CogniteClient client,
+                                                              List<Struct> element,
+                                                              ProcessContext context) throws Exception;
 }

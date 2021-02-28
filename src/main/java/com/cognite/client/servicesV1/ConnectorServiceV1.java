@@ -30,7 +30,7 @@ import com.cognite.client.servicesV1.executor.FileBinaryRequestExecutor;
 import com.cognite.client.servicesV1.parser.ItemParser;
 
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.dto.*;
+import com.cognite.client.dto.*;
 import com.cognite.client.servicesV1.executor.RequestExecutor;
 import com.cognite.client.servicesV1.parser.FileParser;
 import com.cognite.client.servicesV1.parser.LoginStatusParser;
@@ -158,8 +158,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ResultFutureIterator<String> readAssets(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read assets service.");
-        LOG.debug(loggingPrefix + "readAssets using the following query parameters: {}", queryParameters);
+        LOG.debug(loggingPrefix + "Initiating read assets service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -180,7 +179,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readAssetsAggregates() {
-        LOG.info(loggingPrefix + "Initiating read assets aggregates service.");
+        LOG.debug(loggingPrefix + "Initiating read assets aggregates service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -200,7 +199,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readAssetsById() {
-        LOG.info(loggingPrefix + "Initiating read assets by id service.");
+        LOG.debug(loggingPrefix + "Initiating read assets by id service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -221,7 +220,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeAssets() {
-        LOG.info(loggingPrefix + "Initiating write assets service.");
+        LOG.debug(loggingPrefix + "Initiating write assets service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -245,7 +244,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter updateAssets() {
-        LOG.info(loggingPrefix + "Initiating update assets service.");
+        LOG.debug(loggingPrefix + "Initiating update assets service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -269,7 +268,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteAssets() {
-        LOG.info(loggingPrefix + "Initiating delete assets service.");
+        LOG.debug(loggingPrefix + "Initiating delete assets service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -293,8 +292,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ResultFutureIterator<String> readEvents(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read events service.");
-        LOG.debug(loggingPrefix + "readEvents using the following query parameters: {}", queryParameters);
+        LOG.debug(loggingPrefix + "Initiating read events service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -315,7 +313,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readEventsAggregates() {
-        LOG.info(loggingPrefix + "Initiating read events aggregates service.");
+        LOG.debug(loggingPrefix + "Initiating read events aggregates service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -335,7 +333,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readEventsById() {
-        LOG.info(loggingPrefix + "Initiating read events service.");
+        LOG.debug(loggingPrefix + "Initiating read events service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -356,7 +354,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeEvents() {
-        LOG.info(loggingPrefix + "Initiating write events service.");
+        LOG.debug(loggingPrefix + "Initiating write events service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -380,7 +378,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter updateEvents() {
-        LOG.info(loggingPrefix + "Initiating update events service.");
+        LOG.debug(loggingPrefix + "Initiating update events service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -404,7 +402,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteEvents() {
-        LOG.info(loggingPrefix + "Initiating delete events service.");
+        LOG.debug(loggingPrefix + "Initiating delete events service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -427,9 +425,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readSequencesHeaders(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read sequences headers service.");
-        LOG.debug(loggingPrefix + "readSequencesHeaders using the following query parameters: {}", queryParameters);
+    public ResultFutureIterator<String> readSequencesHeaders(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read sequences headers service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -450,7 +447,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readSequencesAggregates() {
-        LOG.info(loggingPrefix + "Initiating read sequences aggregates service.");
+        LOG.debug(loggingPrefix + "Initiating read sequences aggregates service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -470,7 +467,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readSequencesById() {
-        LOG.info(loggingPrefix + "Initiating read sequences by id service.");
+        LOG.debug(loggingPrefix + "Initiating read sequences by id service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -491,7 +488,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeSequencesHeaders() {
-        LOG.info(loggingPrefix + "Initiating write sequences headers service.");
+        LOG.debug(loggingPrefix + "Initiating write sequences headers service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -514,7 +511,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter updateSequencesHeaders() {
-        LOG.info(loggingPrefix + "Initiating update sequences headers service.");
+        LOG.debug(loggingPrefix + "Initiating update sequences headers service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -538,7 +535,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteSequencesHeaders() {
-        LOG.info(loggingPrefix + "Initiating delete sequences service.");
+        LOG.debug(loggingPrefix + "Initiating delete sequences service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -561,9 +558,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readSequencesRows(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read sequences rows service.");
-        LOG.debug(loggingPrefix + "readSequencesRows using the following query parameters: {}", queryParameters);
+    public ResultFutureIterator<String> readSequencesRows(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read sequences rows service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -585,7 +581,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeSequencesRows() {
-        LOG.info(loggingPrefix + "Initiating write sequences rows service.");
+        LOG.debug(loggingPrefix + "Initiating write sequences rows service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -609,7 +605,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteSequencesRows() {
-        LOG.info(loggingPrefix + "Initiating delete sequences service.");
+        LOG.debug(loggingPrefix + "Initiating delete sequences service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -632,9 +628,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the TS query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readTsHeaders(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read TS headers service.");
-        LOG.debug(loggingPrefix + "readTsHeaders using the following query parameters: {}", queryParameters);
+    public ResultFutureIterator<String> readTsHeaders(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read TS headers service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -655,7 +650,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readTsAggregates() {
-        LOG.info(loggingPrefix + "Initiating read timeseries aggregates service.");
+        LOG.debug(loggingPrefix + "Initiating read timeseries aggregates service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -675,7 +670,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readTsById() {
-        LOG.info(loggingPrefix + "Initiating read time series by id service.");
+        LOG.debug(loggingPrefix + "Initiating read time series by id service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -696,7 +691,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeTsHeaders() {
-        LOG.info(loggingPrefix + "Initiating write ts headers service.");
+        LOG.debug(loggingPrefix + "Initiating write ts headers service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -720,7 +715,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter updateTsHeaders() {
-        LOG.info(loggingPrefix + "Initiating update ts headers service.");
+        LOG.debug(loggingPrefix + "Initiating update ts headers service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -744,7 +739,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteTsHeaders() {
-        LOG.info(loggingPrefix + "Initiating delete ts service.");
+        LOG.debug(loggingPrefix + "Initiating delete ts service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -767,9 +762,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readTsDatapoints(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read TS datapoints service.");
-        LOG.debug(loggingPrefix + "readTsDatapoints using the following query parameters: {}", queryParameters);
+    public ResultFutureIterator<String> readTsDatapoints(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read TS datapoints service.");
         this.validate();
 
         TSPointsRequestProvider requestProvider = TSPointsRequestProvider.builder()
@@ -793,10 +787,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the events query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>
+    public ResultFutureIterator<DataPointListItem>
             readTsDatapointsProto(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read TS datapoints service.");
-        LOG.debug(loggingPrefix + "readTsDatapoints using the following query parameters: {}", queryParameters);
+        LOG.debug(loggingPrefix + "Initiating read TS datapoints service.");
         this.validate();
 
         TSPointsReadProtoRequestProvider requestProvider = TSPointsReadProtoRequestProvider.builder()
@@ -815,13 +808,33 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Read latest data point from Cognite.
+     *
+     * @return
+     */
+    public ItemReader<String> readTsDatapointsLatest() {
+        LOG.debug(loggingPrefix + "Initiating read latest data point service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("timeseries/data/latest")
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
      * Write time series headers to Cognite.
      *
      * Calling this method will return an <code>ItemWriter</code>
      * @return
      */
     public ItemWriter writeTsDatapoints() {
-        LOG.info(loggingPrefix + "Building writer for ts datapoints service.");
+        LOG.debug(loggingPrefix + "Building writer for ts datapoints service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -845,11 +858,35 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeTsDatapointsProto() {
-        LOG.info(loggingPrefix + "Building writer for ts datapoints service.");
+        LOG.debug(loggingPrefix + "Building writer for ts datapoints service.");
         this.validate();
 
         TSPointsWriteProtoRequestProvider requestProvider = TSPointsWriteProtoRequestProvider.builder()
                 .setEndpoint("timeseries/data")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Delete data points in Cognite.
+     *
+     * Calling this method will return an <code>ItemWriter</code>
+     * @return
+     */
+    public ItemWriter deleteDatapoints() {
+        LOG.debug(loggingPrefix + "Initiating delete data points service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("timeseries/data/delete")
                 .setRequestParameters(RequestParameters.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(getAppIdentifier())
@@ -869,8 +906,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public Iterator<CompletableFuture<ResponseItems<String>>> read3dModels(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read 3d models service.");
-        LOG.debug(loggingPrefix + "read3dModels using the following query parameters: {}", queryParameters);
+        LOG.debug(loggingPrefix + "Initiating read 3d models service.");
         this.validate();
 
         GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
@@ -886,14 +922,14 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
-     * Fetch Raw rows from Cognite.
+     * Fetch Raw rows from Cognite. This service can handle both single rows and
+     * large collection of rows.
      *
      * @param queryParameters The parameters for the raw query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRawRows(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read raw rows service.");
-        LOG.debug(loggingPrefix + "readRawRows using the following query parameters: {}", queryParameters);
+    public ResultFutureIterator<String> readRawRows(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read raw rows service.");
         this.validate();
 
         RawReadRowsRequestProvider requestProvider = RawReadRowsRequestProvider.builder()
@@ -909,12 +945,33 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Fetch a single row by row key.
+     *
+     * @return
+     */
+    public ItemReader<String> readRawRow() {
+        LOG.debug(loggingPrefix + "Initiating read single row service.");
+        this.validate();
+
+        RawReadRowsRequestProvider requestProvider = RawReadRowsRequestProvider.builder()
+                .setEndpoint("raw/dbs")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
      * Read cursors for retrieving events in parallel. The results set is split into n partitions.
      *
      * @return
      */
     public ItemReader<String> readCursorsRawRows() {
-        LOG.info(loggingPrefix + "Initiating read raw cursors service.");
+        LOG.debug(loggingPrefix + "Initiating read raw cursors service.");
         this.validate();
 
         RawReadRowsCursorsRequestProvider requestProvider = RawReadRowsCursorsRequestProvider.builder()
@@ -934,7 +991,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * Calling this method will return an <code>ItemWriter</code>
      */
     public ItemWriter writeRawRows() {
-        LOG.info(loggingPrefix + "Initiating write raw rows service.");
+        LOG.debug(loggingPrefix + "Initiating write raw rows service.");
         this.validate();
 
         RawWriteRowsRequestProvider requestProvider = RawWriteRowsRequestProvider.builder()
@@ -958,7 +1015,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteRawRows() {
-        LOG.info(loggingPrefix + "Initiating delete raw rows service.");
+        LOG.debug(loggingPrefix + "Initiating delete raw rows service.");
         this.validate();
 
         RawDeleteRowsRequestProvider requestProvider = RawDeleteRowsRequestProvider.builder()
@@ -980,8 +1037,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      *
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRawDbNames(ProjectConfig config) {
-        LOG.info(loggingPrefix + "Initiating read raw database names service.");
+    public ResultFutureIterator<String> readRawDbNames(ProjectConfig config) {
+        LOG.debug(loggingPrefix + "Initiating read raw database names service.");
         this.validate();
 
         GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
@@ -999,15 +1056,60 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
-     * List the Raw tables for a given database..
+     * Create Raw tables in a given database.
+     *
+     * @return
+     */
+    public ItemWriter writeRawDbNames() {
+        LOG.debug(loggingPrefix + "Creating databases");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Create Raw tables in a given database.
+     *
+     * @return
+     */
+    public ItemWriter deleteRawDbNames() {
+        LOG.debug(loggingPrefix + "Deleting databases");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs/delete")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * List the Raw tables for a given database.
      *
      * @param dbName The name of the database to list tables from.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRawTableNames(String dbName, ProjectConfig config) {
+    public ResultFutureIterator<String> readRawTableNames(String dbName, ProjectConfig config) {
         Preconditions.checkNotNull(dbName);
         Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
-        LOG.info(loggingPrefix + "Initiating read raw table names service.");
         LOG.debug(loggingPrefix + "Listing tables for database {}", dbName);
         this.validate();
 
@@ -1026,14 +1128,65 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Create Raw tables in a given database.
+     *
+     * @param dbName The name of the database to list tables from.
+     * @return
+     */
+    public ItemWriter writeRawTableNames(String dbName) {
+        Preconditions.checkNotNull(dbName);
+        Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
+        LOG.debug(loggingPrefix + "Creating tables in database {}", dbName);
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs/" + dbName + "/tables")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Delete Raw tables from a given database.
+     *
+     * @param dbName The name of the database to list tables from.
+     * @return
+     */
+    public ItemWriter deleteRawTableNames(String dbName) {
+        Preconditions.checkNotNull(dbName);
+        Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
+        LOG.debug(loggingPrefix + "Deleting tables in database {}", dbName);
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("raw/dbs/" + dbName + "/tables/delete")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
      * List file headers from Cognite.
      *
      * @param queryParameters The parameters for the file query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readFileHeaders(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read File headers service.");
-        LOG.debug(loggingPrefix + "read file headers using the following query parameters: {}", queryParameters);
+    public ResultFutureIterator<String> readFileHeaders(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read File headers service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -1054,7 +1207,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readFilesAggregates() {
-        LOG.info(loggingPrefix + "Initiating read files aggregates service.");
+        LOG.debug(loggingPrefix + "Initiating read files aggregates service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1074,7 +1227,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readFilesById() {
-        LOG.info(loggingPrefix + "Initiating read files by id service.");
+        LOG.debug(loggingPrefix + "Initiating read files by id service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1096,7 +1249,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public FileBinaryReader readFileBinariesByIds() {
-        LOG.info(loggingPrefix + "Initiating read File binaries by ids service.");
+        LOG.debug(loggingPrefix + "Initiating read File binaries by ids service.");
         this.validate();
 
         return FileBinaryReader.builder()
@@ -1116,8 +1269,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      *
      * @return
      */
-    public ItemWriter writeFile() {
-        LOG.info(loggingPrefix + "Initiating write file service.");
+    public ItemWriter writeFileHeaders() {
+        LOG.debug(loggingPrefix + "Initiating write file header / metadata service.");
         this.validate();
 
         FilesUploadRequestProvider requestProvider = FilesUploadRequestProvider.builder()
@@ -1144,7 +1297,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public FileWriter writeFileProto() {
-        LOG.info(loggingPrefix + "Initiating write file proto service.");
+        LOG.debug(loggingPrefix + "Initiating write file proto service.");
         this.validate();
 
         return FileWriter.builder()
@@ -1161,7 +1314,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter updateFileHeaders() {
-        LOG.info(loggingPrefix + "Initiating update file headers service.");
+        LOG.debug(loggingPrefix + "Initiating update file headers service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1185,7 +1338,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteFiles() {
-        LOG.info(loggingPrefix + "Initiating delete files service.");
+        LOG.debug(loggingPrefix + "Initiating delete files service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1210,7 +1363,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public LoginStatus readLoginStatusByApiKey(String host, String apiKey) throws Exception {
-        LOG.info(loggingPrefix + "Getting login status for host [{}].", host);
+        LOG.debug(loggingPrefix + "Getting login status for host [{}].", host);
         this.validate();
 
         GetLoginRequestProvider requestProvider = GetLoginRequestProvider.builder()
@@ -1249,8 +1402,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the data sets query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readRelationships(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read relationships service.");
+    public ResultFutureIterator<String> readRelationships(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read relationships service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -1272,7 +1425,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> readRelationshipsById() {
-        LOG.info(loggingPrefix + "Initiating read relationships by id service.");
+        LOG.debug(loggingPrefix + "Initiating read relationships by id service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1293,7 +1446,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeRelationships() {
-        LOG.info(loggingPrefix + "Initiating write relationships service.");
+        LOG.debug(loggingPrefix + "Initiating write relationships service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1318,7 +1471,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteRelationships() {
-        LOG.info(loggingPrefix + "Initiating delete relationships service.");
+        LOG.debug(loggingPrefix + "Initiating delete relationships service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1343,7 +1496,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter updateDataSets() {
-        LOG.info(loggingPrefix + "Initiating update data sets service.");
+        LOG.debug(loggingPrefix + "Initiating update data sets service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1366,8 +1519,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the data sets query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readDataSets(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read data sets service.");
+    public ResultFutureIterator<String> readDataSets(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read data sets service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -1383,13 +1536,53 @@ public abstract class ConnectorServiceV1 implements Serializable {
     }
 
     /**
+     * Read data sets aggregates from Cognite.
+     *
+     * @return
+     */
+    public ItemReader<String> readDataSetsAggregates() {
+        LOG.debug(loggingPrefix + "Initiating read data set aggregates service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("datasets/aggregate")
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * Read data sets by id from Cognite.
+     *
+     * @return
+     */
+    public ItemReader<String> readDataSetsById() {
+        LOG.debug(loggingPrefix + "Initiating read data sets by id service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("datasets/byids")
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
      * Write data sets to Cognite.
      *
      * Calling this method will return an <code>ItemWriter</code>
      * @return
      */
     public ItemWriter writeDataSets() {
-        LOG.info(loggingPrefix + "Initiating write data sets service.");
+        LOG.debug(loggingPrefix + "Initiating write data sets service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1412,8 +1605,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @param queryParameters The parameters for the data sets query.
      * @return
      */
-    public Iterator<CompletableFuture<ResponseItems<String>>> readLabels(RequestParameters queryParameters) {
-        LOG.info(loggingPrefix + "Initiating read labels service.");
+    public ResultFutureIterator<String> readLabels(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read labels service.");
         this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
@@ -1435,7 +1628,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter writeLabels() {
-        LOG.info(loggingPrefix + "Initiating write labels service.");
+        LOG.debug(loggingPrefix + "Initiating write labels service.");
         this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
@@ -1459,13 +1652,83 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemWriter deleteLabels() {
-        LOG.info(loggingPrefix + "Initiating delete labels service.");
+        LOG.debug(loggingPrefix + "Initiating delete labels service.");
         this.validate();
 
         PostPlaygroundJsonRequestProvider requestProvider = PostPlaygroundJsonRequestProvider.builder()
                 .setEndpoint("labels/delete")
                 .setRequestParameters(RequestParameters.create())
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Read security categories from Cognite.
+     *
+     * @param queryParameters The parameters for the security categories query.
+     * @return
+     */
+    public ResultFutureIterator<String> readSecurityCategories(RequestParameters queryParameters) {
+        LOG.debug(loggingPrefix + "Initiating read security categories service.");
+        this.validate();
+
+        GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
+                .setEndpoint("securitycategories")
+                .setRequestParameters(queryParameters)
+                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
+                .withMaxRetries(getMaxRetries().get());
+    }
+
+    /**
+     * Write security categories to Cognite.
+     *
+     * Calling this method will return an <code>ItemWriter</code>
+     * @return
+     */
+    public ItemWriter writeSecurityCategories() {
+        LOG.debug(loggingPrefix + "Initiating write security categories service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("securitycategories")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(SDK_IDENTIFIER)
+                .setAppIdentifier(getAppIdentifier())
+                .setSessionIdentifier(getSessionIdentifier())
+                .build();
+
+        return ItemWriter.builder()
+                .setRequestProvider(requestProvider)
+                .setMaxRetries(getMaxRetries().get())
+                .build();
+    }
+
+    /**
+     * Delete security categories in Cognite.
+     *
+     * Calling this method will return an <code>ItemWriter</code>
+     * @return
+     */
+    public ItemWriter deleteSecurityCategories() {
+        LOG.debug(loggingPrefix + "Initiating delete security categories service.");
+        this.validate();
+
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
+                .setEndpoint("securitycategories/delete")
+                .setRequestParameters(RequestParameters.create())
+                .setSdkIdentifier(SDK_IDENTIFIER)
                 .setAppIdentifier(getAppIdentifier())
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
@@ -1484,7 +1747,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> detectAnnotationsPnid() {
-        LOG.info(loggingPrefix + "Initiating the annotation detection service.");
+        LOG.debug(loggingPrefix + "Initiating the annotation detection service.");
         this.validate();
 
         PostPlaygroundJsonRequestProvider jobStartRequestProvider =
@@ -1517,7 +1780,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> convertPnid() {
-        LOG.info(loggingPrefix + "Initiating the convert PDF service.");
+        LOG.debug(loggingPrefix + "Initiating the convert PDF service.");
         this.validate();
 
         PostPlaygroundJsonRequestProvider jobStartRequestProvider =
@@ -1549,7 +1812,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return An {@link ItemReader<String>} for reading the models.
      */
     public ItemReader<String> readEntityMatcherModels() {
-        LOG.info(loggingPrefix + "Initiating read entity matcher models service.");
+        LOG.debug(loggingPrefix + "Initiating read entity matcher models service.");
         this.validate();
 
         GetPlaygroundRequestProvider requestProvider = GetPlaygroundRequestProvider.builder()
@@ -1569,7 +1832,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return An {@link ItemWriter} for deleting the models
      */
     public ItemWriter deleteEntityMatcherModels() {
-        LOG.info(loggingPrefix + "Initiating delete entity matcher models service.");
+        LOG.debug(loggingPrefix + "Initiating delete entity matcher models service.");
         this.validate();
 
         PostPlaygroundJsonRequestProvider requestProvider = PostPlaygroundJsonRequestProvider.builder()
@@ -1592,11 +1855,11 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public ItemReader<String> entityMatcherPredict() {
-        LOG.info(loggingPrefix + "Initiating entity matcher predict service.");
+        LOG.debug(loggingPrefix + "Initiating entity matcher predict service.");
         this.validate();
 
-        PostPlaygroundJsonRequestProvider jobStartRequestProvider =
-                PostPlaygroundJsonRequestProvider.builder()
+        PostJsonRequestProvider jobStartRequestProvider =
+                PostJsonRequestProvider.builder()
                         .setEndpoint("context/entitymatching/predict")
                         .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                         .setAppIdentifier(getAppIdentifier())
@@ -1604,10 +1867,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser
-                .of(ImmutableMap.of("jobId", "jobId"));
+                .of(ImmutableMap.of("jobId", "id"));
 
-        GetPlaygroundJobIdRequestProvider jobResultsRequestProvider =
-                GetPlaygroundJobIdRequestProvider.of("context/entitymatching/jobs")
+        GetIdRequestProvider jobResultsRequestProvider =
+                GetIdRequestProvider.of("context/entitymatching/jobs")
                 .toBuilder()
                 .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                 .setAppIdentifier(getAppIdentifier())
@@ -1625,11 +1888,11 @@ public abstract class ConnectorServiceV1 implements Serializable {
      * @return
      */
     public Connector<String> entityMatcherFit() {
-        LOG.info(loggingPrefix + "Initiating entity matcher training service.");
+        LOG.debug(loggingPrefix + "Initiating entity matcher training service.");
         this.validate();
 
-        PostPlaygroundJsonRequestProvider jobStartRequestProvider =
-                PostPlaygroundJsonRequestProvider.builder()
+        PostJsonRequestProvider jobStartRequestProvider =
+                PostJsonRequestProvider.builder()
                         .setEndpoint("context/entitymatching")
                         .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                         .setAppIdentifier(getAppIdentifier())
@@ -1637,10 +1900,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser.of(
-                ImmutableMap.of("id", "jobId"));
+                ImmutableMap.of("id", "id"));
 
-        GetPlaygroundJobIdRequestProvider jobResultsRequestProvider =
-                GetPlaygroundJobIdRequestProvider.of("context/entitymatching")
+        GetIdRequestProvider jobResultsRequestProvider =
+                GetIdRequestProvider.of("context/entitymatching")
                         .toBuilder()
                         .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
                         .setAppIdentifier(getAppIdentifier())
@@ -1926,8 +2189,35 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
-         * Executes a request to get items and blocks the thread until all items have been downloaded.
+         * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
+         * the setting applied.
          *
+         * @param client The {@link OkHttpClient} to use.
+         * @return a {@link ItemWriter} object with the configuration applied.
+         */
+        public SingleRequestItemReader<T> withHttpClient(OkHttpClient client) {
+            Preconditions.checkNotNull(client, "The http client cannot be null.");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
+                    .build();
+        }
+
+        /**
+         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
+         * a {@link SingleRequestItemReader} with the setting applied.
+         *
+         * @param executorService The {@link ExecutorService} to use.
+         * @return a {@link ItemWriter} object with the configuration applied.
+         */
+        public SingleRequestItemReader<T> withExecutorService(ExecutorService executorService) {
+            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
+                    .build();
+        }
+
+        /**
+         * Executes a request to get items and blocks the thread until all items have been downloaded.
          *
          * @param items
          * @return
@@ -2013,7 +2303,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private static final RequestParametersResponseParser DEFAULT_JOB_START_RESPONSE_PARSER =
                 RequestParametersResponseParser.of(ImmutableMap.of(
                         "modelId", "modelId",
-                        "jobId", "jobId"
+                        "jobId", "jobId",
+                        "id", "id"
                 ));
 
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
@@ -2105,7 +2396,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * When the timeout is triggered, the reader will respond with the current job status (most likely
          * "Queued" or "Running").
          *
-         * The default timeout is 10 minutes.
+         * The default timeout is 15 minutes.
          *
          * @param timeout
          * @return
@@ -2120,7 +2411,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
          *
          * Don't set the polling interval too low, or you risk overloading the api.
          *
-         * The default polling interval is 1 sec.
+         * The default polling interval is 2 sec.
          *
          * @param interval
          * @return
@@ -2130,8 +2421,35 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
-         * Executes a request to get items and blocks the thread until all items have been downloaded.
+         * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
+         * the setting applied.
          *
+         * @param client The {@link OkHttpClient} to use.
+         * @return a {@link AsyncJobReader} object with the configuration applied.
+         */
+        public AsyncJobReader<T> withHttpClient(OkHttpClient client) {
+            Preconditions.checkNotNull(client, "The http client cannot be null.");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
+                    .build();
+        }
+
+        /**
+         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
+         * a {@link AsyncJobReader} with the setting applied.
+         *
+         * @param executorService The {@link ExecutorService} to use.
+         * @return a {@link ItemWriter} object with the configuration applied.
+         */
+        public AsyncJobReader<T> withExecutorService(ExecutorService executorService) {
+            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
+            return toBuilder()
+                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
+                    .build();
+        }
+
+        /**
+         * Executes a request to get items and blocks the thread until all items have been downloaded.
          *
          * @param items
          * @return
@@ -2154,7 +2472,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
-         *
          *
          * @param items
          * @return
@@ -2419,7 +2736,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
-         * Sets the http client to use for api requests. Returns a {@link ResultFutureIterator} with
+         * Sets the http client to use for api requests. Returns a {@link ItemWriter} with
          * the setting applied.
          *
          * @param client The {@link OkHttpClient} to use.
@@ -2434,7 +2751,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         /**
          * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
-         * a {@link ResultFutureIterator} with the setting applied.
+         * a {@link ItemWriter} with the setting applied.
          *
          * @param executorService The {@link ExecutorService} to use.
          * @return a {@link ItemWriter} object with the configuration applied.
@@ -2544,6 +2861,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
          *
          * The following storage providers are supported:
          * - Google Cloud Storage. Specify the temp path as {@code gs://<my-storage-bucket>/<my-path>/}.
+         * - Local (network) storage.
          *
          * @param path The URI to the temp storage
          * @return a {@FileBinaryReader} with temp storage configured.
@@ -2696,13 +3014,14 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
         private final String loggingPrefix = "FileWriter [" + randomIdString + "] -";
         private final ObjectMapper objectMapper = new ObjectMapper();
-        private final int CPU_MULTIPLIER = 10;
+        private final int CPU_MULTIPLIER = 8;
+        private final int MAX_CPU = 20;
 
         private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
                 .withValidResponseCodes(ImmutableList.of(400))
                 .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                .withExecutor(new ForkJoinPool(Runtime.getRuntime().availableProcessors()
-                        * CPU_MULTIPLIER));
+                .withExecutor(new ForkJoinPool(
+                        Math.min(Runtime.getRuntime().availableProcessors() * CPU_MULTIPLIER, MAX_CPU)));
 
         private final FileBinaryRequestExecutor baseFileBinaryRequestExecutor = FileBinaryRequestExecutor.of(DEFAULT_CLIENT)
                 .withMaxRetries(DEFAULT_MAX_RETRIES);
@@ -2783,12 +3102,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
             FileContainer fileContainer = (FileContainer) fileContainerRequest.getProtoRequestBody();
             boolean hasExtraAssetIds = false;
 
-            LOG.info(loggingPrefix + "Received file container to write. Name: {}, Binary type: {}, Size: {}MB, "
-                    + "Binary URI: {}, Number of asset links: {}, Number of metadata fields: {}",
+            LOG.info(loggingPrefix + "Received file container to write. Name: {}, Binary type: {}, Binary Size: {}MB, "
+                    + "Binary URI: {}, Content lenght: {}, Number of asset links: {}, Number of metadata fields: {}",
                     fileContainer.getFileMetadata().getName().getValue(),
                     fileContainer.getFileBinary().getBinaryTypeCase().toString(),
                     String.format("%.3f", fileContainer.getFileBinary().getBinary().size() / (1024d * 1024d)),
                     fileContainer.getFileBinary().getBinaryUri(),
+                    fileContainer.getFileBinary().getContentLength(),
                     fileContainer.getFileMetadata().getAssetIdsCount(),
                     fileContainer.getFileMetadata().getMetadataCount());
 
@@ -2959,8 +3279,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
     public static class DownloadFileBinary {
         final static Logger LOG = LoggerFactory.getLogger(DownloadFileBinary.class);
-        final static String randomIdString = RandomStringUtils.randomAlphanumeric(5);
-        final static String loggingPrefix = "DownloadFileBinary [" + randomIdString + "] -";
+        final static String loggingPrefix = "DownloadFileBinary() - ";
         final static OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(90, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.MINUTES)
@@ -2994,6 +3313,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                                                                               int maxRetries,
                                                                               @Nullable URI tempStorageURI,
                                                                               boolean forceTempStorage) {
+            String loggingPrefix = DownloadFileBinary.loggingPrefix +  RandomStringUtils.randomAlphanumeric(5) + " - ";
             LOG.debug(loggingPrefix + "Download URL received: {}. Max retries: {}. Temp storage: {}. "
                     + "Force temp storage: {}",
                     downloadUrl,
@@ -3025,7 +3345,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             CompletableFuture<FileBinary> future = requestExecutor.downloadBinaryAsync(FileBinaryBuilder)
                     .thenApply(fileBinary -> {
                         long requestDuration = System.currentTimeMillis() - startTimeMillies;
-                        long contentLength = fileBinary.getContentLength().getValue();
+                        long contentLength = fileBinary.getContentLength();
                         double contentLengthMb = -1;
                         if (contentLength > 0) {
                             contentLengthMb = contentLength / (1024d * 1024d);

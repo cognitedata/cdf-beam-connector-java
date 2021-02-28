@@ -2,8 +2,8 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.TimeseriesMetadata;
+import com.cognite.client.dto.Item;
+import com.cognite.client.dto.TimeseriesMetadata;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.transforms.*;
@@ -29,7 +29,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
         Pipeline pipeline = Pipeline.create();
 
         PCollection<TimeseriesMetadata> writeResults = pipeline
-                .apply("Create TS objects", Create.of(TestUtilsV1.generateTsHeaderObjects(1500)))
+                .apply("Create TS objects", Create.of(TestUtilsV1.generateTsHeaderObjects(9500)))
                 .apply("Write TS headers", CogniteIO.writeTimeseriesMetadata()
                         .withProjectConfig(projectConfig)
                         .withWriterConfig(WriterConfig.create()

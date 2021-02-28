@@ -16,7 +16,7 @@
 
 package com.cognite.client.servicesV1.executor;
 
-import com.cognite.beam.io.dto.FileBinary;
+import com.cognite.client.dto.FileBinary;
 import com.cognite.client.servicesV1.ConnectorConstants;
 import com.cognite.client.servicesV1.ResponseBinary;
 import com.google.auto.value.AutoValue;
@@ -82,9 +82,8 @@ public abstract class FileBinaryRequestExecutor {
             504     // gateway timeout
     );
 
-    private static final int DEFAULT_CPU_MULTIPLIER = 10;
-    private static final ForkJoinPool DEFAULT_POOL = new ForkJoinPool(Runtime.getRuntime().availableProcessors()
-            * DEFAULT_CPU_MULTIPLIER);
+    private static final int DEFAULT_NUM_WORKERS = 10;
+    private static final ForkJoinPool DEFAULT_POOL = new ForkJoinPool(DEFAULT_NUM_WORKERS);
 
     protected final static Logger LOG = LoggerFactory.getLogger(FileBinaryRequestExecutor.class);
 
@@ -303,7 +302,7 @@ public abstract class FileBinaryRequestExecutor {
                             String.format("%.2f", response.body().contentLength() / (1024d * 1024d)));
                     return FileBinary.newBuilder()
                             .setBinary(ByteString.readFrom(response.body().byteStream()))
-                            .setContentLength(Int64Value.of(response.body().contentLength()))
+                            .setContentLength(response.body().contentLength())
                             .build();
                 }
             } catch (Exception e) {
@@ -545,7 +544,7 @@ public abstract class FileBinaryRequestExecutor {
 
             return FileBinary.newBuilder()
                     .setBinaryUri(fileURI.toString())
-                    .setContentLength(Int64Value.of(response.body().contentLength()))
+                    .setContentLength(response.body().contentLength())
                     .build();
         } else if (null != getTempStoragePath().getScheme()
                 && getTempStoragePath().getScheme().equalsIgnoreCase("file")) {
@@ -564,7 +563,7 @@ public abstract class FileBinaryRequestExecutor {
 
             return FileBinary.newBuilder()
                     .setBinaryUri(tempFilePath.toUri().toString())
-                    .setContentLength(Int64Value.of(response.body().contentLength()))
+                    .setContentLength(response.body().contentLength())
                     .build();
         } else {
             throw new IOException("Temp storage location not supported: " + getTempStoragePath());
@@ -655,6 +654,12 @@ public abstract class FileBinaryRequestExecutor {
         public void writeTo(@NotNull BufferedSink bufferedSink) throws IOException {
             if (null != fileURI.getScheme() && fileURI.getScheme().equalsIgnoreCase("gs")) {
                 Blob blob = getBlob(fileURI);
+                if (null == blob) {
+                    LOG.error("Looks like the GCS blob is null/does not exist. File URI: {}",
+                            fileURI.toString());
+                    throw new IOException(String.format("Looks like the GCS blob is null/does not exist. File URI: %s",
+                            fileURI.toString()));
+                }
                 blob.downloadTo(bufferedSink.outputStream());
                 if (deleteTempFile) {
                     blob.delete();
@@ -673,7 +678,7 @@ public abstract class FileBinaryRequestExecutor {
                         Files.delete(Paths.get(fileURI));
                     }
                 } catch (Exception e) {
-                    new IOException(e);
+                    throw new IOException(e);
                 }
             } else {
                 throw new IOException("URI is unsupported: " + fileURI.toString());
@@ -685,7 +690,12 @@ public abstract class FileBinaryRequestExecutor {
             if (fileURI.getScheme().equalsIgnoreCase("gs")) {
                 try {
                     Blob blob = getBlob(fileURI);
-                    contentLength = blob.getSize();
+                    if (null == blob) {
+                        LOG.warn("Looks like the GCS blob is null/does not exist. File URI: {}",
+                                fileURI.toString());
+                    } else {
+                        contentLength = blob.getSize();
+                    }
                 } catch (IOException e) {
                     LOG.warn(e.getMessage());
                 }

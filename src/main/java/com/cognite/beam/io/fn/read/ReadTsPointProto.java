@@ -17,124 +17,108 @@
 package com.cognite.beam.io.fn.read;
 
 import com.cognite.beam.io.config.Hints;
+import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.TimeseriesPoint;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
+import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.TimeseriesParser;
-import com.cognite.beam.io.util.internal.MetricsUtil;
-import com.cognite.v1.timeseries.proto.DataPointListItem;
-import org.apache.beam.sdk.metrics.Counter;
+import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
-import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 
 /**
  * This function reads time series data points based on the input RequestParameters.
  *
- *
  */
-public class ReadTsPointProto extends DoFn<RequestParameters, Iterable<TimeseriesPoint>> {
+public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<TimeseriesPoint>> {
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
+    final ReaderConfig readerConfig;
+    final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    private final ConnectorServiceV1 connector;
-    private final boolean isMetricsEnabled;
-    private final boolean isStreaming;
-    private final Distribution apiLatency = Metrics.distribution("cognite", "apiLatency");
-    private final Distribution tsPointsBatch = Metrics.distribution("cognite", "tsPointsBatchSize");
-    private final Distribution tsBatch = Metrics.distribution("cognite", "numberOfTS");
-    private final Counter apiRetryCounter = Metrics.counter("cognite", "apiRetries");
+    public ReadTsPointProto(Hints hints,
+                            ReaderConfig readerConfig,
+                            PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints);
+        Preconditions.checkNotNull(readerConfig, "Reader config cannot be null.");
+        Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
 
-    public ReadTsPointProto(Hints hints, ReaderConfig readerConfig) {
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(readerConfig.getAppIdentifier())
-                .setSessionIdentifier(readerConfig.getSessionIdentifier())
-                .build();
-
-        isMetricsEnabled = readerConfig.isMetricsEnabled();
-        isStreaming = readerConfig.isStreamingEnabled();
-    }
-
-    @Setup
-    public void setup() {
-        LOG.info("Setting up TS point proto reader.");
+        this.projectConfigView = projectConfigView;
+        this.readerConfig = readerConfig;
     }
 
     @ProcessElement
-    public void processElement(@Element RequestParameters query,
-                               OutputReceiver<Iterable<TimeseriesPoint>> out) throws Exception {
-        final String batchIdentifierPrefix = "ReadTsPointProto - Request id: "
-                + RandomStringUtils.randomAlphanumeric(6) + " - ";
+    public void processElement(@Element RequestParameters requestParameters,
+                               OutputReceiver<Iterable<TimeseriesPoint>> outputReceiver,
+                               ProcessContext context) throws Exception {
+        final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+        final Instant batchStartInstant = Instant.now();
 
-        LOG.info(batchIdentifierPrefix + "Streaming mode: {}", isStreaming);
-        LOG.debug(batchIdentifierPrefix + "Sending query to the Cognite data platform: {}", query.toString());
+        // Identify the project config to use
+        ProjectConfig projectConfig;
+        if (context.sideInput(projectConfigView).size() > 0) {
+            projectConfig = context.sideInput(projectConfigView).get(0);
+        } else {
+            String message = batchLogPrefix + "Cannot identify project config. Empty side input.";
+            LOG.error(message);
+            throw new Exception(message);
+        }
 
+        // Read the items
         try {
-            Iterator<CompletableFuture<ResponseItems<DataPointListItem>>> results =
-                    connector.readTsDatapointsProto(query);
-
-            CompletableFuture<ResponseItems<DataPointListItem>> responseItemsFuture;
-            ResponseItems<DataPointListItem> responseItems;
-
-            while (results.hasNext()) {
-                responseItemsFuture = results.next();
-                responseItems = responseItemsFuture.join();
-                int tsPointsCounter = 0;
-                List<TimeseriesPoint> pointsOutput = new ArrayList<>(20000);
-                long minTimestampMs = Long.MAX_VALUE;
-
-                if (!responseItems.isSuccessful()) {
-                    // something went wrong with the request
-                    String message = batchIdentifierPrefix + "Error while iterating through the results from Fusion: "
-                            + responseItems.getResponseBodyAsString();
-                    LOG.error(message);
-                    throw new Exception(message);
+            Iterator<List<TimeseriesPoint>> resultsIterator = listItems(getClient(projectConfig, readerConfig),
+                    requestParameters,
+                    requestParameters.getPartitions().toArray(new String[requestParameters.getPartitions().size()]));
+            Instant pageStartInstant = Instant.now();
+            int totalNoItems = 0;
+            while (resultsIterator.hasNext()) {
+                List<TimeseriesPoint> results = resultsIterator.next();
+                if (readerConfig.isMetricsEnabled()) {
+                    apiBatchSize.update(results.size());
+                    apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
                 }
-
-                // Gather all TS points
-                for (DataPointListItem item : responseItems.getResultsItems()) {
-                    List<TimeseriesPoint> points = TimeseriesParser.parseDataPointListItem(item);
-                    for (TimeseriesPoint point : points) {
-                        pointsOutput.add(point);
-                        if (minTimestampMs > point.getTimestamp()) {
-                            minTimestampMs = point.getTimestamp();
-                        }
-                        tsPointsCounter++;
-                    }
-                }
-
-                if (isStreaming) {
+                if (readerConfig.isStreamingEnabled()) {
                     // output with timestamps in streaming mode--need that for windowing
-                    out.outputWithTimestamp(pointsOutput, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                    long minTimestampMs = results.stream()
+                            .mapToLong(point -> point.getTimestamp())
+                            .min()
+                            .orElse(1L);
+
+                    outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
                 } else {
                     // no timestamping in batch mode--just leads to lots of complications
-                    out.output(pointsOutput);
+                    outputReceiver.output(results);
                 }
-                LOG.info(batchIdentifierPrefix + "Received {} TS and {} datapoints in the response.",
-                        responseItems.getResultsItems().size(),
-                        tsPointsCounter);
 
-                if (isMetricsEnabled) {
-                    MetricsUtil.recordApiLatency(responseItems, apiLatency);
-                    MetricsUtil.recordApiRetryCounter(responseItems, apiRetryCounter);
-                    tsBatch.update(responseItems.getResultsItems().size());
-                    tsPointsBatch.update(tsPointsCounter);
-                }
+                totalNoItems += results.size();
+                pageStartInstant = Instant.now();
             }
+
+            LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
+                    totalNoItems,
+                    Duration.between(batchStartInstant, Instant.now()).toString());
         } catch (Exception e) {
-            LOG.error(batchIdentifierPrefix + "Error reading results from the Cognite connector.", e);
-            throw e;
+            LOG.error(batchLogPrefix + "Error when reading from Cognite Data Fusion: {}",
+                    e.toString());
+            throw new Exception(batchLogPrefix + "Error when reading from Cognite Data Fusion.", e);
         }
+    }
+
+    protected Iterator<List<TimeseriesPoint>> listItems(CogniteClient client,
+                                                     RequestParameters requestParameters,
+                                                     String... partitions) throws Exception {
+        Preconditions.checkArgument(partitions.length == 0,
+                "Partitions is not supported for data points");
+        return client.timeseries().dataPoints().retrieve(requestParameters);
     }
 }

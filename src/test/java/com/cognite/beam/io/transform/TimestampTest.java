@@ -3,7 +3,7 @@ package com.cognite.beam.io.transform;
 import com.cognite.beam.io.TestConfigProviderV1;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.RawRow;
+import com.cognite.client.dto.RawRow;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.coders.VarLongCoder;
 import org.apache.beam.sdk.io.TextIO;

@@ -16,110 +16,88 @@
 
 package com.cognite.beam.io.fn.read;
 
-import com.cognite.beam.io.CogniteIO;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.dto.RawTable;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.dto.RawTable;
 import com.google.common.base.Preconditions;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * This function reads all table names from a given raw database.
  *
  *
  */
-public class ReadRawTable extends DoFn<String, RawTable> {
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
-    private final ObjectMapper objectMapper = new ObjectMapper();
-    private final String parseErrorDefaultPrefix = "Parsing error. Unable to parse result item. ";
+public class ReadRawTable extends IOBaseFn<String, RawTable> {
+    private static final Logger LOG = LoggerFactory.getLogger(ReadRawTable.class);
 
-    private final ConnectorServiceV1 connector;
-
+    private final ReaderConfig readerConfig;
     private final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    public ReadRawTable(Hints hints, String appIdentifier, String sessionIdentifier,
+    public ReadRawTable(Hints hints,
+                        ReaderConfig readerConfig,
                         PCollectionView<List<ProjectConfig>> projectConfigView) {
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(appIdentifier)
-                .setSessionIdentifier(sessionIdentifier)
-                .build();
+        super(hints);
+        Preconditions.checkNotNull(readerConfig, "Reader config cannot be null.");
+        Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
+        this.readerConfig = readerConfig;
         this.projectConfigView = projectConfigView;
     }
 
-    @Setup
-    public void setup() {
-        LOG.info("Setting up ReadRawTable.");
-    }
-
     @ProcessElement
-    public void processElement(@Element String dbName, OutputReceiver<RawTable> outputReceiver,
+    public void processElement(@Element String dbName,
+                               OutputReceiver<RawTable> outputReceiver,
                                ProcessContext context) throws Exception {
         Preconditions.checkNotNull(dbName, "Database name cannot be null.");
         Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
-        final String batchIdentifier = RandomStringUtils.randomAlphanumeric(6);
-        final String loggingPrefix = "ReadRawTable - " + batchIdentifier + " - ";
-        LOG.debug(loggingPrefix + "Sending query to the Cognite api. List tables for: {}",
-                dbName);
+        final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+        final Instant batchStartInstant = Instant.now();
 
         // Identify the project config to use
-        ProjectConfig projectConfig = ProjectConfig.create();
+        ProjectConfig projectConfig;
         if (context.sideInput(projectConfigView).size() > 0) {
             projectConfig = context.sideInput(projectConfigView).get(0);
         } else {
-            LOG.error(loggingPrefix + "Unable to read ProjectConfig from the side input.");
+            String message = batchLogPrefix + "Cannot identify project config. Empty side input.";
+            LOG.error(message);
+            throw new Exception(message);
         }
 
-        Preconditions.checkState(projectConfig.isConfigured(),
-                loggingPrefix + "ProjectConfig is not configured. ProjectConfig: "
-                + projectConfig.toString());
-
         try {
-            Iterator<CompletableFuture<ResponseItems<String>>> results = connector.readRawTableNames(dbName, projectConfig);
-            ResponseItems<String> responseItems;
+            Iterator<List<String>> resultsIterator = getClient(projectConfig, readerConfig).raw().tables().list(dbName);
+            Instant pageStartInstant = Instant.now();
+            int totalNoItems = 0;
 
-            while (results.hasNext()) {
-                responseItems = results.next().join();
-                if (!responseItems.isSuccessful()) {
-                    // something went wrong with the request
-                    String message = loggingPrefix + "Error while iterating through the results from Fusion: "
-                            + responseItems.getResponseBodyAsString();
-                    LOG.error(message);
-                    throw new Exception(message);
+            while (resultsIterator.hasNext()) {
+                List<String> results = resultsIterator.next();
+                if (readerConfig.isMetricsEnabled()) {
+                    apiBatchSize.update(results.size());
+                    apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
                 }
+                results.forEach(item -> outputReceiver.output(
+                        RawTable.newBuilder()
+                                .setDbName(dbName)
+                                .setTableName(item)
+                                .build()));
 
-                for (String item : responseItems.getResultsItems()) {
-                    JsonNode root = objectMapper.readTree(item);
-
-                    RawTable.Builder rawTableBuilder = RawTable.newBuilder()
-                            .setDbName(dbName);
-
-                    // A result item must contain a name node
-                    if (root.path("name").isTextual()) {
-                        rawTableBuilder.setTableName(root.get("name").textValue());
-                    } else {
-                        throw new Exception(loggingPrefix + parseErrorDefaultPrefix
-                                + "Unable to parse attribute: name. Item exerpt: "
-                                + item
-                                .substring(0, Math.min(item.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH)));
-                    }
-                    outputReceiver.output(rawTableBuilder.build());
-                }
+                totalNoItems += results.size();
+                pageStartInstant = Instant.now();
             }
+
+            LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
+                    totalNoItems,
+                    Duration.between(batchStartInstant, Instant.now()).toString());
         } catch (Exception e) {
-            LOG.error(loggingPrefix + "Error reading results from the Cognite connector.", e);
+            LOG.error(batchLogPrefix + "Error reading results from the Cognite connector.", e);
             throw e;
         }
     }

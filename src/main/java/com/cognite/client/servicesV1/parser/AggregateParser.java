@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.Aggregate;
+import com.cognite.client.dto.Aggregate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.StringValue;

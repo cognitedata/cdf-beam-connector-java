@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn;
 
-import com.cognite.beam.io.dto.SequenceBody;
+import com.cognite.client.dto.SequenceBody;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.BooleanCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;

@@ -55,7 +55,7 @@ public abstract class GetSimpleListRequestProvider extends GenericRequestProvide
         RequestParameters requestParameters = getRequestParameters();
         Request.Builder requestBuilder = buildGenericRequest();
         HttpUrl.Builder urlBuilder = buildGenericUrl();
-        ImmutableList<String> rootParameters = ImmutableList.of("limit", "cursor", "divisions");
+        ImmutableList<String> rootParameters = ImmutableList.of("limit", "cursor", "divisions", "sort");
         ImmutableList<Class> validClasses = ImmutableList.of(String.class, Integer.class, Long.class,
                 Float.class, Double.class, Boolean.class);
 

@@ -2,10 +2,10 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.SequenceBody;
-import com.cognite.beam.io.dto.SequenceMetadata;
-import com.cognite.beam.io.dto.SequenceRow;
+import com.cognite.client.dto.Item;
+import com.cognite.client.dto.SequenceBody;
+import com.cognite.client.dto.SequenceMetadata;
+import com.cognite.client.dto.SequenceRow;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;

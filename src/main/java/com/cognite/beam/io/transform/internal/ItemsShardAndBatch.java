@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.transform.internal;
 
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Item;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.google.auto.value.AutoValue;
 import org.apache.beam.sdk.coders.KvCoder;

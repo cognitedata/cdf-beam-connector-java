@@ -24,11 +24,11 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.FileMetadata;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.fn.parse.ParseFileMetaFn;
-import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
+import com.cognite.beam.io.fn.read.*;
+import com.cognite.beam.io.transform.BreakFusion;
+import com.cognite.client.dto.FileMetadata;
+import com.cognite.client.dto.Item;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertFileHeaderFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -42,7 +42,6 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 
@@ -177,11 +176,19 @@ public abstract class FilesMetadata {
         }
         @Override
         public PCollection<FileMetadata> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all files metadata composite transform.");
 
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             // conditional streaming
             PCollection<RequestParameters> requestParametersPCollection;
@@ -207,9 +214,13 @@ public abstract class FilesMetadata {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Read results", ParDo.of(new ReadItemsIteratorFn(getHints(), ResourceType.FILE_HEADER,
-                            getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseFileMetaFn()));
+                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
+                            getReaderConfig().enableMetrics(false), ResourceType.FILE_HEADER,
+                            projectConfigView))
+                            .withSideInputs(projectConfigView))
+                    .apply("Break fusion", BreakFusion.<RequestParameters>create())
+                    .apply(ParDo.of(new ListFilesFn(getHints(), getReaderConfig(),projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -290,14 +301,13 @@ public abstract class FilesMetadata {
 
             PCollection<FileMetadata> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(1000)
+                            .setMaxBatchSize(4000)
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsByIdFn(getHints(), ResourceType.FILE_BY_ID, getReaderConfig(),
-                                    projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseFileMetaFn()));
+                            new RetrieveFilesFn(getHints(), getReaderConfig(),
+                                    projectConfigView)).withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -319,7 +329,7 @@ public abstract class FilesMetadata {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<FileMetadata>, PCollection<FileMetadata>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 100;
+        private static final int MAX_WRITE_BATCH_SIZE = 400;
 
         public static Write.Builder builder() {
             return new com.cognite.beam.io.AutoValue_FilesMetadata_Write.Builder()
@@ -396,8 +406,7 @@ public abstract class FilesMetadata {
                     .apply("Remove key", Values.<Iterable<FileMetadata>>create())
                     .apply("Upsert items", ParDo.of(
                             new UpsertFileHeaderFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseFileMetaFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }

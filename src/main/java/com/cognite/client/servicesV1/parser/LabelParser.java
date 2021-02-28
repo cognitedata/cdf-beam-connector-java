@@ -17,8 +17,8 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.Asset;
-import com.cognite.beam.io.dto.Label;
+import com.cognite.client.dto.Asset;
+import com.cognite.client.dto.Label;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -91,55 +91,6 @@ public class LabelParser {
             mapBuilder.put("description", element.getDescription().getValue());
         }
 
-        return mapBuilder.build();
-    }
-
-    /**
-     * Builds a request update item object from {@link Label}.
-     *
-     * An update item object updates an existing asset object with new values for all provided fields.
-     * Fields that are not in the update object retain their original value.
-     *
-     * @param element
-     * @return
-     */
-    public static Map<String, Object> toRequestUpdateItem(Asset element) {
-        ImmutableMap.Builder<String, Object> mapBuilder = ImmutableMap.builder();
-        ImmutableMap.Builder<String, Object> updateNodeBuilder = ImmutableMap.builder();
-
-        updateNodeBuilder.put("externalId", ImmutableMap.of("set", element.getExternalId()));
-        updateNodeBuilder.put("name", ImmutableMap.of("set", element.getName()));
-
-        if (element.hasDescription()) {
-            updateNodeBuilder.put("description", ImmutableMap.of("set", element.getDescription().getValue()));
-        }
-
-        mapBuilder.put("update", updateNodeBuilder.build());
-        return mapBuilder.build();
-    }
-
-    /**
-     * Builds a request insert item object from <code>Label</code>.
-     *
-     * A replace item object replaces an existing event object with new values for all provided fields.
-     * Fields that are not in the update object are set to null.
-     * @param element
-     * @return
-     */
-    public static Map<String, Object> toRequestReplaceItem(Asset element) {
-        ImmutableMap.Builder<String, Object> mapBuilder = ImmutableMap.builder();
-        ImmutableMap.Builder<String, Object> updateNodeBuilder = ImmutableMap.builder();
-
-        updateNodeBuilder.put("externalId", ImmutableMap.of("set", element.getExternalId()));
-        updateNodeBuilder.put("name", ImmutableMap.of("set", element.getName()));
-
-        if (element.hasDescription()) {
-            updateNodeBuilder.put("description", ImmutableMap.of("set", element.getDescription().getValue()));
-        } else {
-            updateNodeBuilder.put("description", ImmutableMap.of("setNull", true));
-        }
-
-        mapBuilder.put("update", updateNodeBuilder.build());
         return mapBuilder.build();
     }
 }

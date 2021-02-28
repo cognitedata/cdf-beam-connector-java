@@ -20,11 +20,10 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.*;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.client.dto.*;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.parse.ParseFileMetaFn;
 import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.write.UpsertFileFn;
 import com.cognite.beam.io.transform.BreakFusion;
@@ -211,7 +210,6 @@ public abstract class Files {
 
         @Override
         public PCollection<FileContainer> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all files composite transform.");
             Coder<Long> varLongCoder = VarLongCoder.of();
             Coder<FileMetadata> metadataCoder = ProtoCoder.of(FileMetadata.class);
@@ -517,8 +515,6 @@ public abstract class Files {
 
         @Override
         public PCollection<FileMetadata> expand(PCollection<FileContainer> input) {
-            LOG.info("Starting Cognite writer.");
-
             LOG.debug("Building upsert file composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<FileContainer> containerCoder = ProtoCoder.of(FileContainer.class);
@@ -559,8 +555,7 @@ public abstract class Files {
                     .apply("Remove key", Values.<Iterable<FileContainer>>create())
                     .apply("Upsert files", ParDo.of(
                             new UpsertFileFn(getHints(), getWriterConfig(), isDeleteTempFile(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseFileMetaFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -642,9 +637,7 @@ public abstract class Files {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.FILE,
-                                    getWriterConfig().getAppIdentifier(), getWriterConfig().getSessionIdentifier(),
-                                    projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.FILE, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

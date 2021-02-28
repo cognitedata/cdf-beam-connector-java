@@ -20,11 +20,9 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.SequenceBody;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.beam.io.fn.read.ListSequencesRowsFn;
+import com.cognite.client.dto.SequenceBody;
 import com.cognite.beam.io.fn.delete.DeleteSequenceRowsFn;
-import com.cognite.beam.io.fn.parse.ParseSequenceBodyFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.write.UpsertSeqBodyFn;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -179,9 +177,16 @@ public abstract class SequenceRows {
 
         @Override
         public PCollection<SequenceBody> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all sequence rows composite transform.");
 
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<SequenceBody> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
@@ -189,9 +194,9 @@ public abstract class SequenceRows {
                             .withProjectConfigParameters(getProjectConfig())
                             .withReaderConfig(getReaderConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
-                    .apply("Read results", ParDo.of(new ReadItemsIteratorFn(getHints(), ResourceType.SEQUENCE_BODY,
-                            getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseSequenceBodyFn()));
+                    .apply("Read results", ParDo.of(new ListSequencesRowsFn(getHints(),
+                            getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -389,8 +394,7 @@ public abstract class SequenceRows {
                     .apply("Remove key", Values.<Iterable<SequenceBody>>create())
                     .apply("Delete sequence rows", ParDo.of(
                             new DeleteSequenceRowsFn(getHints(),
-                                                    getWriterConfig().getAppIdentifier(),
-                                                    getWriterConfig().getSessionIdentifier(),
+                                                    getWriterConfig(),
                                                     projectConfigView))
                             .withSideInputs(projectConfigView));
 

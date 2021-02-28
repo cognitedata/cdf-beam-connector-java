@@ -56,7 +56,7 @@ public abstract class TSPointsWriteProtoRequestProvider extends GenericRequestPr
         Preconditions.checkArgument(getRequestParameters().getProtoRequestBody() instanceof DataPointInsertionRequest,
                 "The protobuf request body is not of type DataPointInsertionRequest");
         DataPointInsertionRequest requestPayload = (DataPointInsertionRequest) getRequestParameters().getProtoRequestBody();
-        LOG.info(logMessagePrefix + "Building write request for {} time series",
+        LOG.debug(logMessagePrefix + "Building write request for {} time series",
                 requestPayload.getItemsCount());
         Request.Builder requestBuilder = buildGenericRequest();
 

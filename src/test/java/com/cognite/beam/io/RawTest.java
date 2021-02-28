@@ -2,12 +2,9 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.RawRow;
-import com.cognite.beam.io.dto.RawTable;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.google.protobuf.ListValue;
-import com.google.protobuf.NullValue;
+import com.cognite.client.dto.RawRow;
+import com.cognite.client.dto.RawTable;
+import com.cognite.client.util.DataGenerator;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 import org.apache.beam.sdk.Pipeline;
@@ -38,46 +35,8 @@ class RawTest extends TestConfigProviderV1 {
     @Test
     @Tag("remoteCDP")
     void writeRows() {
-        final RawRow row1 = RawRow.newBuilder()
-                .setDbName(rawDbName)
-                .setTableName(rawTableName)
-                .setKey("A")
-                .setColumns(Struct.newBuilder()
-                        .putFields("string", Value.newBuilder().setStringValue("myStringValue").build())
-                        .putFields("numeric", Value.newBuilder().setNumberValue(100d).build())
-                        .putFields("bool", Value.newBuilder().setBoolValue(true).build())
-                        .putFields("null_value", Value.newBuilder().setNullValue(NullValue.NULL_VALUE).build())
-                        .putFields("array", Value.newBuilder().setListValue(ListValue.newBuilder()
-                                .addValues(Value.newBuilder().setNumberValue(1d).build())
-                                .addValues(Value.newBuilder().setNumberValue(2d).build())
-                                .addValues(Value.newBuilder().setNumberValue(3d).build())
-                                .build()).build())
-                        .putFields("struct", Value.newBuilder().setStructValue(Struct.newBuilder()
-                                .putFields("nestedString", Value.newBuilder().setStringValue("myTrickyStringValue_æøå_äö")
-                                        .build())).build())
-                ).build();
-
-        final RawRow row2 = RawRow.newBuilder()
-                .setDbName(rawDbName)
-                .setTableName(rawTableName)
-                .setKey("B")
-                .setColumns(Struct.newBuilder()
-                        .putFields("string", Value.newBuilder().setStringValue("another value").build())
-                        .putFields("numeric", Value.newBuilder().setNumberValue(10.123456789d).build())
-                        .putFields("bool", Value.newBuilder().setBoolValue(false).build())
-                        .putFields("null_value", Value.newBuilder().setNullValue(NullValue.NULL_VALUE).build())
-                        .putFields("array", Value.newBuilder().setListValue(ListValue.newBuilder()
-                                .addValues(Value.newBuilder().setNumberValue(10d).build())
-                                .addValues(Value.newBuilder().setNumberValue(20d).build())
-                                .addValues(Value.newBuilder().setNumberValue(30d).build())
-                                .build()).build())
-                        .putFields("struct", Value.newBuilder().setStructValue(Struct.newBuilder()
-                                .putFields("nestedString", Value.newBuilder().setStringValue("myStringValue")
-                                        .build())).build())
-                ).build();
-
         final Pipeline pipeline = Pipeline.create();
-        pipeline.apply("Build input rows", Create.of(row1, row2))
+        pipeline.apply("Build input rows", Create.of(DataGenerator.generateRawRows(rawDbName, rawTableName, 9567)))
                 .apply("write rows", CogniteIO.writeRawRow()
                         .withProjectConfig(projectConfig))
                 .apply("Format results", MapElements
@@ -222,35 +181,13 @@ class RawTest extends TestConfigProviderV1 {
 
     @Test
     @Tag("remoteCDP")
-    void readRowsCursors() {
-        final ConnectorServiceV1 connector = ConnectorServiceV1.builder()
-                .setMaxRetries(1)
-                .build();
-        try {
-            ResponseItems<String> results = connector.readCursorsRawRows().getItems(RequestParameters.create()
-                    .withDbName(rawDbName)
-                    .withTableName(rawTableName)
-                    .withRootParameter("numberOfCursors", 5)
-                    .withRootParameter("minLastUpdatedTime", 123456789L)
-                    .withProjectConfig(projectConfig));
-
-            for (String item : results.getResultsItems()) {
-                System.out.println(item);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Test
-    @Tag("remoteCDP")
     void readRowsToFile() {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<RawRow> rows = pipeline.apply(CogniteIO.readRawRow()
                 .withProjectConfig(projectConfig)
                 .withHints(Hints.create()
-                        .withReadShards(2))
+                        .withReadShards(4))
                 .withRequestParameters(RequestParameters.create()
                         .withRootParameter("dbName", rawDbName)
                         .withRootParameter("tableName", rawTableName)

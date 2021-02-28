@@ -5,32 +5,48 @@ import com.google.common.base.Preconditions;
 
 import java.io.Serializable;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * This class captures the client configuration parameters.
  */
 @AutoValue
 public abstract class ClientConfig implements Serializable {
-    final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
-    final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
-    final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
-    final static int DEFAULT_LIST_PARTITIONS = 8;
+    private final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
+    private final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
+    private final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
+    private final static int DEFAULT_LIST_PARTITIONS = 8;
 
     // Thread pool capacity
-    final static int DEFAULT_CPU_MULTIPLIER = 8;
+    private final static int DEFAULT_CPU_MULTIPLIER = 8;
+    private final static int DEFAULT_MAX_WORKER_THREADS = 8;
 
     // Connection retries
     private static final int DEFAULT_RETRIES = 5;
     private static final int MAX_RETRIES = 20;
     private static final int MIN_RETRIES = 1;
 
+    // Max batch size when writing to Raw
+    private static final int DEFAULT_WRITE_RAW_MAX_BATCH_SIZE = 2000;
+    private static final int MIN_WRITE_RAW_MAX_BATCH_SIZE = 1;
+    private static final int MAX_WRITE_RAW_MAX_BATCH_SIZE = 10000;
+
+    // Max batch size for context operations
+    private static final int DEFAULT_ENTITY_MATCHING_MAX_BATCH_SIZE = 1000;
+    private static final int MIN_ENTITY_MATCHING_MAX_BATCH_SIZE = 1;
+    private static final int MAX_ENTITY_MATCHING_MAX_BATCH_SIZE = 20000;
+
     private static Builder builder() {
         return new AutoValue_ClientConfig.Builder()
                 .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
                 .setMaxRetries(DEFAULT_RETRIES)
-                .setNoWorkers(Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER)
+                .setNoWorkers(Math.min(
+                        Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
+                        DEFAULT_MAX_WORKER_THREADS))
                 .setNoListPartitions(DEFAULT_LIST_PARTITIONS)
-                .setUpsertMode(DEFAULT_UPSERT_MODE);
+                .setUpsertMode(DEFAULT_UPSERT_MODE)
+                .setEntityMatchingMaxBatchSize(DEFAULT_ENTITY_MATCHING_MAX_BATCH_SIZE);
     }
 
     /**
@@ -50,6 +66,7 @@ public abstract class ClientConfig implements Serializable {
     public abstract int getNoWorkers();
     public abstract int getNoListPartitions();
     public abstract UpsertMode getUpsertMode();
+    public abstract int getEntityMatchingMaxBatchSize();
 
     /**
      * Set the app identifier. The identifier is encoded in the api calls to the Cognite instance and can be
@@ -134,6 +151,20 @@ public abstract class ClientConfig implements Serializable {
         return toBuilder().setUpsertMode(mode).build();
     }
 
+    /**
+     * Sets the max batch size when executing entity matching operations.
+     * @param value
+     * @return
+     */
+    public ClientConfig withEntityMatchingMaxBatchSize(int value) {
+        checkArgument(value >= MIN_ENTITY_MATCHING_MAX_BATCH_SIZE
+                        && value <= MAX_ENTITY_MATCHING_MAX_BATCH_SIZE,
+                String.format("Max context batch size must be between %d and %d", MIN_ENTITY_MATCHING_MAX_BATCH_SIZE,
+                        MAX_ENTITY_MATCHING_MAX_BATCH_SIZE));
+
+        return toBuilder().setEntityMatchingMaxBatchSize(value).build();
+    }
+
     @AutoValue.Builder
     static abstract class Builder {
         abstract Builder setAppIdentifier(String value);
@@ -142,6 +173,7 @@ public abstract class ClientConfig implements Serializable {
         abstract Builder setNoWorkers(int value);
         abstract Builder setNoListPartitions(int value);
         abstract Builder setUpsertMode(UpsertMode value);
+        abstract Builder setEntityMatchingMaxBatchSize(int value);
 
         abstract ClientConfig build();
     }

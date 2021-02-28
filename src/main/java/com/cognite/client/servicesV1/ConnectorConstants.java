@@ -39,7 +39,7 @@ public final class ConnectorConstants {
     public static final int MIN_MAX_RETRIES = 1;
     public static final int MAX_MAX_RETRIES = 20;
     public static final String DEFAULT_ENDPOINT = "";
-    public static final Duration DEFAULT_ASYNC_API_JOB_TIMEOUT = Duration.ofMinutes(10);
+    public static final Duration DEFAULT_ASYNC_API_JOB_TIMEOUT = Duration.ofMinutes(15);
     public static final Duration DEFAULT_ASYNC_API_JOB_POLLING_INTERVAL = Duration.ofSeconds(2);
 
     /*
@@ -57,7 +57,8 @@ public final class ConnectorConstants {
 
     public static final int DEFAULT_SEQUENCE_WRITE_MAX_ROWS_PER_ITEM = 10_000;
     public static final int DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH = 10;
-    public static final int DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH = 50_000;
+    public static final int DEFAULT_SEQUENCE_WRITE_MAX_CELLS_PER_BATCH = 100_000;
+    public static final int DEFAULT_SEQUENCE_WRITE_MAX_CHARS_PER_BATCH = 1_000_000;
 
     /*
     Controls the recording of metrics

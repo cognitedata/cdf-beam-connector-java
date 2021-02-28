@@ -42,6 +42,11 @@ public abstract class Hints implements Serializable {
     private static final int MIN_READ_SHARDS = 1;
     private static final int MAX_READ_SHARDS = 10000;
 
+    // Number of read shards per worker. Will influence the CPU saturation of a worker
+    private static final int DEFAULT_READ_SHARDS_PER_WORKER = 4;
+    private static final int MIN_READ_SHARDS_PER_WORKER = 1;
+    private static final int MAX_READ_SHARDS_PER_WORKER = 10;
+
     // Number of shards when writing. Will affect the batching parallelization potential
     private static final int DEFAULT_WRITE_SHARDS = 10;
     private static final int MIN_WRITE_SHARDS = 1;
@@ -73,6 +78,7 @@ public abstract class Hints implements Serializable {
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_Hints.Builder()
                 .setReadShards(DEFAULT_READ_SHARDS)
+                .setReadShardsPerWorker(DEFAULT_READ_SHARDS_PER_WORKER)
                 .setWriteShards(DEFAULT_WRITE_SHARDS)
                 .setWriteMaxBatchLatency(DEFAULT_WRITE_MAX_LATENCY)
                 .setWriteRawMaxBatchSize(DEFAULT_WRITE_RAW_MAX_BATCH_SIZE)
@@ -87,6 +93,7 @@ public abstract class Hints implements Serializable {
     }
 
     public abstract ValueProvider<Integer> getReadShards();
+    public abstract int getReadShardsPerWorker();
     public abstract int getWriteShards();
     public abstract int getWriteRawMaxBatchSize();
     public abstract int getContextMaxBatchSize();
@@ -107,9 +114,11 @@ public abstract class Hints implements Serializable {
      * @param value
      * @return
      */
+    @Deprecated
     public Hints withReadShards(int value) {
         return toBuilder().setReadShards(value).build();
     }
+    // todo: remove when new partitions Fn is implemented
 
     /**
      * Sets the number of batches/shards to chunk the results data set into. In general, the higher the number of shards
@@ -122,8 +131,25 @@ public abstract class Hints implements Serializable {
      * @param value
      * @return
      */
+    @Deprecated
     public Hints withReadShards(ValueProvider<Integer> value) {
         return toBuilder().setReadShards(value).build();
+    }
+    // todo: remove when new partitions Fn is implemented
+
+    /**
+     * Sets the (max) number of parallel read shards per worker.
+     *
+     * This will influence the saturation of a worker. In general, I/O operations should be done in parallel in
+     * order to feed the worker with enough data to saturate it.
+     *
+     * The default number of read shards per worker is 4.
+     *
+     * @param value
+     * @return
+     */
+    public Hints withReadShardsPerWorker(int value) {
+        return toBuilder().setReadShardsPerWorker(value).build();
     }
 
     /**
@@ -254,6 +280,7 @@ public abstract class Hints implements Serializable {
 
     @AutoValue.Builder public abstract static class Builder {
         abstract Builder setReadShards(ValueProvider<Integer> value);
+        abstract Builder setReadShardsPerWorker(int value);
         abstract Builder setWriteShards(int value);
         abstract Builder setWriteRawMaxBatchSize(int value);
         abstract Builder setContextMaxBatchSize(int value);
@@ -279,6 +306,11 @@ public abstract class Hints implements Serializable {
                             && hints.getWriteRawMaxBatchSize() <= MAX_WRITE_RAW_MAX_BATCH_SIZE,
                     String.format("Max write batch size must be between %d and %d", MIN_WRITE_RAW_MAX_BATCH_SIZE,
                             MAX_WRITE_RAW_MAX_BATCH_SIZE));
+
+            checkArgument(hints.getReadShardsPerWorker() >= MIN_READ_SHARDS_PER_WORKER
+                            && hints.getReadShardsPerWorker() <= MAX_READ_SHARDS_PER_WORKER
+                    , String.format("Number of read shards per worker must be between %d and %d",
+                            MIN_READ_SHARDS_PER_WORKER, MAX_READ_SHARDS_PER_WORKER));
 
             return hints;
         }

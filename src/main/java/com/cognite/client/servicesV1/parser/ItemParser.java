@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.Item;
+import com.cognite.client.dto.Item;
 import com.cognite.client.servicesV1.util.JsonUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -120,7 +120,7 @@ public class ItemParser {
      * If the Json node cannot be parsed, an empty {@link Optional} will be returned.
      * @param itemJson The Json string
      * @param fieldName The Json path to parse
-     * @return The Json path as a {@link String}, or an empty {@link Optional} if unable to parse it.
+     * @return The Json path as a {@link Long}, or an empty {@link Optional} if unable to parse it.
      */
     public static Optional<Long> parseLong(String itemJson, String fieldName) {
         Optional<Long> returnObject = Optional.empty();
@@ -135,10 +135,10 @@ public class ItemParser {
                         + "Unable to parse attribute: " + fieldName + ". Item exerpt: " +
                         itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
 
-                LOG.warn(message);
+                LOG.debug(message);
             }
         } catch (Exception e) {
-            LOG.error(logPrefix + parseErrorDefaultPrefix, e);
+            LOG.warn(logPrefix + parseErrorDefaultPrefix, e);
         } finally {
             return returnObject;
         }
@@ -169,10 +169,10 @@ public class ItemParser {
                         + "Unable to parse attribute: " + fieldName + ". Item exerpt: " +
                         itemJson.substring(0, Math.min(itemJson.length(), CogniteIO.MAX_LOG_ELEMENT_LENGTH));
 
-                LOG.warn(message);
+                LOG.debug(message);
             }
         } catch (Exception e) {
-            LOG.error(logPrefix + parseErrorDefaultPrefix, e);
+            LOG.warn(logPrefix + parseErrorDefaultPrefix, e);
         } finally {
             return returnObject;
         }

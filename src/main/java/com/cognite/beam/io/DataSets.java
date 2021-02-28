@@ -20,13 +20,13 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.DataSet;
-import com.cognite.beam.io.fn.ResourceType;
-import com.cognite.beam.io.fn.parse.ParseDataSetFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
+import com.cognite.beam.io.fn.read.ListDataSetsFn;
+import com.cognite.beam.io.fn.read.RetrieveDataSetsFn;
+import com.cognite.client.dto.DataSet;
 import com.cognite.beam.io.fn.write.UpsertDataSetFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
+import com.cognite.client.dto.Item;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.StringValue;
@@ -161,18 +161,24 @@ public abstract class DataSets {
 
         @Override
         public PCollection<DataSet> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all data sets composite transform.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<DataSet> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
                             .withProjectConfigParameters(getProjectConfig())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Read results", ParDo.of(
-                            new ReadItemsIteratorFn(getHints(), ResourceType.DATA_SET, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseDataSetFn()));
-
+                    .apply("Read results", ParDo.of(new ListDataSetsFn(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -181,6 +187,84 @@ public abstract class DataSets {
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setReaderConfig(ReaderConfig value);
             public abstract ReadAll build();
+        }
+    }
+
+    /**
+     * Transform that will read a collection of {@link DataSet} objects from Cognite Data Fusion.
+     *
+     * You specify which {@link DataSet} objects to read via a set of ids enclosed in
+     * {@link Item} objects. This transform takes a collection of {@link Item}
+     * as input and returns all {@link DataSet} objects matching them.
+     */
+    @AutoValue
+    public abstract static class ReadAllById
+            extends ConnectorBase<PCollection<Item>, PCollection<DataSet>> {
+
+        public static ReadAllById.Builder builder() {
+            return new com.cognite.beam.io.AutoValue_DataSets_ReadAllById.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setReaderConfig(ReaderConfig.create())
+                    .setProjectConfigFile(invalidProjectConfigFile);
+        }
+        public abstract ReaderConfig getReaderConfig();
+        public abstract ReadAllById.Builder toBuilder();
+
+        public ReadAllById withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public ReadAllById withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public ReadAllById withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public ReadAllById withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        public ReadAllById withReaderConfig(ReaderConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setReaderConfig(config).build();
+        }
+
+        @Override
+        public PCollection<DataSet> expand(PCollection<Item> input) {
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
+            PCollection<DataSet> outputCollection = input
+                    .apply("Shard and batch items", ItemsShardAndBatch.builder()
+                            .setMaxBatchSize(100)
+                            .setMaxLatency(getHints().getWriteMaxBatchLatency())
+                            .setWriteShards(getHints().getWriteShards())
+                            .build())
+                    .apply("Read results", ParDo.of(
+                            new RetrieveDataSetsFn(getHints(), getReaderConfig(),
+                                    projectConfigView)).withSideInputs(projectConfigView));
+
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<ReadAllById.Builder> {
+            public abstract ReadAllById.Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAllById build();
         }
     }
 
@@ -227,8 +311,6 @@ public abstract class DataSets {
 
         @Override
         public PCollection<DataSet> expand(PCollection<DataSet> input) {
-            LOG.info("Starting Cognite writer.");
-
             LOG.debug("Building upsert DataSet composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<DataSet> dataSetCoder = ProtoCoder.of(DataSet.class);
@@ -265,8 +347,7 @@ public abstract class DataSets {
                     .apply("Remove key", Values.<Iterable<DataSet>>create())
                     .apply("Upsert items", ParDo.of(
                             new UpsertDataSetFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseDataSetFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }

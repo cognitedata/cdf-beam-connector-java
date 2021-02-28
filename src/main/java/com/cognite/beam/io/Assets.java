@@ -20,14 +20,13 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Aggregate;
-import com.cognite.beam.io.dto.Item;
+import com.cognite.beam.io.fn.read.*;
+import com.cognite.client.config.ResourceType;
+import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.*;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.read.AddPartitionsFn;
-import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
-import com.cognite.beam.io.fn.read.ReadItemsFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertAssetFn;
 import com.cognite.beam.io.transform.BreakFusion;
@@ -44,9 +43,7 @@ import org.apache.beam.sdk.transforms.join.CoGroupByKey;
 import org.apache.beam.sdk.transforms.join.KeyedPCollectionTuple;
 import org.apache.beam.sdk.values.*;
 
-import com.cognite.beam.io.dto.Asset;
-import com.cognite.beam.io.fn.parse.ParseAssetFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
+import com.cognite.client.dto.Asset;
 import com.google.auto.value.AutoValue;
 
 import java.util.List;
@@ -186,11 +183,19 @@ public abstract class Assets {
 
         @Override
         public PCollection<Asset> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read assets composite transform.");
 
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             // Conditional streaming
             PCollection<RequestParameters> requestParametersPCollection;
@@ -217,12 +222,13 @@ public abstract class Assets {
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
-                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(), ResourceType.ASSET,
-                            getReaderConfig().enableMetrics(false))))
+                    .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
+                            getReaderConfig().enableMetrics(false), ResourceType.ASSET,
+                            projectConfigView))
+                            .withSideInputs(projectConfigView))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
-                    .apply("Read results", ParDo.of(
-                            new ReadItemsIteratorFn(getHints(), ResourceType.ASSET, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseAssetFn()));
+                    .apply("Read results", ParDo.of(new ListAssetsFn(getHints(), getReaderConfig(),projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -291,7 +297,6 @@ public abstract class Assets {
 
         @Override
         public PCollection<Asset> expand(PCollection<Item> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all asset by id composite transform.");
 
             // project config side input
@@ -305,14 +310,13 @@ public abstract class Assets {
 
             PCollection<Asset> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(1000)
+                            .setMaxBatchSize(4000)
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsByIdFn(getHints(), ResourceType.ASSETS_BY_ID, getReaderConfig(),
-                                    projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseAssetFn()));
+                            new RetrieveAssetsFn(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -640,10 +644,8 @@ public abstract class Assets {
             PCollection<Asset> outputCollection = input
                     .apply("Group assets by key", GroupByKey.create())
                     .apply("Remove key", Values.create())
-                    .apply("Sort assets", ParDo.of(new SortAssetsForUpsertFn()))
                     .apply("Write assets", ParDo.of(new UpsertAssetFn(getHints(), getWriterConfig(),
-                            projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse output assets", ParDo.of(new ParseAssetFn()));
+                            projectConfigView)).withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -938,8 +940,7 @@ public abstract class Assets {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.ASSET, getWriterConfig().getAppIdentifier(),
-                                    getWriterConfig().getSessionIdentifier(), projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.ASSET, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

@@ -17,7 +17,6 @@
 package com.cognite.client.config;
 
 import com.google.auto.value.AutoValue;
-import org.apache.beam.sdk.options.ValueProvider;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;

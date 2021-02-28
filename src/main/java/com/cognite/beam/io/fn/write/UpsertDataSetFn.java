@@ -19,75 +19,25 @@ package com.cognite.beam.io.fn.write;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.DataSet;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.parser.DataSetParser;
-import com.google.common.collect.ImmutableList;
+import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.DataSet;
 import org.apache.beam.sdk.values.PCollectionView;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Writes data sets to CDF.Clean.
  *
- * This function will first try to write the data sets as new object. In case the events already exists (based on externalId
- * or Id), the data sets will be updated. Effectively this results in an upsert.
- *
  */
 public class UpsertDataSetFn extends UpsertItemBaseFn<DataSet> {
-    public UpsertDataSetFn(Hints hints, WriterConfig writerConfig, PCollectionView<List<ProjectConfig>> projectConfig) {
-        super(hints, writerConfig, projectConfig);
+    public UpsertDataSetFn(Hints hints,
+                           WriterConfig writerConfig,
+                           PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints, writerConfig, projectConfigView);
     }
 
     @Override
-    protected void populateMaps(Iterable<DataSet> element, Map<Long, DataSet> internalIdInsertMap,
-                      Map<String, DataSet> externalIdInsertMap) throws Exception {
-        for (DataSet value : element) {
-            if (value.hasExternalId()) {
-                externalIdInsertMap.put(value.getExternalId().getValue(), value);
-            } else if (value.hasId()) {
-                internalIdInsertMap.put(value.getId().getValue(), value);
-            } else {
-                throw new Exception("Item does not contain id nor externalId: " + value.toString());
-            }
-        }
-    }
-
-    @Override
-    protected ConnectorServiceV1.ItemWriter getItemWriterInsert() {
-        return connector.writeDataSets();
-    }
-
-    @Override
-    protected ConnectorServiceV1.ItemWriter getItemWriterUpdate() {
-        return connector.updateDataSets();
-    }
-
-    @Override
-    protected List<Map<String, Object>> toRequestInsertItems(Iterable<DataSet> input) throws Exception {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (DataSet element : input) {
-            listBuilder.add(DataSetParser.toRequestInsertItem(element));
-        }
-        return listBuilder.build();
-    }
-
-    @Override
-    protected List<Map<String, Object>> toRequestUpdateItems(Iterable<DataSet> input) throws Exception {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (DataSet element : input) {
-            listBuilder.add(DataSetParser.toRequestUpdateItem(element));
-        }
-        return listBuilder.build();
-    }
-
-    @Override
-    protected List<Map<String, Object>> toRequestReplaceItems(Iterable<DataSet> input) throws Exception {
-        ImmutableList.Builder<Map<String, Object>> listBuilder = ImmutableList.builder();
-        for (DataSet element : input) {
-            listBuilder.add(DataSetParser.toRequestReplaceItem(element));
-        }
-        return listBuilder.build();
+    protected List<DataSet> upsertItems(CogniteClient client, List<DataSet> inputItems) throws Exception {
+        return client.datasets().upsert(inputItems);
     }
 }

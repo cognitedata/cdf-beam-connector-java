@@ -20,15 +20,13 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.dto.Relationship;
-import com.cognite.beam.io.fn.ResourceType;
+import com.cognite.beam.io.fn.read.ListRelationshipsFn;
+import com.cognite.beam.io.fn.read.RetrieveRelationshipsFn;
+import com.cognite.client.dto.Item;
+import com.cognite.client.dto.Relationship;
+import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
-import com.cognite.beam.io.fn.parse.ParseRelationshipFn;
-import com.cognite.beam.io.fn.read.ReadItemsByIdFn;
-import com.cognite.beam.io.fn.read.ReadItemsIteratorFn;
 import com.cognite.beam.io.fn.write.UpsertRelationshipFn;
-import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.auto.value.AutoValue;
@@ -176,8 +174,16 @@ public abstract class Relationships {
 
         @Override
         public PCollection<Relationship> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all relationships composite transform.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Relationship> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
@@ -190,10 +196,10 @@ public abstract class Relationships {
                             .withReaderConfig(getReaderConfig()))
                     //.apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(), ResourceType.RELATIONSHIP,
                     //        getReaderConfig().enableMetrics(false))))
-                    .apply("Break fusion", BreakFusion.<RequestParameters>create())
+                    //.apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsIteratorFn(getHints(), ResourceType.RELATIONSHIP, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseRelationshipFn()));
+                            new ListRelationshipsFn(getHints(), getReaderConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
@@ -274,14 +280,13 @@ public abstract class Relationships {
 
             PCollection<Relationship> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(1000)
+                            .setMaxBatchSize(4000)
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsByIdFn(getHints(), ResourceType.RELATIONSHIP_BY_ID, getReaderConfig(),
-                                    projectConfigView)).withSideInputs(projectConfigView))
-                    .apply("Parse results", ParDo.of(new ParseRelationshipFn()));
+                            new RetrieveRelationshipsFn(getHints(), getReaderConfig(),
+                                    projectConfigView)).withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -303,7 +308,7 @@ public abstract class Relationships {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<Relationship>, PCollection<Relationship>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 1000;
+        private static final int MAX_WRITE_BATCH_SIZE = 4000;
 
         public static Builder builder() {
             return new AutoValue_Relationships_Write.Builder()
@@ -370,8 +375,7 @@ public abstract class Relationships {
                     .apply("Remove key", Values.<Iterable<Relationship>>create())
                     .apply("Upsert items", ParDo.of(
                             new UpsertRelationshipFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
-                    .apply("Parse results items", ParDo.of(new ParseRelationshipFn()));
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
@@ -451,8 +455,7 @@ public abstract class Relationships {
                             .setWriteShards(getHints().getWriteShards())
                             .build())
                     .apply("Delete items", ParDo.of(
-                            new DeleteItemsFn(getHints(), ResourceType.RELATIONSHIP, getWriterConfig().getAppIdentifier(),
-                                    getWriterConfig().getSessionIdentifier(), projectConfigView))
+                            new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.RELATIONSHIP, projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

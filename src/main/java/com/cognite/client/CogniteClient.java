@@ -1,7 +1,8 @@
 package com.cognite.client;
 
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.dto.LoginStatus;
+import com.cognite.client.config.AuthConfig;
+import com.cognite.client.dto.LoginStatus;
 import com.cognite.client.config.ClientConfig;
 import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.google.auto.value.AutoValue;
@@ -19,6 +20,8 @@ import java.util.concurrent.TimeUnit;
  * This class represents the main entry point for interacting with this SDK (and Cognite Data Fusion).
  *
  * All services are exposed via this object.
+ *
+ * @see <a href="https://docs.cognite.com/api/v1/">Cognite API v1 specification</a>
  */
 @AutoValue
 public abstract class CogniteClient implements Serializable {
@@ -32,10 +35,17 @@ public abstract class CogniteClient implements Serializable {
             .build();
 
     private static final int DEFAULT_CPU_MULTIPLIER = 8;
-    private static ForkJoinPool executorService = new ForkJoinPool(Runtime.getRuntime().availableProcessors()
-            * DEFAULT_CPU_MULTIPLIER);
+    private final static int DEFAULT_MAX_WORKER_THREADS = 8;
+    private static ForkJoinPool executorService = new ForkJoinPool(Math.min(
+            Runtime.getRuntime().availableProcessors() * DEFAULT_CPU_MULTIPLIER,
+            DEFAULT_MAX_WORKER_THREADS));
 
-    protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
+    protected final static Logger LOG = LoggerFactory.getLogger(CogniteClient.class);
+
+    static {
+        LOG.info("CogniteClient - setting up default worker pool with {} workers.",
+                executorService.getParallelism());
+    }
 
     @Nullable
     private String cdfProjectCache = null; // Cache attribute for the CDF project
@@ -133,7 +143,9 @@ public abstract class CogniteClient implements Serializable {
         LOG.info("Setting up client with {} worker threads and {} list partitions",
                 config.getNoWorkers(),
                 config.getNoListPartitions());
-        executorService = new ForkJoinPool(config.getNoWorkers());
+        if (config.getNoWorkers() != executorService.getParallelism()) {
+            executorService = new ForkJoinPool(config.getNoWorkers());
+        }
 
         return toBuilder().setClientConfig(config).build();
     }
@@ -148,12 +160,102 @@ public abstract class CogniteClient implements Serializable {
     }
 
     /**
+     * Returns {@link Timeseries} representing the Cognite timeseries api endpoint.
+     *
+     * @return The timeseries api object.
+     */
+    public Timeseries timeseries() {
+        return Timeseries.of(this);
+    }
+
+    /**
      * Returns {@link Events} representing the Cognite events api endpoint.
      *
      * @return The events api object.
      */
     public Events events() {
         return Events.of(this);
+    }
+
+    /**
+     * Returns {@link Files} representing the Cognite files api endpoints.
+     *
+     * @return The labels api endpoint.
+     */
+    public Files files() {
+        return Files.of(this);
+    }
+
+    /**
+     * Returns {@link Relationships} representing the Cognite relationships api endpoint.
+     *
+     * @return The relationships api object.
+     */
+    public Relationships relationships() {
+        return Relationships.of(this);
+    }
+
+    /**
+     * Returns {@link Sequences} representing the Cognite sequences api endpoint.
+     *
+     * @return The sequences api object.
+     */
+    public Sequences sequences() {
+        return Sequences.of(this);
+    }
+
+    /**
+     * Returns {@link Raw} representing the Cognite Raw service.
+     *
+     * @return The raw api object.
+     */
+    public Raw raw() {
+        return Raw.of(this);
+    }
+
+    /**
+     * Returns {@link Labels} representing the Cognite labels api endpoints.
+     *
+     * @return The labels api endpoint.
+     */
+    public Labels labels() {
+        return Labels.of(this);
+    }
+
+    /**
+     * Returns {@link Datasets} representing the Cognite dats sets api endpoint.
+     *
+     * @return The data sets api object.
+     */
+    public Datasets datasets() {
+        return Datasets.of(this);
+    }
+
+    /**
+     * Returns {@link SecurityCategories} representing the Cognite labels api endpoints.
+     *
+     * @return The security categories api endpoint.
+     */
+    public SecurityCategories securityCategories() {
+        return SecurityCategories.of(this);
+    }
+
+    /**
+     * Returns {@link Contextualization} representing the Cognite contextualization api endpoints.
+     *
+     * @return The contextualization api endpoint.
+     */
+    public Contextualization contextualization() {
+        return Contextualization.of(this);
+    }
+
+    /**
+     * Returns {@link Experimental} representing experimental (non-released) api endpoints.
+     *
+     * @return The Experimental api endpoints.
+     */
+    public Experimental experimental() {
+        return Experimental.of(this);
     }
 
     /**
@@ -192,6 +294,38 @@ public abstract class CogniteClient implements Serializable {
         }
 
         return ProjectConfig.create()
+                .withHost(getBaseUrl())
+                .withApiKey(getApiKey())
+                .withProject(cdfProject);
+    }
+
+    /**
+     * Returns a auth info for api requests
+     * @return project config with auth info populated
+     * @throws Exception
+     */
+    protected AuthConfig buildAuthConfig() throws Exception {
+        String cdfProject = null;
+        if (null != getProject()) {
+            // The project is explicitly defined
+            cdfProject = getProject();
+        } else if (null != cdfProjectCache) {
+            // The project info is cached
+            cdfProject = cdfProjectCache;
+        } else {
+            // Have to get the project via the api key
+            LoginStatus loginStatus = getConnectorService()
+                    .readLoginStatusByApiKey(getBaseUrl(), getApiKey());
+
+            if (loginStatus.getProject().isEmpty()) {
+                throw new Exception("Could not find the CDF project for the api key.");
+            }
+            LOG.debug("CDF project identified for the api key. Project: {}", loginStatus.getProject());
+            cdfProjectCache = loginStatus.getProject(); // Cache the result
+            cdfProject = loginStatus.getProject();
+        }
+
+        return AuthConfig.create()
                 .withHost(getBaseUrl())
                 .withApiKey(getApiKey())
                 .withProject(cdfProject);

@@ -3,11 +3,8 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.*;
-import com.cognite.client.servicesV1.Connector;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cognite.client.CogniteClient;
+import com.cognite.client.dto.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
@@ -32,13 +29,11 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 class ContextTest extends TestConfigProviderV1 {
-    final ObjectMapper mapper = new ObjectMapper();
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
     static final String metaKey = "source";
     static final String metaValue = "unit_test";
@@ -475,54 +470,44 @@ class ContextTest extends TestConfigProviderV1 {
 
     private long trainMatchingModel(String featureType, String loggingPrefix) throws Exception {
         // Set up the main data objects to use during the test
-        LOG.info(loggingPrefix + "Building test data objects...");
         ImmutableList<Struct> source = generateSourceStructs();
         ImmutableList<Struct> target = generateTargetTrainingStructs();
 
-        String[] featureTypes = {"simple", "bigram", "frequency-weighted-bigram", "bigram-extra-tokenizers"};
-
         // Train the matching model
-        LOG.info(loggingPrefix + "Training matching model...");
-        ConnectorServiceV1 connectorService = ConnectorServiceV1.builder().build();
-        Connector<String> entityMatchConnector = connectorService.entityMatcherFit();
-        long modelId = -1L;
         RequestParameters entityMatchFitRequest = RequestParameters.create()
                 .withRootParameter("sources",  source)
                 .withRootParameter("targets", target)
                 .withRootParameter("matchFields", ImmutableList.of(
                         ImmutableMap.of("source", "name", "target", "externalId")
                 ))
-                .withRootParameter("featureType", featureType)
-                .withProjectConfig(projectConfig);
+                .withRootParameter("featureType", featureType);
 
-        CompletableFuture<ResponseItems<String>> responseItems = entityMatchConnector
-                .executeAsync(entityMatchFitRequest);
-        LOG.info(loggingPrefix + "Train matching model response: isSuccessful: {}, status: {}",
-                responseItems.join().isSuccessful(),
-                responseItems.join().getStatus().get(0));
-        LOG.info(loggingPrefix + "Train matching model response body: {}",
-                responseItems.join().getResponseBodyAsString());
-        assertTrue(responseItems.join().isSuccessful());
-        modelId = mapper.readTree(responseItems.join().getResultsItems().get(0)).path("id").longValue();
-        LOG.info(loggingPrefix + "Matching model training finished. Model id: {}", modelId);
+        CogniteClient client = CogniteClient.ofKey(getApiKey())
+                .withBaseUrl(getHost());
+        List<EntityMatchModel> models = client.contextualization().entityMatching()
+                .create(ImmutableList.of(entityMatchFitRequest));
 
-        return modelId;
+        LOG.debug(loggingPrefix + "Train matching model response body: {}",
+                models.get(0));
+
+        return models.get(0).getId().getValue();
     }
 
     private boolean deleteEntityMatcherModel(long modelId, String loggingPrefix) throws Exception {
         LOG.info(loggingPrefix + "Clean up. Removing the matching model...");
-        ConnectorServiceV1 connectorService = ConnectorServiceV1.builder().build();
-        ConnectorServiceV1.ItemWriter deleteModelWriter = connectorService.deleteEntityMatcherModels();
+        Item modelItem = Item.newBuilder()
+                .setId(modelId)
+                .build();
 
-        CompletableFuture<ResponseItems<String>> deleteResponseItems = deleteModelWriter
-                .writeItemsAsync(RequestParameters.create()
-                        .withProjectConfig(projectConfig)
-                        .withItems(ImmutableList.of(ImmutableMap.of("id", modelId))));
-        LOG.info(loggingPrefix + "Delete model response: isSuccessful: {}",
-                deleteResponseItems.join().isSuccessful());
+        CogniteClient client = CogniteClient.ofKey(getApiKey())
+                .withBaseUrl(getHost());
+        List<Item> deleteResults = client.contextualization()
+                .entityMatching()
+                .delete(ImmutableList.of(modelItem));
+
         LOG.info(loggingPrefix + "Delete model response body: {}",
-                deleteResponseItems.join().getResponseBodyAsString());
-        return deleteResponseItems.join().isSuccessful();
+                deleteResults.get(0));
+        return true;
     }
 
     private ImmutableList<Struct> generateSourceStructs() {

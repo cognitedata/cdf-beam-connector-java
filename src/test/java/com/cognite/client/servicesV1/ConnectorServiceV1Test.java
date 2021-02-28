@@ -3,8 +3,8 @@ package com.cognite.client.servicesV1;
 import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.TestConfigProviderV1;
 import com.cognite.beam.io.TestUtilsV1;
-import com.cognite.beam.io.dto.FileBinary;
-import com.cognite.beam.io.dto.PnIDResponse;
+import com.cognite.client.dto.FileBinary;
+import com.cognite.client.dto.PnIDResponse;
 import com.cognite.client.servicesV1.parser.PnIDResponseParser;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -808,84 +808,6 @@ class ConnectorServiceV1Test extends TestConfigProviderV1 {
                 .withProjectConfig(projectConfig);
 
         assertTrue(connectorService.deleteTsHeaders().writeItems(deleteReqParameters).isSuccessful());
-    }
-
-    @Test
-    @Tag("remoteCDP")
-    void createPnID() throws Exception {
-
-        ConnectorServiceV1 connectorService = ConnectorServiceV1.builder().build();
-        ItemReader<String> detectAnnotations = connectorService.detectAnnotationsPnid();
-
-        RequestParameters postPnID = RequestParameters.create()
-                .withRootParameter("fileId", 7339813294098717L)
-                .withRootParameter("entities",  ImmutableList.of("01-100-PE-N", "02-100-PE-N", "MP 02 S"))
-                .withProjectConfig(projectConfig);
-
-        CompletableFuture<ResponseItems<String>> responseItems = detectAnnotations.getItemsAsync(postPnID);
-
-        //LOG.info("ResponseItems: " + responseItems.get().toString());
-        //LOG.info("ResultsItems: " + responseItems.get().getResultsItems().toString());
-
-        PnIDResponse annotationsResponse =
-                PnIDResponseParser.ParsePnIDAnnotationResponse(responseItems.get().getResultsItems().get(0));
-        LOG.info("PnIDResponse object, annotations: " + annotationsResponse);
-
-        ItemReader<String> interactiveFiles = connectorService.convertPnid();
-        RequestParameters getInteractiveFilesRequest = RequestParameters.create()
-                .withProjectConfig(projectConfig)
-                .withRootParameter("fileId", 7339813294098717L)
-                .withRootParameter("items", annotationsResponse.getEntitiesList());
-        //LOG.info("Request object for get interactive pnid: " + getInteractiveFilesRequest.getRequestParametersAsJson());
-        CompletableFuture<ResponseItems<String>> intPnidResponse = interactiveFiles.getItemsAsync(getInteractiveFilesRequest);
-        //LOG.info("Int pnid ResponseItems: " + intPnidResponse.get().toString());
-        //LOG.info("Int pnid ResultsItems: " + intPnidResponse.get().getResultsItems().toString());
-        PnIDResponse interactiveResponse =
-                PnIDResponseParser.ParsePnIDConvertResponse(intPnidResponse.get().getResultsItems().get(0));
-        LOG.info("PnIDResponse object, intPnId: " + interactiveResponse);
-
-        // download the binaries
-        CompletableFuture<FileBinary> svgResponse = null;
-        CompletableFuture<FileBinary> pngResponse = null;
-        if (interactiveResponse.hasSvgUrl()) {
-            svgResponse = ConnectorServiceV1.DownloadFileBinary
-                    .downloadFileBinaryFromURL(interactiveResponse.getSvgUrl().getValue());
-        }
-        if (interactiveResponse.hasPngUrl()) {
-            pngResponse = ConnectorServiceV1.DownloadFileBinary
-                    .downloadFileBinaryFromURL(interactiveResponse.getPngUrl().getValue());
-        }
-
-        PnIDResponse.Builder finalResponseBuilder = annotationsResponse.toBuilder()
-                .mergeFrom(interactiveResponse);
-
-        LOG.info("Merged response w/ annotations and file paths: " + finalResponseBuilder.build());
-
-        if (null != svgResponse) {
-            LOG.info("Found SVG. Adding to response object");
-            finalResponseBuilder.setSvgBinary(BytesValue.of(svgResponse.join().getBinary()));
-            try {
-                Files.write(Paths.get("./test_int_pnid.svg"), finalResponseBuilder.getSvgBinary().getValue().toByteArray());
-                Files.write(Paths.get("./test_int_pnid_from_reponse.svg"), svgResponse.get().getBinary().toByteArray());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        if (null != pngResponse) {
-            LOG.info("Found PNG. Adding to response object");
-            finalResponseBuilder.setPngBinary(BytesValue.of(pngResponse.get().getBinary()));
-            try {
-                Files.write(Paths.get("./test_int_pnid.png"), finalResponseBuilder.getPngBinary().getValue().toByteArray());
-                Files.write(Paths.get("./test_int_pnid_from_reponse.png"), pngResponse.get().getBinary().toByteArray());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        PnIDResponse finalResponse = finalResponseBuilder.build();
-        //LOG.info("PnIDResponse object, final: " + finalResponse);
-
-        assertTrue(responseItems.get().isSuccessful());
     }
 
     @Test

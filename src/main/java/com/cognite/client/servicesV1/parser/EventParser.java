@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.Event;
+import com.cognite.client.dto.Event;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -52,7 +52,7 @@ public class EventParser {
         if (root.path("id").isIntegralNumber()) {
             eventBuilder.setId(Int64Value.of(root.get("id").longValue()));
         } else {
-            String message = logPrefix + "Unable to parse attribute: id. Item exerpt: "
+            String message = logPrefix + "Unable to parse attribute: id. Item excerpt: "
                     + json.substring(0, Math.min(json.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
             throw new Exception(message);
         }

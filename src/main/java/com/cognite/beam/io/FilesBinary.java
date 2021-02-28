@@ -19,9 +19,9 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.beam.io.dto.FileBinary;
-import com.cognite.beam.io.dto.Item;
-import com.cognite.beam.io.fn.read.ReadFileBinaryByIdFn;
+import com.cognite.beam.io.fn.read.RetrieveFileBinariesFn;
+import com.cognite.client.dto.FileBinary;
+import com.cognite.client.dto.Item;
 import com.cognite.beam.io.transform.internal.*;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
@@ -110,9 +110,8 @@ public abstract class FilesBinary {
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
-                    .apply("Read file binaries", ParDo.of(new ReadFileBinaryByIdFn(getHints(),
-                            getReaderConfig().getAppIdentifier(), getReaderConfig().getSessionIdentifier(),
-                            getTempStorageURI(), isForceTempStorage(), projectConfigView))
+                    .apply("Read file binaries", ParDo.of(new RetrieveFileBinariesFn(getHints(),
+                            getReaderConfig(), getTempStorageURI(), isForceTempStorage(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
             return outputCollection;

@@ -16,7 +16,7 @@
 
 package com.cognite.beam.io.fn;
 
-import com.cognite.beam.io.dto.Asset;
+import com.cognite.client.dto.Asset;
 import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;

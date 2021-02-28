@@ -17,7 +17,7 @@
 package com.cognite.client.servicesV1.parser;
 
 import com.cognite.beam.io.CogniteIO;
-import com.cognite.beam.io.dto.RawRow;
+import com.cognite.client.dto.RawRow;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
@@ -46,8 +46,8 @@ public class RawParser {
      */
     public static RawRow parseRawRow(String dbName, String dbTable, String rowJson) throws Exception {
         Preconditions.checkNotNull(dbName, "dbName cannot be null");
-        Preconditions.checkNotNull(dbTable, "dbName cannot be null");
-        Preconditions.checkNotNull(rowJson, "dbName cannot be null");
+        Preconditions.checkNotNull(dbTable, "dbTable cannot be null");
+        Preconditions.checkNotNull(rowJson, "rowJson cannot be null");
         String logItemExerpt = rowJson.substring(0, Math.min(rowJson.length() - 1, CogniteIO.MAX_LOG_ELEMENT_LENGTH));
 
         JsonNode root = objectMapper.readTree(rowJson);
