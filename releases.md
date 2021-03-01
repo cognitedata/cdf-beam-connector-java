@@ -46,6 +46,8 @@ Changes are grouped as follows:
   All other signatures are the same as before, so you may run a search & replace to update your client.
   
 - `EntityMatch.matchTo` renamed to `EntityMatch.target` to align with the entity matching api v1.
+
+- Experimental: The interactive P&ID service has been updated to use the new entities specification.
   
 ### Fixed
 

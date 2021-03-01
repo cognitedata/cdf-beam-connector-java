@@ -19,7 +19,7 @@ message BoundingBox {
 message Annotation {
      BoundingBox boundingBox = 1;
      google.protobuf.StringValue text = 2;
-     google.protobuf.Struct entity = 3;
+     repeated google.protobuf.Struct entities = 3;
      google.protobuf.DoubleValue confidence = 4;
      google.protobuf.StringValue type = 5;
 }
