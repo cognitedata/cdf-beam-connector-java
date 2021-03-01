@@ -31,6 +31,8 @@ Changes are grouped as follows:
 
 - Refactored the core I/O engine into a separate Java SDK. This should also give a general performance improvement of about 2x.
 
+- Support for Beam 2.28.0
+
 ### Changed
 
 - Refactored `RequestParameters` from `com.cognite.beam.servicesV1.RequestParameters` to `com.cognite.beam.RequestParameters`.
