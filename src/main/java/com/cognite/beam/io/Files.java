@@ -23,8 +23,7 @@ import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.*;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
-import com.cognite.beam.io.fn.parse.ParseAggregateFn;
-import com.cognite.beam.io.fn.read.ReadItemsFn;
+import com.cognite.beam.io.fn.read.ReadAggregatesFn;
 import com.cognite.beam.io.fn.write.UpsertFileFn;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -420,8 +419,16 @@ public abstract class Files {
 
         @Override
         public PCollection<Aggregate> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all files aggregates composite transform.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Aggregate> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
@@ -430,8 +437,9 @@ public abstract class Files {
                             .withReaderConfig(getReaderConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsFn(getHints(), ResourceType.FILE_AGGREGATES, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseAggregateFn()));
+                            new ReadAggregatesFn(getHints(), getReaderConfig(),
+                                    projectConfigView, ResourceType.FILE_HEADER))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }

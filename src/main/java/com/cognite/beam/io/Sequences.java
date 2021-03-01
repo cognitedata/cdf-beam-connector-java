@@ -26,7 +26,6 @@ import com.cognite.client.dto.Item;
 import com.cognite.client.dto.SequenceMetadata;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
-import com.cognite.beam.io.fn.parse.ParseAggregateFn;
 import com.cognite.beam.io.fn.write.UpsertSeqHeaderFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
@@ -435,8 +434,16 @@ public abstract class Sequences {
 
         @Override
         public PCollection<Aggregate> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all sequences aggregates composite transform.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Aggregate> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
@@ -445,8 +452,9 @@ public abstract class Sequences {
                             .withReaderConfig(getReaderConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsFn(getHints(), ResourceType.SEQUENCE_AGGREGATES, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseAggregateFn()));
+                            new ReadAggregatesFn(getHints(), getReaderConfig(),
+                                    projectConfigView, ResourceType.SEQUENCE_HEADER))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
