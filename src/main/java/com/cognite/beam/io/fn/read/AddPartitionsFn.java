@@ -21,9 +21,11 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.Request;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.Aggregate;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -81,25 +83,30 @@ public class AddPartitionsFn extends IOBaseFn<RequestParameters, RequestParamete
             throw new Exception(message);
         }
 
+        // Build a "clean" request containing only the filters
+        Request aggregateReguest = Request.create()
+                .withRequestParameters(ImmutableMap.<String, Object>of(
+                        "filter", requestParameters.getFilterParameters()));
+
         // Count the expected number of results.
         try {
             Aggregate aggregateResult;
             switch (resourceType) {
                 case ASSET:
                     aggregateResult =
-                            getClient(projectConfig, readerConfig).assets().aggregate(requestParameters.getRequest());
+                            getClient(projectConfig, readerConfig).assets().aggregate(aggregateReguest);
                     break;
                 case EVENT:
                     aggregateResult =
-                            getClient(projectConfig, readerConfig).events().aggregate(requestParameters.getRequest());
+                            getClient(projectConfig, readerConfig).events().aggregate(aggregateReguest);
                     break;
                 case TIMESERIES_HEADER:
                     aggregateResult =
-                            getClient(projectConfig, readerConfig).timeseries().aggregate(requestParameters.getRequest());
+                            getClient(projectConfig, readerConfig).timeseries().aggregate(aggregateReguest);
                     break;
                 case FILE_HEADER:
                     aggregateResult =
-                            getClient(projectConfig, readerConfig).files().aggregate(requestParameters.getRequest());
+                            getClient(projectConfig, readerConfig).files().aggregate(aggregateReguest);
                     break;
                 default:
                     LOG.error(batchLogPrefix + "Not a supported resource type: " + resourceType);

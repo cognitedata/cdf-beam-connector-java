@@ -26,7 +26,6 @@ import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.*;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
-import com.cognite.beam.io.fn.parse.ParseAggregateFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertAssetFn;
 import com.cognite.beam.io.transform.BreakFusion;
@@ -458,8 +457,16 @@ public abstract class Assets {
 
         @Override
         public PCollection<Aggregate> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read all asset aggregates composite transform.");
+
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig())
+                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
+                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                    .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Aggregate> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
@@ -468,8 +475,9 @@ public abstract class Assets {
                             .withReaderConfig(getReaderConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(
-                            new ReadItemsFn(getHints(), ResourceType.ASSETS_AGGREGATES, getReaderConfig())))
-                    .apply("Parse results", ParDo.of(new ParseAggregateFn()));
+                            new ReadAggregatesFn(getHints(), getReaderConfig(),
+                                    projectConfigView, ResourceType.ASSET))
+                            .withSideInputs(projectConfigView));
 
             return outputCollection;
         }
