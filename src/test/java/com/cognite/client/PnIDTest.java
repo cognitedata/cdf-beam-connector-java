@@ -4,6 +4,7 @@ import com.cognite.client.config.ClientConfig;
 import com.cognite.client.dto.*;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.StringValue;
 import com.google.protobuf.Struct;
 import com.google.protobuf.util.Structs;
@@ -108,9 +109,24 @@ class PnIDTest {
 
             LOG.info(loggingPrefix + "Start detect annotations and convert to SVG.");
             final List<Struct> entities = ImmutableList.of(
-                    Structs.of("name", Values.of("1N914")),
-                    Structs.of("name", Values.of("02-100-PE-N")),
-                    Structs.of("name", Values.of("01-100-PE-N")));
+                    Struct.newBuilder()
+                            .putFields("searchText", Values.of("1N914"))
+                            .putFields("name", Values.of("The name of 1N914"))
+                            .putFields("type", Values.of("Asset"))
+                            .putFields("externalId", Values.of("my-external-id-1"))
+                            .putFields("id", Values.of(146379580567867L))
+                            .build(),
+                    Structs.of(
+                            "searchText", Values.of(ListValue.newBuilder()
+                                    .addValues(Values.of("02-100-PE-N"))
+                                    .addValues(Values.of("01-100-PE-N"))
+                                    .build()),
+                            "type", Values.of("Asset"),
+                            "externalId", Values.of("my-external-id-2")),
+                    Structs.of(
+                            "searchText", Values.of("01-100-PE-N"),
+                            "type", Values.of("Asset"),
+                            "externalId", Values.of("my-external-id-3")));
 
             final List<Item> fileItems = uploadFilesResult.stream()
                     .map(metadata -> Item.newBuilder()
@@ -120,7 +136,7 @@ class PnIDTest {
 
             List<PnIDResponse> detectResults = client.experimental()
                     .pnid()
-                    .detectAnnotationsPnID(fileItems, entities, "name", true);
+                    .detectAnnotationsPnID(fileItems, entities, "searchText", true);
 
             LOG.info(loggingPrefix + "Finished detect annotations and convert to SVG. Duration: {}",
                     Duration.between(startInstant, Instant.now()));

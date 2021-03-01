@@ -84,10 +84,14 @@ public class PnIDResponseParser {
                 if (node.path("text").isTextual()) {
                     annotationBuilder.setText(StringValue.of(node.get("text").textValue()));
                 }
-                if (node.path("entities").isObject()) {
-                    Struct.Builder structBuilder = Struct.newBuilder();
-                    JsonFormat.parser().merge(node.path("entities").toString(), structBuilder);
-                    annotationBuilder.setEntity(structBuilder.build());
+                if (node.path("entities").isArray()) {
+                    for (JsonNode entity : node.path("entities")) {
+                        if (entity.isObject()) {
+                            Struct.Builder structBuilder = Struct.newBuilder();
+                            JsonFormat.parser().merge(entity.toString(), structBuilder);
+                            annotationBuilder.addEntities(structBuilder.build());
+                        }
+                    }
                 }
                 if (node.path("confidence").isFloatingPointNumber()) {
                     annotationBuilder.setConfidence(DoubleValue.of(node.get("confidence").doubleValue()));
