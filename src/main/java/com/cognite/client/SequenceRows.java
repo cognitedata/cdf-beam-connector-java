@@ -39,7 +39,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.cognite.client.servicesV1.ConnectorConstants.*;
-import static com.cognite.client.servicesV1.ConnectorConstants.DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH;
 
 /**
  * This class represents the Cognite sequence body/rows api endpoint.
@@ -392,7 +391,7 @@ public abstract class SequenceRows extends ApiBase {
                         if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                             itemsMap.remove(value.getExternalId());
                         } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                            itemsMap.remove(value.getId());
+                            itemsMap.remove(String.valueOf(value.getId()));
                         }
                     }
 
@@ -401,7 +400,7 @@ public abstract class SequenceRows extends ApiBase {
                         if (value.getIdTypeCase() == Item.IdTypeCase.EXTERNAL_ID) {
                             itemsMap.remove(value.getExternalId());
                         } else if (value.getIdTypeCase() == Item.IdTypeCase.ID) {
-                            itemsMap.remove(value.getId());
+                            itemsMap.remove(String.valueOf(value.getId()));
                         }
                     }
 
@@ -489,7 +488,7 @@ public abstract class SequenceRows extends ApiBase {
             for (SequenceBody item : elements) {
                 // deduplicate row numbers
                 Set<Long> uniqueRowNos = new HashSet<>(sequenceRowNumbers.size() + item.getRowsCount());
-                sequenceRowNumbers.forEach(uniqueRowNos::add);
+                uniqueRowNos.addAll(sequenceRowNumbers);
                 item.getRowsList().forEach(row -> uniqueRowNos.add(row.getRowNumber()));
                 sequenceRowNumbers = new ArrayList<>(uniqueRowNos);
             }
@@ -551,7 +550,7 @@ public abstract class SequenceRows extends ApiBase {
 
         // Wait for all requests futures to complete
         List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
-        responseMap.keySet().forEach(future -> futureList.add(future));
+        responseMap.keySet().forEach(futureList::add);
         CompletableFuture<Void> allFutures =
                 CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
         allFutures.join(); // Wait for all futures to complete
@@ -664,6 +663,12 @@ public abstract class SequenceRows extends ApiBase {
                         .addAllRows(rowList)
                         .build());
                 totalItemCounter++;
+                if (getSequenceId(sequence).isPresent()) {
+                    // Must add id here as well to cover for a corner case where a sequences body has been
+                    // "partitioned" by submitting some parts in earlier batches. Then we must make sure that
+                    // the id is captured for duplicate detection.
+                    sequenceIds.add(getSequenceId(sequence).get());
+                }
             }
 
             if (batch.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH) {
@@ -689,7 +694,7 @@ public abstract class SequenceRows extends ApiBase {
 
         // Wait for all requests futures to complete
         List<CompletableFuture<ResponseItems<String>>> futureList = new ArrayList<>();
-        responseMap.keySet().forEach(future -> futureList.add(future));
+        responseMap.keySet().forEach(futureList::add);
         CompletableFuture<Void> allFutures =
                 CompletableFuture.allOf(futureList.toArray(new CompletableFuture[futureList.size()]));
         allFutures.join(); // Wait for all futures to complete
