@@ -604,7 +604,7 @@ public abstract class SequenceRows extends ApiBase {
         Instant startInstant = Instant.now();
         String loggingPrefix = "splitAndUpsertSeqBody() - ";
         Map<CompletableFuture<ResponseItems<String>>, List<SequenceBody>> responseMap = new HashMap<>();
-        List<SequenceBody> batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+        List<SequenceBody> batch = new ArrayList<>();
         List<String> sequenceIds = new ArrayList<>(); // To check for existing / duplicate item ids
         int totalItemCounter = 0;
         int totalRowCounter = 0;
@@ -618,7 +618,7 @@ public abstract class SequenceRows extends ApiBase {
                 if (sequenceIds.contains(getSequenceId(sequence).get())) {
                     // The externalId / id already exists in the batch, submit it
                     responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
-                    batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                    batch = new ArrayList<>();
                     batchCellsCounter = 0;
                     batchCharacterCounter = 0;
                     sequenceIds.clear();
@@ -644,7 +644,7 @@ public abstract class SequenceRows extends ApiBase {
 
                     // Submit the batch
                     responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
-                    batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                    batch = new ArrayList<>();
                     batchCellsCounter = 0;
                     batchCharacterCounter = 0;
                     sequenceIds.clear();
@@ -668,7 +668,7 @@ public abstract class SequenceRows extends ApiBase {
 
             if (batch.size() >= DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH) {
                 responseMap.put(upsertSeqBody(batch, seqBodyCreateWriter), batch);
-                batch = new ArrayList<>(DEFAULT_SEQUENCE_WRITE_MAX_ITEMS_PER_BATCH);
+                batch = new ArrayList<>();
                 batchCellsCounter = 0;
                 batchCharacterCounter = 0;
                 sequenceIds.clear();
