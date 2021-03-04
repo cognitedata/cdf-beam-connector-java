@@ -25,7 +25,7 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Separate the generic Java SDK from the Beam specific code (the "Beam Connector").
 
-## [0.9.15-SNAPSHOT]
+## [0.9.15]
 
 ### Added
 
