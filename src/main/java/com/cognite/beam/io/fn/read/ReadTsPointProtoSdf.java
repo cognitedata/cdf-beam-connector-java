@@ -17,26 +17,21 @@
 package com.cognite.beam.io.fn.read;
 
 import com.cognite.beam.io.config.Hints;
+import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.TimeseriesPoint;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.client.servicesV1.ResponseItems;
-import com.cognite.client.servicesV1.parser.TimeseriesParser;
 import com.cognite.client.servicesV1.util.TSIterationUtilities;
-import com.cognite.beam.io.util.internal.MetricsUtil;
-import com.cognite.v1.timeseries.proto.DataPointListItem;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Int64Value;
 import org.apache.beam.sdk.io.range.OffsetRange;
-import org.apache.beam.sdk.metrics.Counter;
-import org.apache.beam.sdk.metrics.Distribution;
-import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.splittabledofn.ManualWatermarkEstimator;
 import org.apache.beam.sdk.transforms.splittabledofn.RestrictionTracker;
 import org.apache.beam.sdk.transforms.splittabledofn.WatermarkEstimators;
+import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +52,7 @@ import java.util.concurrent.CompletableFuture;
  *
  */
 @DoFn.BoundedPerElement
-public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<TimeseriesPoint>> {
+public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, Iterable<TimeseriesPoint>> {
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
     private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
     private final String loggingPrefix = "Read TS points sdf [" + randomIdString + "] -";
@@ -71,41 +66,39 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
     private static final int MAX_AGG_POINTS = 10000;
     private static final int PARALLELIZATION = 4;
 
-    private final ConnectorServiceV1 connector;
-    private final boolean isMetricsEnabled;
-    private final boolean isStreaming;
+    final ReaderConfig readerConfig;
+    final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    private final Distribution apiLatency = Metrics.distribution("cognite", "apiLatency");
-    private final Distribution tsPointsBatch = Metrics.distribution("cognite", "tsPointsBatchSize");
-    private final Distribution tsBatch = Metrics.distribution("cognite", "numberOfTS");
-    private final Counter apiRetryCounter = Metrics.counter("cognite", "apiRetries");
-
-    public ReadTsPointProtoSdf(Hints hints, ReaderConfig readerConfig) {
-        this.connector = ConnectorServiceV1.builder()
-                .setMaxRetries(hints.getMaxRetries())
-                .setAppIdentifier(readerConfig.getAppIdentifier())
-                .setSessionIdentifier(readerConfig.getSessionIdentifier())
-                .build();
-
-        isMetricsEnabled = readerConfig.isMetricsEnabled();
-        isStreaming = readerConfig.isStreamingEnabled();
-    }
-
-    @Setup
-    public void setup() {
-        LOG.info("Setting up TS point proto reader.");
+    public ReadTsPointProtoSdf(Hints hints,
+                               ReaderConfig readerConfig,
+                               PCollectionView<List<ProjectConfig>> projectConfigView) {
+        super(hints);
+        this.readerConfig = readerConfig;
+        this.projectConfigView = projectConfigView;
     }
 
     @ProcessElement
     public void processElement(@Element RequestParameters query,
                                RestrictionTracker<OffsetRange, Long> tracker,
-                               OutputReceiver<Iterable<TimeseriesPoint>> out,
-                               ManualWatermarkEstimator watermarkEstimator) throws Exception {
+                               OutputReceiver<Iterable<TimeseriesPoint>> outputReceiver,
+                               ManualWatermarkEstimator watermarkEstimator,
+                               ProcessContext context) throws Exception {
         final String batchIdentifierPrefix = "Request batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         final String localLoggingPrefix = loggingPrefix + batchIdentifierPrefix;
-        LOG.info(localLoggingPrefix + "Streaming mode: {}", isStreaming);
+        final Instant batchStartInstant = Instant.now();
+        LOG.info(localLoggingPrefix + "Streaming mode: {}", readerConfig.isStreamingEnabled());
         LOG.debug(localLoggingPrefix + "Input query: {}", query.toString());
         LOG.info(localLoggingPrefix + "Reading TS based on input restriction {}", tracker.currentRestriction());
+
+        // Identify the project config to use
+        ProjectConfig projectConfig;
+        if (context.sideInput(projectConfigView).size() > 0) {
+            projectConfig = context.sideInput(projectConfigView).get(0);
+        } else {
+            String message = localLoggingPrefix + "Cannot identify project config. Empty side input.";
+            LOG.error(message);
+            throw new Exception(message);
+        }
 
         long startRange = tracker.currentRestriction().getFrom();
         long endRange = tracker.currentRestriction().getTo();
@@ -113,7 +106,7 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
                 Instant.ofEpochMilli(startRange).toString(),
                 Instant.ofEpochMilli(endRange).toString());
 
-        if (isStreaming) {
+        if (readerConfig.isStreamingEnabled()) {
             watermarkEstimator.setWatermark(org.joda.time.Instant.ofEpochMilli(startRange));
         }
 
@@ -124,56 +117,39 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
         // Build query so it conforms with the current restriction
         RequestParameters queryRestricted = buildRequestParameters(query, startRange, endRange, localLoggingPrefix);
         try {
-            Iterator<CompletableFuture<ResponseItems<DataPointListItem>>> results =
-                    connector.readTsDatapointsProto(queryRestricted.getRequest());
-            CompletableFuture<ResponseItems<DataPointListItem>> responseItemsFuture;
-            ResponseItems<DataPointListItem> responseItems;
+            Iterator<List<TimeseriesPoint>> resultsIterator = getClient(projectConfig, readerConfig)
+                    .timeseries()
+                    .dataPoints()
+                    .retrieve(queryRestricted.getRequest());
 
-            while (results.hasNext()) {
-                responseItemsFuture = results.next();
-                responseItems = responseItemsFuture.join();
-                int tsPointsCounter = 0;
-                List<TimeseriesPoint> pointsOutput = new ArrayList<>(20000);
-                long minTimestampMs = Long.MAX_VALUE;
-
-                if (!responseItems.isSuccessful()) {
-                    // something went wrong with the request
-                    String message = batchIdentifierPrefix + "Error while iterating through the results from Fusion: "
-                            + responseItems.getResponseBodyAsString();
-                    LOG.error(message);
-                    throw new Exception(message);
+            Instant pageStartInstant = Instant.now();
+            int totalNoItems = 0;
+            while (resultsIterator.hasNext()) {
+                List<TimeseriesPoint> results = resultsIterator.next();
+                if (readerConfig.isMetricsEnabled()) {
+                    apiBatchSize.update(results.size());
+                    apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
                 }
-
-                // Gather all TS points
-                for (DataPointListItem item : responseItems.getResultsItems()) {
-                    List<TimeseriesPoint> points = TimeseriesParser.parseDataPointListItem(item);
-                    for (TimeseriesPoint point : points) {
-                        pointsOutput.add(point);
-                        if (minTimestampMs > point.getTimestamp()) {
-                            minTimestampMs = point.getTimestamp();
-                        }
-                        tsPointsCounter++;
-                    }
-                }
-
-                if (isStreaming) {
+                if (readerConfig.isStreamingEnabled()) {
                     // output with timestamps in streaming mode--need that for windowing
-                    out.outputWithTimestamp(pointsOutput, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                    long minTimestampMs = results.stream()
+                            .mapToLong(point -> point.getTimestamp())
+                            .min()
+                            .orElse(1L);
+
+                    outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
                 } else {
                     // no timestamping in batch mode--just leads to lots of complications
-                    out.output(pointsOutput);
+                    outputReceiver.output(results);
                 }
-                LOG.info(batchIdentifierPrefix + "Received {} TS and {} datapoints in the response.",
-                        responseItems.getResultsItems().size(),
-                        tsPointsCounter);
 
-                if (isMetricsEnabled) {
-                    MetricsUtil.recordApiLatency(responseItems, apiLatency);
-                    MetricsUtil.recordApiRetryCounter(responseItems, apiRetryCounter);
-                    tsBatch.update(responseItems.getResultsItems().size());
-                    tsPointsBatch.update(tsPointsCounter);
-                }
+                totalNoItems += results.size();
+                pageStartInstant = Instant.now();
             }
+
+            LOG.info(localLoggingPrefix + "Retrieved {} items in {}}.",
+                    totalNoItems,
+                    Duration.between(batchStartInstant, Instant.now()).toString());
         } catch (Exception e) {
             LOG.error(localLoggingPrefix + "Error reading results from the Cognite connector.", e);
             throw e;
@@ -225,7 +201,18 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
     @SplitRestriction
     public void splitRestriction(RequestParameters requestParameters,
                                  OffsetRange offsetRange,
-                                 OutputReceiver<OffsetRange> out) throws Exception {
+                                 OutputReceiver<OffsetRange> out,
+                                 ProcessContext context) throws Exception {
+        // Identify the project config to use
+        ProjectConfig projectConfig;
+        if (context.sideInput(projectConfigView).size() > 0) {
+            projectConfig = context.sideInput(projectConfigView).get(0);
+        } else {
+            String message = "Cannot identify project config. Empty side input.";
+            LOG.error(message);
+            throw new Exception(message);
+        }
+
         int noTsItems = requestParameters.getItems().size();
         Duration duration = Duration.ofMillis(offsetRange.getTo() - offsetRange.getFrom());
         final Duration SPLIT_LOWER_LIMIT = Duration.ofMinutes(Math.max(60, (1440 / noTsItems)));
@@ -249,7 +236,7 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
             offsetRanges = ImmutableList.of(offsetRange); // no splits
         } else {
             // We have raw data points. Check the max frequency
-            double maxFrequency = getMaxFrequency(requestParameters, offsetRange);
+            double maxFrequency = getMaxFrequency(requestParameters, offsetRange, getClient(projectConfig, readerConfig));
             if (maxFrequency == 0d) {
                 // no datapoints in the range--don't split it
                 LOG.warn(loggingPrefix + "Unable to build statistics for the restriction / range. No counts. "
@@ -276,107 +263,15 @@ public class ReadTsPointProtoSdf extends DoFn<RequestParameters, Iterable<Timese
 
     /* Calculate the max frequency of the TS items in the query */
     private double getMaxFrequency(RequestParameters requestParameters,
-                                   OffsetRange offsetRange) throws Exception {
-        final String localLoggingPrefix = loggingPrefix + "Build TS stats. ";
-        final Duration MAX_STATS_DURATION = Duration.ofDays(10);
+                                   OffsetRange offsetRange,
+                                   CogniteClient client) throws Exception {
         long from = offsetRange.getFrom();
         long to = offsetRange.getTo();
 
-        double frequency = 0d;
+        return client.timeseries()
+                .dataPoints()
+                .getMaxFrequency(requestParameters.getRequest(), Instant.ofEpochMilli(from), Instant.ofEpochMilli(to));
 
-        Duration duration = Duration.ofMillis(to - from);
-        if (duration.compareTo(MAX_STATS_DURATION) > 0) {
-            // we have a really long range, shorten it
-            from = to - MAX_STATS_DURATION.toMillis();
-            duration = Duration.ofMillis(to - from);
-        }
-
-        if (duration.compareTo(Duration.ofDays(1)) > 0) {
-            // build stats from days granularity
-            LOG.info(localLoggingPrefix + "Calculating TS stats based on day granularity, using a time window "
-                    + "from [{}] to [{}]",
-                    Instant.ofEpochMilli(from).toString(),
-                    Instant.ofEpochMilli(to).toString());
-
-            RequestParameters statsQuery = requestParameters
-                    .withRootParameter(START_KEY, from)
-                    .withRootParameter(END_KEY, to)
-                    .withRootParameter(GRANULARITY_KEY, "d")
-                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"));
-
-            double averageCount = this.getMaxAverageCount(statsQuery);
-            frequency = averageCount / (Duration.ofDays(1).toMinutes() * 60);
-            LOG.info(localLoggingPrefix + "Average TS count per day: {}, frequency: {}", averageCount, frequency);
-
-        } else {
-            // build stats from hour granularity
-            LOG.info(localLoggingPrefix + "Calculating TS stats based on hour granularity, using a time window "
-                            + "from [{}] to [{}]",
-                    Instant.ofEpochMilli(from).toString(),
-                    Instant.ofEpochMilli(to).toString());
-
-            RequestParameters statsQuery = requestParameters
-                    .withRootParameter(START_KEY, from)
-                    .withRootParameter(END_KEY, to)
-                    .withRootParameter(GRANULARITY_KEY, "h")
-                    .withRootParameter(AGGREGATES_KEY, ImmutableList.of("count"));
-
-            double averageCount = this.getMaxAverageCount(statsQuery);
-            frequency = averageCount / (Duration.ofHours(1).toMinutes() * 60);
-            LOG.info(localLoggingPrefix + "Average TS count per hour: {}, frequency: {}", averageCount, frequency);
-        }
-
-        return frequency;
-    }
-
-    /* Gets the max average TS count from a query */
-    private double getMaxAverageCount(RequestParameters query) throws Exception {
-        String localLoggingPrefix = loggingPrefix + "getMaxAverageCount - ";
-        Preconditions.checkArgument(query.getRequestParameters().containsKey(AGGREGATES_KEY)
-                && query.getRequestParameters().get(AGGREGATES_KEY) instanceof List
-                && ((List) query.getRequestParameters().get(AGGREGATES_KEY)).contains("count"),
-                "The query must specify the count aggregate.");
-
-        double average = 0d;
-        try {
-            Iterator<CompletableFuture<ResponseItems<DataPointListItem>>> results =
-                    connector.readTsDatapointsProto(query.getRequest());
-            CompletableFuture<ResponseItems<DataPointListItem>> responseItemsFuture;
-            ResponseItems<DataPointListItem> responseItems;
-
-            while (results.hasNext()) {
-                responseItemsFuture = results.next();
-                responseItems = responseItemsFuture.join();
-                int tsPointsCounter = 0;
-
-                if (!responseItems.isSuccessful()) {
-                    // something went wrong with the request
-                    String message = localLoggingPrefix + "Error while iterating through the results from Fusion: "
-                            + responseItems.getResponseBodyAsString();
-                    LOG.error(message);
-                    throw new Exception(message);
-                }
-
-                for (DataPointListItem item : responseItems.getResultsItems()) {
-                    LOG.debug(localLoggingPrefix + "Item in results list, Ts id: {}", item.getId());
-                    List<TimeseriesPoint> points = TimeseriesParser.parseDataPointListItem(item);
-                    LOG.info(localLoggingPrefix + "Number of datapoints in TS list item: {}", points.size());
-
-                    double candidate = points.stream()
-                            .map(TimeseriesPoint::getValueAggregates)
-                            .map(TimeseriesPoint.Aggregates::getCount)
-                            .mapToDouble(Int64Value::getValue)
-                            .average()
-                            .orElse(0d);
-
-                    if (candidate > average) average = candidate;
-                }
-            }
-        } catch (Exception e) {
-            LOG.error(localLoggingPrefix + "Error reading results from the Cognite connector.", e);
-            throw e;
-        }
-        return average;
     }
 
     private RequestParameters buildRequestParameters(RequestParameters requestParameters,
