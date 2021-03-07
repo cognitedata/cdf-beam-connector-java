@@ -87,10 +87,10 @@ public abstract class CogniteClient implements Serializable {
     protected abstract String getBaseUrl();
     public abstract ClientConfig getClientConfig();
 
-    protected OkHttpClient getHttpClient() {
+    public OkHttpClient getHttpClient() {
         return httpClient;
     }
-    protected ForkJoinPool getExecutorService() {
+    public ForkJoinPool getExecutorService() {
         return executorService;
     }
 
@@ -262,44 +262,8 @@ public abstract class CogniteClient implements Serializable {
      * @return
      */
     protected ConnectorServiceV1 getConnectorService() {
-        return ConnectorServiceV1.create(getClientConfig().getMaxRetries());
-        // todo add executor and client spec here. Must refactor the Beam DoFns too (SDK must be added as a non-serialized variable).
+        return ConnectorServiceV1.of(this);
     }
-
-    /**
-     * Returns a auth info for api requests
-     * @return project config with auth info populated
-     * @throws Exception
-     */
-    /*
-    protected ProjectConfig buildProjectConfig() throws Exception {
-        String cdfProject = null;
-        if (null != getProject()) {
-            // The project is explicitly defined
-            cdfProject = getProject();
-        } else if (null != cdfProjectCache) {
-            // The project info is cached
-            cdfProject = cdfProjectCache;
-        } else {
-            // Have to get the project via the api key
-            LoginStatus loginStatus = getConnectorService()
-                    .readLoginStatusByApiKey(getBaseUrl(), getApiKey());
-
-            if (loginStatus.getProject().isEmpty()) {
-                throw new Exception("Could not find the project for the api key.");
-            }
-            LOG.debug("Project identified for the api key. Project: {}", loginStatus.getProject());
-            cdfProjectCache = loginStatus.getProject(); // Cache the result
-            cdfProject = loginStatus.getProject();
-        }
-
-        return ProjectConfig.create()
-                .withHost(getBaseUrl())
-                .withApiKey(getApiKey())
-                .withProject(cdfProject);
-    }
-
-     */
 
     /**
      * Returns a auth info for api requests

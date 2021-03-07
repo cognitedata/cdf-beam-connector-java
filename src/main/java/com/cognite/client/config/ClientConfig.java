@@ -12,8 +12,8 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 @AutoValue
 public abstract class ClientConfig implements Serializable {
-    private final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
-    private final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
+    private final static String DEFAULT_APP_IDENTIFIER = "cognite-java-sdk";
+    private final static String DEFAULT_SESSION_IDENTIFIER = "cognite-java-sdk";
     private final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
     private final static int DEFAULT_LIST_PARTITIONS = 8;
 

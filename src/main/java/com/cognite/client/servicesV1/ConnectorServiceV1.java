@@ -85,22 +85,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
         return ConnectorServiceV1.builder().build();
     }
 
-    public static ConnectorServiceV1 create(int newMaxRetries) {
-        return ConnectorServiceV1.builder()
-                .setMaxRetries(newMaxRetries)
-                .build();
-    }
-
-    public static ConnectorServiceV1 create(int newMaxRetries,
-                                            String appIdentifier,
-                                            String sessionIdentifier) {
-        return ConnectorServiceV1.builder()
-                .setMaxRetries(ValueProvider.StaticValueProvider.of(newMaxRetries))
-                .setAppIdentifier(appIdentifier)
-                .setSessionIdentifier(sessionIdentifier)
-                .build();
-    }
-
     public abstract ValueProvider<Integer> getMaxRetries();
     public abstract int getMaxBatchSize();
 
@@ -1966,7 +1950,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setErrorSubPath("missing")
                 .build();
 
-        static final OkHttpClient DEFAULT_CLIENT = new OkHttpClient.Builder()
+        /*static final OkHttpClient DEFAULT_CLIENT = new OkHttpClient.Builder()
                 .connectTimeout(90, TimeUnit.SECONDS)
                 .readTimeout(90, TimeUnit.SECONDS)
                 .writeTimeout(90, TimeUnit.SECONDS)
@@ -1976,20 +1960,20 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 //                .allEnabledCipherSuites()
                 //                .allEnabledTlsVersions()
                 //                .build()))
-                .build();
+                .build();*/
 
-        static final RequestExecutor DEFAULT_REQUEST_EXECUTOR = RequestExecutor.of(DEFAULT_CLIENT)
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);
+        /*static final RequestExecutor DEFAULT_REQUEST_EXECUTOR = RequestExecutor.of(DEFAULT_CLIENT)
+                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);*/
 
         final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
         abstract RequestProvider getRequestProvider();
-        abstract int getMaxRetries(); // TODO: remove after refactor
+        abstract CogniteClient getClient();
         abstract RequestExecutor getRequestExecutor();
 
         abstract static class Builder<B extends Builder<B>> {
             abstract B setRequestProvider(RequestProvider value);
-            abstract B setMaxRetries(int value); // TODO: remove after refactor
+            abstract B setClient(CogniteClient value);
             abstract B setRequestExecutor(RequestExecutor value);
         }
     }
@@ -2015,19 +1999,25 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         private static <T> Builder<T> builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_ResultFutureIterator.Builder<T>()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR);
+                    //.setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
+                    //.setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
+                    ;
         }
 
-        public static <T> ResultFutureIterator<T> of(RequestProvider requestProvider,
+        public static <T> ResultFutureIterator<T> of(CogniteClient client,
+                                                     RequestProvider requestProvider,
                                                      ResponseParser<T> responseParser) {
             return ResultFutureIterator.<T>builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries()))
                     .setRequestProvider(requestProvider)
                     .setResponseParser(responseParser)
                     .build();
         }
 
-        abstract Builder<T> toBuilder();
+        //abstract Builder<T> toBuilder();
         abstract ResponseParser<T> getResponseParser();
 
         /**
@@ -2036,16 +2026,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param maxRetries the max number of retries.
          * @return The iterator configured with the new max retries.
          */
-        ResultFutureIterator<T> withMaxRetries(int maxRetries) {
+        /*ResultFutureIterator<T> withMaxRetries(int maxRetries) {
             Preconditions.checkArgument(maxRetries <= ConnectorConstants.MAX_MAX_RETRIES
                             && maxRetries >= ConnectorConstants.MIN_MAX_RETRIES
                     , "Max retries out of range. Must be between "
                             + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
             return toBuilder()
-                    .setMaxRetries(maxRetries)
+                    //.setMaxRetries(maxRetries)
                     .setRequestExecutor(getRequestExecutor().withMaxRetries(maxRetries))
                     .build();
-        }
+        }*/
 
         /**
          * Sets the http client to use for api requests. Returns a {@link ResultFutureIterator} with
@@ -2054,12 +2044,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param client The {@link OkHttpClient} to use.
          * @return a {@link ResultFutureIterator} object with the configuration applied.
          */
-        public ResultFutureIterator<T> withHttpClient(OkHttpClient client) {
+        /*public ResultFutureIterator<T> withHttpClient(OkHttpClient client) {
             Preconditions.checkNotNull(client, "The http client cannot be null.");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withHttpClient(client))
                     .build();
-        }
+        }*/
 
         /**
          * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
@@ -2068,12 +2058,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param executorService The {@link ExecutorService} to use.
          * @return a {@link ResultFutureIterator} object with the configuration applied.
          */
-        public ResultFutureIterator<T> withExecutorService(ExecutorService executorService) {
+       /* public ResultFutureIterator<T> withExecutorService(ExecutorService executorService) {
             Preconditions.checkNotNull(executorService, "The executor service cannot be null");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
                     .build();
-        }
+        }*/
 
         @Override
         public boolean hasNext() {
@@ -2162,8 +2152,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         static <T> Builder<T> builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_SingleRequestItemReader.Builder<T>()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR);
+                    //.setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
+                    //.setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
+                    ;
         }
 
         /**
@@ -2175,15 +2166,21 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param <T>
          * @return
          */
-        static <T> SingleRequestItemReader<T> of(RequestProvider requestProvider,
+        static <T> SingleRequestItemReader<T> of(CogniteClient client,
+                                                 RequestProvider requestProvider,
                                                  ResponseParser<T> responseParser) {
             return SingleRequestItemReader.<T>builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422)))
                     .setRequestProvider(requestProvider)
                     .setResponseParser(responseParser)
                     .build();
         }
 
-        abstract Builder<T> toBuilder();
+        //abstract Builder<T> toBuilder();
         abstract ResponseParser<T> getResponseParser();
 
         /**
@@ -2192,9 +2189,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param maxRetries
          * @return
          */
-        SingleRequestItemReader<T> withMaxRetries(int maxRetries) {
+        /*SingleRequestItemReader<T> withMaxRetries(int maxRetries) {
             return toBuilder().setMaxRetries(maxRetries).build();
-        }
+        }*/
 
         /**
          * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
@@ -2203,12 +2200,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param client The {@link OkHttpClient} to use.
          * @return a {@link ItemWriter} object with the configuration applied.
          */
-        public SingleRequestItemReader<T> withHttpClient(OkHttpClient client) {
+        /*public SingleRequestItemReader<T> withHttpClient(OkHttpClient client) {
             Preconditions.checkNotNull(client, "The http client cannot be null.");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withHttpClient(client))
                     .build();
-        }
+        }*/
 
         /**
          * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
@@ -2217,12 +2214,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param executorService The {@link ExecutorService} to use.
          * @return a {@link ItemWriter} object with the configuration applied.
          */
-        public SingleRequestItemReader<T> withExecutorService(ExecutorService executorService) {
+        /*public SingleRequestItemReader<T> withExecutorService(ExecutorService executorService) {
             Preconditions.checkNotNull(executorService, "The executor service cannot be null");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
                     .build();
-        }
+        }*/
 
         /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
@@ -2245,11 +2242,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         public CompletableFuture<ResponseItems<T>> getItemsAsync(Request items) throws Exception {
             Preconditions.checkNotNull(items, "Input cannot be null.");
 
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             // Execute the request and get the response future
-            CompletableFuture<ResponseItems<T>> responseItemsFuture = requestExecutor
+            CompletableFuture<ResponseItems<T>> responseItemsFuture = getRequestExecutor()
                     .executeRequestAsync(getRequestProvider()
                             .withRequest(items)
                             .buildRequest(Optional.empty()))
@@ -2263,17 +2257,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         abstract static class Builder<T> extends ConnectorBase.Builder<Builder<T>> {
             abstract Builder<T> setResponseParser(ResponseParser<T> value);
 
-            abstract SingleRequestItemReader<T> autoBuild();
-
-            SingleRequestItemReader<T> build() {
-                SingleRequestItemReader<T> reader = autoBuild();
-                Preconditions.checkState(reader.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && reader.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return reader;
-            }
+            abstract SingleRequestItemReader<T> build();
         }
     }
 
@@ -2321,9 +2305,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         // Instantiate a base request executor in order to get a stable thread pool for executing repeated requests
         // via the same reader.
-        private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
+       /* private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
                 .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422))
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);
+                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);*/
 
         static <T> Builder<T> builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_AsyncJobReader.Builder<T>()
@@ -2331,7 +2315,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .setJobStartResponseParser(DEFAULT_JOB_START_RESPONSE_PARSER)
                     .setJobTimeoutDuration(DEFAULT_ASYNC_API_JOB_TIMEOUT)
                     .setPollingInterval(DEFAULT_ASYNC_API_JOB_POLLING_INTERVAL)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR);
+                    //.setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
+                    ;
         }
 
         /**
@@ -2344,10 +2329,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param <T>
          * @return
          */
-        static <T> AsyncJobReader<T> of(RequestProvider jobStartRequestProvider,
+        static <T> AsyncJobReader<T> of(CogniteClient client,
+                                        RequestProvider jobStartRequestProvider,
                                         RequestProvider jobResultRequestProvider,
                                         ResponseParser<T> responseParser) {
             return AsyncJobReader.<T>builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422)))
                     .setRequestProvider(jobStartRequestProvider)
                     .setJobResultRequestProvider(jobResultRequestProvider)
                     .setResponseParser(responseParser)
@@ -2367,9 +2358,11 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param maxRetries
          * @return
          */
-        AsyncJobReader<T> withMaxRetries(int maxRetries) {
+        /*AsyncJobReader<T> withMaxRetries(int maxRetries) {
             return toBuilder().setMaxRetries(maxRetries).build();
         }
+
+         */
 
         /**
          * Sets the {@link ResponseParser} for the first/initial api request. This request will typically be
@@ -2435,12 +2428,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param client The {@link OkHttpClient} to use.
          * @return a {@link AsyncJobReader} object with the configuration applied.
          */
-        public AsyncJobReader<T> withHttpClient(OkHttpClient client) {
+        /*public AsyncJobReader<T> withHttpClient(OkHttpClient client) {
             Preconditions.checkNotNull(client, "The http client cannot be null.");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withHttpClient(client))
                     .build();
-        }
+        }*/
 
         /**
          * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
@@ -2449,12 +2442,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param executorService The {@link ExecutorService} to use.
          * @return a {@link ItemWriter} object with the configuration applied.
          */
-        public AsyncJobReader<T> withExecutorService(ExecutorService executorService) {
+        /*public AsyncJobReader<T> withExecutorService(ExecutorService executorService) {
             Preconditions.checkNotNull(executorService, "The executor service cannot be null");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
                     .build();
-        }
+        }*/
 
         /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
@@ -2498,14 +2491,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
          */
         public CompletableFuture<ResponseItems<T>> getItemsAsync(Request items) throws Exception {
             Preconditions.checkNotNull(items, "Input cannot be null.");
-
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             LOG.info(loggingPrefix + "Starting async api job.");
 
             // Execute the request and get the response future
-            CompletableFuture<ResponseItems<T>> responseItemsFuture = requestExecutor
+            CompletableFuture<ResponseItems<T>> responseItemsFuture = getRequestExecutor()
                     .executeRequestAsync(getRequestProvider()
                             .withRequest(items)
                             .buildRequest(Optional.empty()))
@@ -2573,9 +2562,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
                                                                       Request jobStartRequest) {
             Preconditions.checkNotNull(request, "Input cannot be null.");
 
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             // Execute the request and get the response future
             CompletableFuture<ResponseItems<T>> responseItemsFuture = CompletableFuture
                     .supplyAsync(() -> {
@@ -2590,7 +2576,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                             try {
                                 Thread.sleep(getPollingInterval().toMillis());
 
-                                jobResultResponse = requestExecutor
+                                jobResultResponse = getRequestExecutor()
                                         .executeRequestAsync(getJobResultRequestProvider()
                                                 .withRequest(request)
                                                 .buildRequest(Optional.empty()))
@@ -2685,17 +2671,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             abstract Builder<T> setJobTimeoutDuration(Duration value);
             abstract Builder<T> setPollingInterval(Duration value);
 
-            abstract AsyncJobReader<T> autoBuild();
-
-            AsyncJobReader<T> build() {
-                AsyncJobReader<T> reader = autoBuild();
-                Preconditions.checkState(reader.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && reader.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return reader;
-            }
+            abstract AsyncJobReader<T> build();
         }
     }
 
@@ -2704,14 +2680,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         static Builder builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_ItemWriter.Builder()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR
-                            .withValidResponseCodes(ImmutableList.of(400, 409, 422)))
                     .setDuplicatesResponseParser(DEFAULT_DUPLICATES_RESPONSE_PARSER);
         }
 
-        static ItemWriter of(RequestProvider requestProvider) {
+        static ItemWriter of(CogniteClient client, RequestProvider requestProvider) {
             return ItemWriter.builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 409, 422)))
                     .setRequestProvider(requestProvider)
                     .build();
         }
@@ -2739,9 +2717,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param retries
          * @return
          */
-        public ItemWriter withMaxRetries(int retries) {
+       /* public ItemWriter withMaxRetries(int retries) {
             return toBuilder().setMaxRetries(retries).build();
-        }
+        }*/
 
         /**
          * Sets the http client to use for api requests. Returns a {@link ItemWriter} with
@@ -2750,12 +2728,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param client The {@link OkHttpClient} to use.
          * @return a {@link ItemWriter} object with the configuration applied.
          */
-        public ItemWriter withHttpClient(OkHttpClient client) {
+        /*public ItemWriter withHttpClient(OkHttpClient client) {
             Preconditions.checkNotNull(client, "The http client cannot be null.");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withHttpClient(client))
                     .build();
-        }
+        }*/
 
         /**
          * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
@@ -2764,12 +2742,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param executorService The {@link ExecutorService} to use.
          * @return a {@link ItemWriter} object with the configuration applied.
          */
-        public ItemWriter withExecutorService(ExecutorService executorService) {
+        /*public ItemWriter withExecutorService(ExecutorService executorService) {
             Preconditions.checkNotNull(executorService, "The executor service cannot be null");
             return toBuilder()
                     .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
                     .build();
-        }
+        }*/
 
         /**
          * Executes an item-based write request.
@@ -2807,17 +2785,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         abstract static class Builder extends ConnectorBase.Builder<Builder> {
             abstract Builder setDuplicatesResponseParser(ResponseParser<String> value);
 
-            abstract ItemWriter autoBuild();
-
-            ItemWriter build() {
-                ItemWriter writer = autoBuild();
-                Preconditions.checkState(writer.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && writer.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return writer;
-            }
+            abstract ItemWriter build();
         }
     }
 
@@ -2833,15 +2801,27 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         static Builder builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_FileBinaryReader.Builder()
-                    .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
-                    .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
+//                    .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
+//                    .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
+//                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
+//                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
                     .setForceTempStorage(false)
                     .setRequestProvider(PostJsonRequestProvider.builder()
                             .setEndpoint("files/downloadlink")
                             .setRequest(Request.create())
                             .build());
+        }
+
+        static FileBinaryReader of(CogniteClient client) {
+            return FileBinaryReader.builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 409, 422)))
+                    .setSessionIdentifier(client.getClientConfig().getSessionIdentifier())
+                    .setAppIdentifier(client.getClientConfig().getAppIdentifier())
+                    .build();
         }
 
         abstract Builder toBuilder();
