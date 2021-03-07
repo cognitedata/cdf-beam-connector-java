@@ -225,9 +225,7 @@ public class Raw {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // conditional streaming
@@ -421,9 +419,7 @@ public class Raw {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<RawRow> outputCollection = input
@@ -494,9 +490,7 @@ public class Raw {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<RawRow> outputCollection = input
@@ -571,9 +565,7 @@ public class Raw {
             PCollection<String> outputCollection = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Read database names", ParDo.of(
                             new ReadRawDatabase(getHints(), getReaderConfig()))
                             );
@@ -709,9 +701,7 @@ public class Raw {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input

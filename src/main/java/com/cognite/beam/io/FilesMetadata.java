@@ -185,9 +185,7 @@ public abstract class FilesMetadata {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // conditional streaming
@@ -294,9 +292,7 @@ public abstract class FilesMetadata {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<FileMetadata> outputCollection = input
@@ -380,9 +376,7 @@ public abstract class FilesMetadata {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input

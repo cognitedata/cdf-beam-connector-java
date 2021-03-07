@@ -138,9 +138,7 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
         PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                 .apply("Build project config", BuildProjectConfig.create()
                         .withProjectConfigFile(getProjectConfigFile())
-                        .withProjectConfigParameters(getProjectConfig())
-                        .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                        .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                        .withProjectConfigParameters(getProjectConfig()))
                 .apply("To list view", View.<ProjectConfig>asList());
 
         // In case there are no qualified rows from Raw, we need a default value

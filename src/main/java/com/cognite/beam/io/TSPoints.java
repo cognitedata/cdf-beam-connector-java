@@ -258,9 +258,7 @@ public abstract class TSPoints {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
@@ -289,7 +287,8 @@ public abstract class TSPoints {
             if (isNewCodePath()) {
                 LOG.info("Using new codepath with sdf reader");
                 outputCollection = requestParametersWithConfig
-                        .apply("Read results", ParDo.of(new ReadTsPointProtoSdf(getHints(), getReaderConfig())));
+                        .apply("Read results", ParDo.of(new ReadTsPointProtoSdf(getHints(), getReaderConfig(),
+                                projectConfigView)).withSideInputs(projectConfigView));
             } else {
                 LOG.info("Using old codepath for reader");
                 outputCollection = requestParametersWithConfig
@@ -500,9 +499,7 @@ public abstract class TSPoints {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input

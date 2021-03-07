@@ -180,9 +180,7 @@ public abstract class Relationships {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Relationship> outputCollection = input
@@ -273,9 +271,7 @@ public abstract class Relationships {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Relationship> outputCollection = input
@@ -359,9 +355,7 @@ public abstract class Relationships {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
@@ -443,9 +437,7 @@ public abstract class Relationships {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Item> outputCollection = input

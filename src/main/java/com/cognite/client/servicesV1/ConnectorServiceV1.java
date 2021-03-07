@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import com.cognite.client.CogniteClient;
 import com.cognite.client.Request;
 import com.cognite.client.config.AuthConfig;
 import com.cognite.client.servicesV1.executor.FileBinaryRequestExecutor;
@@ -66,12 +67,18 @@ public abstract class ConnectorServiceV1 implements Serializable {
     private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
     private final String loggingPrefix = "ConnectorService [" + randomIdString + "] -";
 
-    public static Builder builder() {
+    private static Builder builder() {
         return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1.Builder()
                 .setMaxRetries(ValueProvider.StaticValueProvider.of(ConnectorConstants.DEFAULT_MAX_RETRIES))
                 .setMaxBatchSize(ConnectorConstants.DEFAULT_MAX_BATCH_SIZE)
                 .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER);
+    }
+
+    public static ConnectorServiceV1 of(CogniteClient client) {
+        return ConnectorServiceV1.builder()
+                .setClient(client)
+                .build();
     }
 
     public static ConnectorServiceV1 create() {
@@ -99,6 +106,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
     public abstract String getAppIdentifier();
     public abstract String getSessionIdentifier();
+    public abstract CogniteClient getClient();
     /*
     @Nullable
     abstract OkHttpClient getHttpClient();
@@ -1926,6 +1934,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         public abstract Builder setMaxBatchSize(int value);
         public abstract Builder setAppIdentifier(String value);
         public abstract Builder setSessionIdentifier(String value);
+        public abstract Builder setClient(CogniteClient value);
         /*
         public abstract Builder setHttpClient(OkHttpClient value);
         public abstract Builder setExecutorService(ExecutorService value);
