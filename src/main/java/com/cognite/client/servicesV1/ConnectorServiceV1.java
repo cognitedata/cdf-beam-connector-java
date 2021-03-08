@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
+import com.cognite.client.CogniteClient;
 import com.cognite.client.Request;
 import com.cognite.client.config.AuthConfig;
 import com.cognite.client.servicesV1.executor.FileBinaryRequestExecutor;
@@ -66,89 +67,21 @@ public abstract class ConnectorServiceV1 implements Serializable {
     private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
     private final String loggingPrefix = "ConnectorService [" + randomIdString + "] -";
 
-    public static Builder builder() {
-        return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1.Builder()
-                .setMaxRetries(ValueProvider.StaticValueProvider.of(ConnectorConstants.DEFAULT_MAX_RETRIES))
-                .setMaxBatchSize(ConnectorConstants.DEFAULT_MAX_BATCH_SIZE)
-                .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
-                .setSessionIdentifier(ConnectorConstants.DEFAULT_SESSION_IDENTIFIER);
+    private static Builder builder() {
+        return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1.Builder();
+    }
+
+    public static ConnectorServiceV1 of(CogniteClient client) {
+        return ConnectorServiceV1.builder()
+                .setClient(client)
+                .build();
     }
 
     public static ConnectorServiceV1 create() {
         return ConnectorServiceV1.builder().build();
     }
 
-    public static ConnectorServiceV1 create(int newMaxRetries) {
-        return ConnectorServiceV1.builder()
-                .setMaxRetries(newMaxRetries)
-                .build();
-    }
-
-    public static ConnectorServiceV1 create(int newMaxRetries,
-                                            String appIdentifier,
-                                            String sessionIdentifier) {
-        return ConnectorServiceV1.builder()
-                .setMaxRetries(ValueProvider.StaticValueProvider.of(newMaxRetries))
-                .setAppIdentifier(appIdentifier)
-                .setSessionIdentifier(sessionIdentifier)
-                .build();
-    }
-
-    public abstract ValueProvider<Integer> getMaxRetries();
-    public abstract int getMaxBatchSize();
-
-    public abstract String getAppIdentifier();
-    public abstract String getSessionIdentifier();
-    /*
-    @Nullable
-    abstract OkHttpClient getHttpClient();
-    @Nullable
-    abstract ExecutorService getExecutorService();
-
-     */
-
-    abstract Builder toBuilder();
-
-
-    /**
-     * Sets the http client to use for api requests. Returns a {@link ConnectorServiceV1} with
-     * the setting applied.
-     *
-     * @param client The {@link OkHttpClient} to use.
-     * @return a {@link ConnectorServiceV1} object with the configuration applied.
-     */
-    /*
-    public ConnectorServiceV1 withHttpClient(OkHttpClient client) {
-        return toBuilder().setHttpClient(client).build();
-    }
-
-     */
-
-    /**
-     * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns a {@link ConnectorServiceV1}
-     * with the setting applied.
-     *
-     * @param executorService The {@link ExecutorService} to use.
-     * @return a {@link ConnectorServiceV1} object with the configuration applied.
-     */
-    /*
-    public ConnectorServiceV1 withExecutorService(ExecutorService executorService) {
-        return toBuilder().setExecutorService(executorService).build();
-    }
-
-     */
-
-    /**
-     * Must lazily validate the state of parameters delivered via ValueProviders.
-     */
-    private void validate() {
-        LOG.debug(loggingPrefix + "Validating retries.");
-        Preconditions.checkState(getMaxRetries().isAccessible()
-                , "Max retries could not be obtained.");
-        Preconditions.checkState(getMaxRetries().get() <= ConnectorConstants.MAX_MAX_RETRIES
-                        && getMaxRetries().get() >= ConnectorConstants.MIN_MAX_RETRIES
-                , "Max retries out of range. Must be between 1 and 20");
-    }
+    public abstract CogniteClient getClient();
 
     /**
      * Read assets from Cognite.
@@ -158,18 +91,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readAssets(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read assets service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("assets/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -179,17 +110,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readAssetsAggregates() {
         LOG.debug(loggingPrefix + "Initiating read assets aggregates service.");
-        this.validate();
+        
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("assets/aggregate")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -199,17 +129,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readAssetsById() {
         LOG.debug(loggingPrefix + "Initiating read assets by id service.");
-        this.validate();
+        
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("assets/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -220,20 +149,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeAssets() {
         LOG.debug(loggingPrefix + "Initiating write assets service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("assets")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -244,20 +169,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter updateAssets() {
         LOG.debug(loggingPrefix + "Initiating update assets service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("assets/update")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -268,20 +189,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteAssets() {
         LOG.debug(loggingPrefix + "Initiating delete assets service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("assets/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -292,18 +209,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readEvents(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read events service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("events/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -313,17 +228,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readEventsAggregates() {
         LOG.debug(loggingPrefix + "Initiating read events aggregates service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("events/aggregate")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -333,17 +246,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readEventsById() {
         LOG.debug(loggingPrefix + "Initiating read events service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("events/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -354,20 +265,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeEvents() {
         LOG.debug(loggingPrefix + "Initiating write events service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("events")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -378,20 +285,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter updateEvents() {
         LOG.debug(loggingPrefix + "Initiating update events service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("events/update")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -402,20 +305,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteEvents() {
         LOG.debug(loggingPrefix + "Initiating delete events service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("events/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -426,18 +325,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readSequencesHeaders(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read sequences headers service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("sequences/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -447,17 +344,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readSequencesAggregates() {
         LOG.debug(loggingPrefix + "Initiating read sequences aggregates service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences/aggregate")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -467,17 +362,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readSequencesById() {
         LOG.debug(loggingPrefix + "Initiating read sequences by id service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -488,18 +381,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeSequencesHeaders() {
         LOG.debug(loggingPrefix + "Initiating write sequences headers service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.of(requestProvider)
-                .withMaxRetries(getMaxRetries().get())
+        return ItemWriter.of(getClient(), requestProvider)
                 .withDuplicatesResponseParser(JsonErrorMessageDuplicateResponseParser.builder().build());
     }
 
@@ -511,20 +402,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter updateSequencesHeaders() {
         LOG.debug(loggingPrefix + "Initiating update sequences headers service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences/update")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -535,20 +422,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteSequencesHeaders() {
         LOG.debug(loggingPrefix + "Initiating delete sequences service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -559,18 +442,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readSequencesRows(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read sequences rows service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("sequences/data/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -581,20 +462,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeSequencesRows() {
         LOG.debug(loggingPrefix + "Initiating write sequences rows service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences/data")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -605,20 +482,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteSequencesRows() {
         LOG.debug(loggingPrefix + "Initiating delete sequences service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("sequences/data/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -629,18 +502,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readTsHeaders(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read TS headers service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("timeseries/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -650,17 +521,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readTsAggregates() {
         LOG.debug(loggingPrefix + "Initiating read timeseries aggregates service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/aggregate")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -670,17 +539,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readTsById() {
         LOG.debug(loggingPrefix + "Initiating read time series by id service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -691,20 +558,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeTsHeaders() {
         LOG.debug(loggingPrefix + "Initiating write ts headers service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -715,20 +578,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter updateTsHeaders() {
         LOG.debug(loggingPrefix + "Initiating update ts headers service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/update")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -739,20 +598,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteTsHeaders() {
         LOG.debug(loggingPrefix + "Initiating delete ts service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -763,21 +618,19 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readTsDatapoints(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read TS datapoints service.");
-        this.validate();
 
         TSPointsRequestProvider requestProvider = TSPointsRequestProvider.builder()
                 .setEndpoint("timeseries/data/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
         TSPointsResponseParser responseParser = TSPointsResponseParser.builder().build()
                 .withRequest(queryParameters);
 
-        return ResultFutureIterator.<String>of(requestProvider, responseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, responseParser);
     }
 
     /**
@@ -789,21 +642,19 @@ public abstract class ConnectorServiceV1 implements Serializable {
     public ResultFutureIterator<DataPointListItem>
             readTsDatapointsProto(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read TS datapoints service.");
-        this.validate();
 
         TSPointsReadProtoRequestProvider requestProvider = TSPointsReadProtoRequestProvider.builder()
                 .setEndpoint("timeseries/data/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
         TSPointsProtoResponseParser responseParser = TSPointsProtoResponseParser.builder().build()
                 .withRequest(queryParameters);
 
-        return ResultFutureIterator.<DataPointListItem>of(requestProvider, responseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<DataPointListItem>of(getClient(), requestProvider, responseParser);
     }
 
     /**
@@ -813,17 +664,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readTsDatapointsLatest() {
         LOG.debug(loggingPrefix + "Initiating read latest data point service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/data/latest")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -834,20 +683,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeTsDatapoints() {
         LOG.debug(loggingPrefix + "Building writer for ts datapoints service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/data")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -858,20 +703,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeTsDatapointsProto() {
         LOG.debug(loggingPrefix + "Building writer for ts datapoints service.");
-        this.validate();
 
         TSPointsWriteProtoRequestProvider requestProvider = TSPointsWriteProtoRequestProvider.builder()
                 .setEndpoint("timeseries/data")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -882,20 +723,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteDatapoints() {
         LOG.debug(loggingPrefix + "Initiating delete data points service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("timeseries/data/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -906,18 +743,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public Iterator<CompletableFuture<ResponseItems<String>>> read3dModels(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read 3d models service.");
-        this.validate();
 
         GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
                 .setEndpoint("3d/models")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -929,18 +764,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readRawRows(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read raw rows service.");
-        this.validate();
 
         RawReadRowsRequestProvider requestProvider = RawReadRowsRequestProvider.builder()
                 .setEndpoint("raw/dbs")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonRawRowResponseParser.builder().build());
     }
 
     /**
@@ -950,18 +783,17 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readRawRow() {
         LOG.debug(loggingPrefix + "Initiating read single row service.");
-        this.validate();
 
         RawReadRowsRequestProvider requestProvider = RawReadRowsRequestProvider.builder()
                 .setEndpoint("raw/dbs")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.<String>of(getClient(),
+                requestProvider, JsonRawRowResponseParser.builder().build());
     }
 
     /**
@@ -971,17 +803,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readCursorsRawRows() {
         LOG.debug(loggingPrefix + "Initiating read raw cursors service.");
-        this.validate();
 
         RawReadRowsCursorsRequestProvider requestProvider = RawReadRowsCursorsRequestProvider.builder()
                 .setEndpoint("raw/dbs")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -991,20 +821,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeRawRows() {
         LOG.debug(loggingPrefix + "Initiating write raw rows service.");
-        this.validate();
 
         RawWriteRowsRequestProvider requestProvider = RawWriteRowsRequestProvider.builder()
                 .setEndpoint("raw/dbs")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1015,20 +841,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteRawRows() {
         LOG.debug(loggingPrefix + "Initiating delete raw rows service.");
-        this.validate();
 
         RawDeleteRowsRequestProvider requestProvider = RawDeleteRowsRequestProvider.builder()
                 .setEndpoint("raw/dbs")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1038,20 +860,18 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readRawDbNames(AuthConfig config) {
         LOG.debug(loggingPrefix + "Initiating read raw database names service.");
-        this.validate();
 
         GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
                 .setEndpoint("raw/dbs")
                 .setRequest(Request.create()
                         .withRootParameter("limit", ConnectorConstants.DEFAULT_MAX_BATCH_SIZE)
                         .withAuthConfig(config))
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1061,20 +881,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeRawDbNames() {
         LOG.debug(loggingPrefix + "Creating databases");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("raw/dbs")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1084,20 +900,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteRawDbNames() {
         LOG.debug(loggingPrefix + "Deleting databases");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("raw/dbs/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1110,20 +922,18 @@ public abstract class ConnectorServiceV1 implements Serializable {
         Preconditions.checkNotNull(dbName);
         Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
         LOG.debug(loggingPrefix + "Listing tables for database {}", dbName);
-        this.validate();
 
         GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
                 .setEndpoint("raw/dbs/" + dbName + "/tables")
                 .setRequest(Request.create()
                         .withRootParameter("limit", ConnectorConstants.DEFAULT_MAX_BATCH_SIZE)
                         .withAuthConfig(config))
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1136,20 +946,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
         Preconditions.checkNotNull(dbName);
         Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
         LOG.debug(loggingPrefix + "Creating tables in database {}", dbName);
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("raw/dbs/" + dbName + "/tables")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1162,20 +968,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
         Preconditions.checkNotNull(dbName);
         Preconditions.checkArgument(!dbName.isEmpty(), "Database name cannot be empty.");
         LOG.debug(loggingPrefix + "Deleting tables in database {}", dbName);
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("raw/dbs/" + dbName + "/tables/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1186,18 +988,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readFileHeaders(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read File headers service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("files/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1207,17 +1007,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readFilesAggregates() {
         LOG.debug(loggingPrefix + "Initiating read files aggregates service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("files/aggregate")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -1227,17 +1025,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readFilesById() {
         LOG.debug(loggingPrefix + "Initiating read files by id service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("files/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1249,13 +1045,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public FileBinaryReader readFileBinariesByIds() {
         LOG.debug(loggingPrefix + "Initiating read File binaries by ids service.");
-        this.validate();
 
-        return FileBinaryReader.builder()
-                .setMaxRetries(getMaxRetries().get())
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
-                .build();
+        return FileBinaryReader.of(getClient());
     }
 
     /**
@@ -1270,20 +1061,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeFileHeaders() {
         LOG.debug(loggingPrefix + "Initiating write file header / metadata service.");
-        this.validate();
 
         FilesUploadRequestProvider requestProvider = FilesUploadRequestProvider.builder()
                 .setEndpoint("files")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1297,13 +1084,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public FileWriter writeFileProto() {
         LOG.debug(loggingPrefix + "Initiating write file proto service.");
-        this.validate();
 
-        return FileWriter.builder()
-                .setMaxRetries(getMaxRetries().get())
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
-                .build();
+        return FileWriter.of(getClient());
     }
 
     /**
@@ -1314,20 +1096,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter updateFileHeaders() {
         LOG.debug(loggingPrefix + "Initiating update file headers service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("files/update")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1338,20 +1116,17 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteFiles() {
         LOG.debug(loggingPrefix + "Initiating delete files service.");
-        this.validate();
+        
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("files/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1363,19 +1138,18 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public LoginStatus readLoginStatusByApiKey(String host, String apiKey) throws Exception {
         LOG.debug(loggingPrefix + "Getting login status for host [{}].", host);
-        this.validate();
 
         GetLoginRequestProvider requestProvider = GetLoginRequestProvider.builder()
                 .setEndpoint("status")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
         JsonResponseParser responseParser = JsonResponseParser.create();
 
-        SingleRequestItemReader<String> itemReader = SingleRequestItemReader.of(requestProvider, responseParser)
-                .withMaxRetries(getMaxRetries().get());
+        SingleRequestItemReader<String> itemReader =
+                SingleRequestItemReader.of(getClient(), requestProvider, responseParser);
 
         // Send the request to the Cognite api
         ResponseItems<String> responseItems = itemReader.getItems(Request.create()
@@ -1403,19 +1177,17 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readRelationships(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read relationships service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("relationships/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .setBetaEnabled(true)
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1425,17 +1197,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readRelationshipsById() {
         LOG.debug(loggingPrefix + "Initiating read relationships by id service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("relationships/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1446,21 +1216,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeRelationships() {
         LOG.debug(loggingPrefix + "Initiating write relationships service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("relationships")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
-                .setBetaEnabled(true)
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1471,21 +1236,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteRelationships() {
         LOG.debug(loggingPrefix + "Initiating delete relationships service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("relationships/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
-                .setBetaEnabled(true)
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1496,20 +1256,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter updateDataSets() {
         LOG.debug(loggingPrefix + "Initiating update data sets service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("datasets/update")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1520,18 +1276,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readDataSets(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read data sets service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("datasets/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1541,17 +1295,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readDataSetsAggregates() {
         LOG.debug(loggingPrefix + "Initiating read data set aggregates service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("datasets/aggregate")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -1561,17 +1313,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readDataSetsById() {
         LOG.debug(loggingPrefix + "Initiating read data sets by id service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("datasets/byids")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1582,20 +1332,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeDataSets() {
         LOG.debug(loggingPrefix + "Initiating write data sets service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("datasets")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1606,18 +1352,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readLabels(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read labels service.");
-        this.validate();
 
         PostJsonListRequestProvider requestProvider = PostJsonListRequestProvider.builder()
                 .setEndpoint("labels/list")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1628,20 +1372,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeLabels() {
         LOG.debug(loggingPrefix + "Initiating write labels service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("labels")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1652,20 +1392,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteLabels() {
         LOG.debug(loggingPrefix + "Initiating delete labels service.");
-        this.validate();
 
         PostPlaygroundJsonRequestProvider requestProvider = PostPlaygroundJsonRequestProvider.builder()
                 .setEndpoint("labels/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1676,18 +1412,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ResultFutureIterator<String> readSecurityCategories(Request queryParameters) {
         LOG.debug(loggingPrefix + "Initiating read security categories service.");
-        this.validate();
 
         GetSimpleListRequestProvider requestProvider = GetSimpleListRequestProvider.builder()
                 .setEndpoint("securitycategories")
                 .setRequest(queryParameters)
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1698,20 +1432,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter writeSecurityCategories() {
         LOG.debug(loggingPrefix + "Initiating write security categories service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("securitycategories")
                 .setRequest(Request.create())
                 .setSdkIdentifier(SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1722,20 +1452,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteSecurityCategories() {
         LOG.debug(loggingPrefix + "Initiating delete security categories service.");
-        this.validate();
 
         PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("securitycategories/delete")
                 .setRequest(Request.create())
                 .setSdkIdentifier(SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1747,14 +1473,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> detectAnnotationsPnid() {
         LOG.debug(loggingPrefix + "Initiating the annotation detection service.");
-        this.validate();
 
         PostPlaygroundJsonRequestProvider jobStartRequestProvider =
                 PostPlaygroundJsonRequestProvider.builder()
                         .setEndpoint("context/pnid/detect")
-                        .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                        .setAppIdentifier(getAppIdentifier())
-                        .setSessionIdentifier(getSessionIdentifier())
+                        .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                        .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                        .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser.of(
@@ -1762,14 +1487,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         GetPlaygroundJobIdRequestProvider jobResultsRequestProvider = GetPlaygroundJobIdRequestProvider.of("context/pnid/detect")
                 .toBuilder()
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     /**
@@ -1780,14 +1504,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> convertPnid() {
         LOG.debug(loggingPrefix + "Initiating the convert PDF service.");
-        this.validate();
 
         PostPlaygroundJsonRequestProvider jobStartRequestProvider =
                 PostPlaygroundJsonRequestProvider.builder()
                         .setEndpoint("context/pnid/convert")
-                        .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                        .setAppIdentifier(getAppIdentifier())
-                        .setSessionIdentifier(getSessionIdentifier())
+                        .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                        .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                        .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser.of(
@@ -1795,14 +1518,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         GetPlaygroundJobIdRequestProvider jobResultsRequestProvider = GetPlaygroundJobIdRequestProvider.of("context/pnid/convert")
                 .toBuilder()
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     /**
@@ -1812,17 +1534,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> readEntityMatcherModels() {
         LOG.debug(loggingPrefix + "Initiating read entity matcher models service.");
-        this.validate();
 
+        // todo Implement new list entity matcher models
         GetPlaygroundRequestProvider requestProvider = GetPlaygroundRequestProvider.builder()
                 .setEndpoint("context/entity_matching")
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1832,20 +1553,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemWriter deleteEntityMatcherModels() {
         LOG.debug(loggingPrefix + "Initiating delete entity matcher models service.");
-        this.validate();
 
-        PostPlaygroundJsonRequestProvider requestProvider = PostPlaygroundJsonRequestProvider.builder()
+        PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                 .setEndpoint("context/entitymatching/delete")
                 .setRequest(Request.create())
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1855,14 +1572,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public ItemReader<String> entityMatcherPredict() {
         LOG.debug(loggingPrefix + "Initiating entity matcher predict service.");
-        this.validate();
 
         PostJsonRequestProvider jobStartRequestProvider =
                 PostJsonRequestProvider.builder()
                         .setEndpoint("context/entitymatching/predict")
-                        .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                        .setAppIdentifier(getAppIdentifier())
-                        .setSessionIdentifier(getSessionIdentifier())
+                        .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                        .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                        .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser
@@ -1871,14 +1587,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
         GetIdRequestProvider jobResultsRequestProvider =
                 GetIdRequestProvider.of("context/entitymatching/jobs")
                 .toBuilder()
-                .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
+                .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                 .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonItemResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonItemResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     /**
@@ -1888,14 +1603,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
      */
     public Connector<String> entityMatcherFit() {
         LOG.debug(loggingPrefix + "Initiating entity matcher training service.");
-        this.validate();
 
         PostJsonRequestProvider jobStartRequestProvider =
                 PostJsonRequestProvider.builder()
                         .setEndpoint("context/entitymatching")
-                        .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                        .setAppIdentifier(getAppIdentifier())
-                        .setSessionIdentifier(getSessionIdentifier())
+                        .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                        .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                        .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                         .build();
 
         RequestParametersResponseParser jobStartResponseParser = RequestParametersResponseParser.of(
@@ -1904,14 +1618,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
         GetIdRequestProvider jobResultsRequestProvider =
                 GetIdRequestProvider.of("context/entitymatching")
                         .toBuilder()
-                        .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                        .setAppIdentifier(getAppIdentifier())
-                        .setSessionIdentifier(getSessionIdentifier())
+                        .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                        .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                        .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                         .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     // TODO 3d models, revisions and nodes
@@ -1919,29 +1632,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
     @AutoValue.Builder
     public abstract static class Builder {
-        public abstract Builder setMaxRetries(ValueProvider<Integer> value);
-        public Builder setMaxRetries(int value) {
-            return this.setMaxRetries(ValueProvider.StaticValueProvider.of(value));
-        }
-        public abstract Builder setMaxBatchSize(int value);
-        public abstract Builder setAppIdentifier(String value);
-        public abstract Builder setSessionIdentifier(String value);
-        /*
-        public abstract Builder setHttpClient(OkHttpClient value);
-        public abstract Builder setExecutorService(ExecutorService value);
-
-         */
-
-        abstract ConnectorServiceV1 autoBuild();
-
-        public ConnectorServiceV1 build() {
-            ConnectorServiceV1 service = autoBuild();
-            Preconditions.checkState(service.getAppIdentifier().length() < 40
-                    , "App identifier out of range. Length must be < 40.");
-            Preconditions.checkState(service.getSessionIdentifier().length() < 40
-                    , "Session identifier out of range. Length must be < 40.");
-            return service;
-        }
+        public abstract Builder setClient(CogniteClient value);
+        abstract ConnectorServiceV1 build();
     }
 
     /**
@@ -1957,30 +1649,15 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setErrorSubPath("missing")
                 .build();
 
-        static final OkHttpClient DEFAULT_CLIENT = new OkHttpClient.Builder()
-                .connectTimeout(90, TimeUnit.SECONDS)
-                .readTimeout(90, TimeUnit.SECONDS)
-                .writeTimeout(90, TimeUnit.SECONDS)
-                //.addNetworkInterceptor(new SSLHandshakeInterceptor())
-                //.connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.COMPATIBLE_TLS,
-                //        new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
-                //                .allEnabledCipherSuites()
-                //                .allEnabledTlsVersions()
-                //                .build()))
-                .build();
-
-        static final RequestExecutor DEFAULT_REQUEST_EXECUTOR = RequestExecutor.of(DEFAULT_CLIENT)
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);
-
         final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
         abstract RequestProvider getRequestProvider();
-        abstract int getMaxRetries(); // TODO: remove after refactor
+        abstract CogniteClient getClient();
         abstract RequestExecutor getRequestExecutor();
 
         abstract static class Builder<B extends Builder<B>> {
             abstract B setRequestProvider(RequestProvider value);
-            abstract B setMaxRetries(int value); // TODO: remove after refactor
+            abstract B setClient(CogniteClient value);
             abstract B setRequestExecutor(RequestExecutor value);
         }
     }
@@ -2005,66 +1682,23 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private CompletableFuture<ResponseItems<T>> currentResponseFuture = null;
 
         private static <T> Builder<T> builder() {
-            return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_ResultFutureIterator.Builder<T>()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR);
+            return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_ResultFutureIterator.Builder<T>();
         }
 
-        public static <T> ResultFutureIterator<T> of(RequestProvider requestProvider,
+        public static <T> ResultFutureIterator<T> of(CogniteClient client,
+                                                     RequestProvider requestProvider,
                                                      ResponseParser<T> responseParser) {
             return ResultFutureIterator.<T>builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries()))
                     .setRequestProvider(requestProvider)
                     .setResponseParser(responseParser)
                     .build();
         }
 
-        abstract Builder<T> toBuilder();
         abstract ResponseParser<T> getResponseParser();
-
-        /**
-         * Set the max number of retries when executing requests against the Cognite API
-         *
-         * @param maxRetries the max number of retries.
-         * @return The iterator configured with the new max retries.
-         */
-        ResultFutureIterator<T> withMaxRetries(int maxRetries) {
-            Preconditions.checkArgument(maxRetries <= ConnectorConstants.MAX_MAX_RETRIES
-                            && maxRetries >= ConnectorConstants.MIN_MAX_RETRIES
-                    , "Max retries out of range. Must be between "
-                            + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-            return toBuilder()
-                    .setMaxRetries(maxRetries)
-                    .setRequestExecutor(getRequestExecutor().withMaxRetries(maxRetries))
-                    .build();
-        }
-
-        /**
-         * Sets the http client to use for api requests. Returns a {@link ResultFutureIterator} with
-         * the setting applied.
-         *
-         * @param client The {@link OkHttpClient} to use.
-         * @return a {@link ResultFutureIterator} object with the configuration applied.
-         */
-        public ResultFutureIterator<T> withHttpClient(OkHttpClient client) {
-            Preconditions.checkNotNull(client, "The http client cannot be null.");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
-                    .build();
-        }
-
-        /**
-         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
-         * a {@link ResultFutureIterator} with the setting applied.
-         *
-         * @param executorService The {@link ExecutorService} to use.
-         * @return a {@link ResultFutureIterator} object with the configuration applied.
-         */
-        public ResultFutureIterator<T> withExecutorService(ExecutorService executorService) {
-            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
-                    .build();
-        }
 
         @Override
         public boolean hasNext() {
@@ -2147,14 +1781,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
         private final String loggingPrefix = "SingleRequestItemReader [" + randomIdString + "] -";
 
-        private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
-                .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422))
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);
-
         static <T> Builder<T> builder() {
-            return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_SingleRequestItemReader.Builder<T>()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR);
+            return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_SingleRequestItemReader.Builder<T>();
         }
 
         /**
@@ -2166,54 +1794,21 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param <T>
          * @return
          */
-        static <T> SingleRequestItemReader<T> of(RequestProvider requestProvider,
+        static <T> SingleRequestItemReader<T> of(CogniteClient client,
+                                                 RequestProvider requestProvider,
                                                  ResponseParser<T> responseParser) {
             return SingleRequestItemReader.<T>builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422)))
                     .setRequestProvider(requestProvider)
                     .setResponseParser(responseParser)
                     .build();
         }
 
-        abstract Builder<T> toBuilder();
         abstract ResponseParser<T> getResponseParser();
-
-        /**
-         * Set the max number of retries when executing requests against the Cognite API
-         *
-         * @param maxRetries
-         * @return
-         */
-        SingleRequestItemReader<T> withMaxRetries(int maxRetries) {
-            return toBuilder().setMaxRetries(maxRetries).build();
-        }
-
-        /**
-         * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
-         * the setting applied.
-         *
-         * @param client The {@link OkHttpClient} to use.
-         * @return a {@link ItemWriter} object with the configuration applied.
-         */
-        public SingleRequestItemReader<T> withHttpClient(OkHttpClient client) {
-            Preconditions.checkNotNull(client, "The http client cannot be null.");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
-                    .build();
-        }
-
-        /**
-         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
-         * a {@link SingleRequestItemReader} with the setting applied.
-         *
-         * @param executorService The {@link ExecutorService} to use.
-         * @return a {@link ItemWriter} object with the configuration applied.
-         */
-        public SingleRequestItemReader<T> withExecutorService(ExecutorService executorService) {
-            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
-                    .build();
-        }
 
         /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
@@ -2236,11 +1831,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
         public CompletableFuture<ResponseItems<T>> getItemsAsync(Request items) throws Exception {
             Preconditions.checkNotNull(items, "Input cannot be null.");
 
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             // Execute the request and get the response future
-            CompletableFuture<ResponseItems<T>> responseItemsFuture = requestExecutor
+            CompletableFuture<ResponseItems<T>> responseItemsFuture = getRequestExecutor()
                     .executeRequestAsync(getRequestProvider()
                             .withRequest(items)
                             .buildRequest(Optional.empty()))
@@ -2254,17 +1846,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         abstract static class Builder<T> extends ConnectorBase.Builder<Builder<T>> {
             abstract Builder<T> setResponseParser(ResponseParser<T> value);
 
-            abstract SingleRequestItemReader<T> autoBuild();
-
-            SingleRequestItemReader<T> build() {
-                SingleRequestItemReader<T> reader = autoBuild();
-                Preconditions.checkState(reader.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && reader.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return reader;
-            }
+            abstract SingleRequestItemReader<T> build();
         }
     }
 
@@ -2310,19 +1892,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final String loggingPrefix = "AsyncJobReader [" + randomIdString + "] -";
         private final ObjectMapper objectMapper = JsonUtil.getObjectMapperInstance();
 
-        // Instantiate a base request executor in order to get a stable thread pool for executing repeated requests
-        // via the same reader.
-        private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
-                .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422))
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);
-
         static <T> Builder<T> builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_AsyncJobReader.Builder<T>()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
                     .setJobStartResponseParser(DEFAULT_JOB_START_RESPONSE_PARSER)
                     .setJobTimeoutDuration(DEFAULT_ASYNC_API_JOB_TIMEOUT)
                     .setPollingInterval(DEFAULT_ASYNC_API_JOB_POLLING_INTERVAL)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR);
+                    ;
         }
 
         /**
@@ -2335,10 +1910,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
          * @param <T>
          * @return
          */
-        static <T> AsyncJobReader<T> of(RequestProvider jobStartRequestProvider,
+        static <T> AsyncJobReader<T> of(CogniteClient client,
+                                        RequestProvider jobStartRequestProvider,
                                         RequestProvider jobResultRequestProvider,
                                         ResponseParser<T> responseParser) {
             return AsyncJobReader.<T>builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422)))
                     .setRequestProvider(jobStartRequestProvider)
                     .setJobResultRequestProvider(jobResultRequestProvider)
                     .setResponseParser(responseParser)
@@ -2351,16 +1932,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
         abstract RequestProvider getJobResultRequestProvider();
         abstract Duration getJobTimeoutDuration();
         abstract Duration getPollingInterval();
-
-        /**
-         * Set the max number of retries when executing requests against the Cognite API
-         *
-         * @param maxRetries
-         * @return
-         */
-        AsyncJobReader<T> withMaxRetries(int maxRetries) {
-            return toBuilder().setMaxRetries(maxRetries).build();
-        }
 
         /**
          * Sets the {@link ResponseParser} for the first/initial api request. This request will typically be
@@ -2420,34 +1991,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
         }
 
         /**
-         * Sets the http client to use for api requests. Returns a {@link SingleRequestItemReader} with
-         * the setting applied.
-         *
-         * @param client The {@link OkHttpClient} to use.
-         * @return a {@link AsyncJobReader} object with the configuration applied.
-         */
-        public AsyncJobReader<T> withHttpClient(OkHttpClient client) {
-            Preconditions.checkNotNull(client, "The http client cannot be null.");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
-                    .build();
-        }
-
-        /**
-         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
-         * a {@link AsyncJobReader} with the setting applied.
-         *
-         * @param executorService The {@link ExecutorService} to use.
-         * @return a {@link ItemWriter} object with the configuration applied.
-         */
-        public AsyncJobReader<T> withExecutorService(ExecutorService executorService) {
-            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
-                    .build();
-        }
-
-        /**
          * Executes a request to get items and blocks the thread until all items have been downloaded.
          *
          * @param items
@@ -2489,14 +2032,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
          */
         public CompletableFuture<ResponseItems<T>> getItemsAsync(Request items) throws Exception {
             Preconditions.checkNotNull(items, "Input cannot be null.");
-
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             LOG.info(loggingPrefix + "Starting async api job.");
 
             // Execute the request and get the response future
-            CompletableFuture<ResponseItems<T>> responseItemsFuture = requestExecutor
+            CompletableFuture<ResponseItems<T>> responseItemsFuture = getRequestExecutor()
                     .executeRequestAsync(getRequestProvider()
                             .withRequest(items)
                             .buildRequest(Optional.empty()))
@@ -2564,9 +2103,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
                                                                       Request jobStartRequest) {
             Preconditions.checkNotNull(request, "Input cannot be null.");
 
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             // Execute the request and get the response future
             CompletableFuture<ResponseItems<T>> responseItemsFuture = CompletableFuture
                     .supplyAsync(() -> {
@@ -2581,7 +2117,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                             try {
                                 Thread.sleep(getPollingInterval().toMillis());
 
-                                jobResultResponse = requestExecutor
+                                jobResultResponse = getRequestExecutor()
                                         .executeRequestAsync(getJobResultRequestProvider()
                                                 .withRequest(request)
                                                 .buildRequest(Optional.empty()))
@@ -2676,17 +2212,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             abstract Builder<T> setJobTimeoutDuration(Duration value);
             abstract Builder<T> setPollingInterval(Duration value);
 
-            abstract AsyncJobReader<T> autoBuild();
-
-            AsyncJobReader<T> build() {
-                AsyncJobReader<T> reader = autoBuild();
-                Preconditions.checkState(reader.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && reader.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return reader;
-            }
+            abstract AsyncJobReader<T> build();
         }
     }
 
@@ -2695,14 +2221,16 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         static Builder builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_ItemWriter.Builder()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR
-                            .withValidResponseCodes(ImmutableList.of(400, 409, 422)))
                     .setDuplicatesResponseParser(DEFAULT_DUPLICATES_RESPONSE_PARSER);
         }
 
-        static ItemWriter of(RequestProvider requestProvider) {
+        static ItemWriter of(CogniteClient client, RequestProvider requestProvider) {
             return ItemWriter.builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 409, 422)))
                     .setRequestProvider(requestProvider)
                     .build();
         }
@@ -2721,45 +2249,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
          */
         public ItemWriter withDuplicatesResponseParser(ResponseParser<String> parser) {
             return toBuilder().setDuplicatesResponseParser(parser).build();
-        }
-
-        /**
-         * Sets the maximum number retries before failing a request. The default max number of
-         * retries is 3.
-         *
-         * @param retries
-         * @return
-         */
-        public ItemWriter withMaxRetries(int retries) {
-            return toBuilder().setMaxRetries(retries).build();
-        }
-
-        /**
-         * Sets the http client to use for api requests. Returns a {@link ItemWriter} with
-         * the setting applied.
-         *
-         * @param client The {@link OkHttpClient} to use.
-         * @return a {@link ItemWriter} object with the configuration applied.
-         */
-        public ItemWriter withHttpClient(OkHttpClient client) {
-            Preconditions.checkNotNull(client, "The http client cannot be null.");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withHttpClient(client))
-                    .build();
-        }
-
-        /**
-         * Sets the {@link ExecutorService} to use for multi-threaded api requests. Returns
-         * a {@link ItemWriter} with the setting applied.
-         *
-         * @param executorService The {@link ExecutorService} to use.
-         * @return a {@link ItemWriter} object with the configuration applied.
-         */
-        public ItemWriter withExecutorService(ExecutorService executorService) {
-            Preconditions.checkNotNull(executorService, "The executor service cannot be null");
-            return toBuilder()
-                    .setRequestExecutor(getRequestExecutor().withExecutor(executorService))
-                    .build();
         }
 
         /**
@@ -2798,17 +2287,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         abstract static class Builder extends ConnectorBase.Builder<Builder> {
             abstract Builder setDuplicatesResponseParser(ResponseParser<String> value);
 
-            abstract ItemWriter autoBuild();
-
-            ItemWriter build() {
-                ItemWriter writer = autoBuild();
-                Preconditions.checkState(writer.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && writer.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return writer;
-            }
+            abstract ItemWriter build();
         }
     }
 
@@ -2824,10 +2303,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         static Builder builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_FileBinaryReader.Builder()
-                    .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
-                    .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
                     .setForceTempStorage(false)
                     .setRequestProvider(PostJsonRequestProvider.builder()
                             .setEndpoint("files/downloadlink")
@@ -2835,10 +2310,17 @@ public abstract class ConnectorServiceV1 implements Serializable {
                             .build());
         }
 
-        abstract Builder toBuilder();
+        static FileBinaryReader of(CogniteClient client) {
+            return FileBinaryReader.builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400, 409, 422)))
+                    .build();
+        }
 
-        abstract String getAppIdentifier();
-        abstract String getSessionIdentifier();
+        abstract Builder toBuilder();
         abstract boolean isForceTempStorage();
 
         @Nullable
@@ -2903,17 +2385,13 @@ public abstract class ConnectorServiceV1 implements Serializable {
             PostJsonRequestProvider requestProvider = PostJsonRequestProvider.builder()
                     .setEndpoint("files/downloadlink")
                     .setRequest(Request.create())
-                    .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                    .setAppIdentifier(getAppIdentifier())
-                    .setSessionIdentifier(getSessionIdentifier())
+                    .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                    .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                    .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                     .build();
 
-            RequestExecutor requestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
-                    .withValidResponseCodes(ImmutableList.of(400, 409, 422))
-                    .withMaxRetries(getMaxRetries());
-
             // Get the file download links
-            ResponseItems<String> fileItemsResponse = requestExecutor
+            ResponseItems<String> fileItemsResponse = getRequestExecutor()
                     .executeRequestAsync(requestProvider
                             .withRequest(items)
                             .buildRequest(Optional.empty()))
@@ -2985,22 +2463,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         @AutoValue.Builder
         abstract static class Builder extends ConnectorBase.Builder<Builder> {
-            abstract Builder setAppIdentifier(String value);
-            abstract Builder setSessionIdentifier(String value);
             abstract Builder setForceTempStorage(boolean value);
             abstract Builder setTempStoragePath(URI value);
 
-            abstract FileBinaryReader autoBuild();
-
-            FileBinaryReader build() {
-                FileBinaryReader reader = autoBuild();
-                Preconditions.checkState(reader.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && reader.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return reader;
-            }
+            abstract FileBinaryReader build();
         }
     }
 
@@ -3013,24 +2479,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
         private final String loggingPrefix = "FileWriter [" + randomIdString + "] -";
         private final ObjectMapper objectMapper = new ObjectMapper();
-        private final int CPU_MULTIPLIER = 8;
-        private final int MAX_CPU = 20;
-
-        private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
-                .withValidResponseCodes(ImmutableList.of(400))
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                .withExecutor(new ForkJoinPool(
-                        Math.min(Runtime.getRuntime().availableProcessors() * CPU_MULTIPLIER, MAX_CPU)));
-
-        private final FileBinaryRequestExecutor baseFileBinaryRequestExecutor = FileBinaryRequestExecutor.of(DEFAULT_CLIENT)
-                .withMaxRetries(DEFAULT_MAX_RETRIES);
 
         static Builder builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_FileWriter.Builder()
-                    .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
-                    .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
                     .setRequestProvider(PostJsonRequestProvider.builder()
                             .setEndpoint("files")
                             .setRequest(Request.create())
@@ -3038,10 +2489,22 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .setDeleteTempFile(true);
         }
 
+        static FileWriter of(CogniteClient client) {
+            return FileWriter.builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400)))
+                    .setFileBinaryRequestExecutor(FileBinaryRequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries()))
+                    .build();
+        }
+
         abstract Builder toBuilder();
 
-        abstract String getAppIdentifier();
-        abstract String getSessionIdentifier();
+        abstract FileBinaryRequestExecutor getFileBinaryRequestExecutor();
         abstract boolean isDeleteTempFile();
 
         /**
@@ -3114,13 +2577,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
             FilesUploadRequestProvider requestProvider = FilesUploadRequestProvider.builder()
                     .setEndpoint("files")
                     .setRequest(Request.create())
-                    .setSdkIdentifier(ConnectorConstants.SDK_IDENTIFIER)
-                    .setAppIdentifier(getAppIdentifier())
-                    .setSessionIdentifier(getSessionIdentifier())
+                    .setSdkIdentifier(getClient().getClientConfig().getSdkIdentifier())
+                    .setAppIdentifier(getClient().getClientConfig().getAppIdentifier())
+                    .setSessionIdentifier(getClient().getClientConfig().getSessionIdentifier())
                     .build();
-
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
 
             // Build the file metadata request
             FileMetadata fileMetadata = fileContainer.getFileMetadata();
@@ -3142,7 +2602,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .withRequestParameters(FileParser.toRequestInsertItem(fileMetadata));
 
             // Post the file metadata and get the file upload links
-            ResponseBinary fileUploadResponse = requestExecutor
+            ResponseBinary fileUploadResponse = getRequestExecutor()
                     .executeRequestAsync(requestProvider
                             .withRequest(postFileMetaRequest)
                             .buildRequest(Optional.empty()))
@@ -3170,8 +2630,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
             // Start upload of the file binaries on a separate thread
             URL fileUploadURL = new URL((String) fileUploadResponseItem.get(uploadUrlKey));
-            FileBinaryRequestExecutor fileBinaryRequestExecutor = baseFileBinaryRequestExecutor
-                    .withMaxRetries(getMaxRetries());
 
             CompletableFuture<ResponseItems<String>> future;
             if (fileContainer.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY
@@ -3183,7 +2641,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 future = CompletableFuture.completedFuture(
                         ResponseItems.of(JsonResponseParser.create(), fileUploadResponse));
             } else {
-                future = fileBinaryRequestExecutor.uploadBinaryAsync(fileContainer.getFileBinary(), fileUploadURL)
+                future = getFileBinaryRequestExecutor()
+                        .enableDeleteTempFile(isDeleteTempFile())
+                        .uploadBinaryAsync(fileContainer.getFileBinary(), fileUploadURL)
                         .thenApply(responseBinary -> {
                             long requestDuration = System.currentTimeMillis() - responseBinary.getResponse().sentRequestAtMillis();
                             LOG.info(loggingPrefix + "Upload complete for file [{}], size {}MB in {}s at {}mb/s",
@@ -3236,7 +2696,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             }
             metaRequests.add(tempMeta);
 
-            ItemWriter updateWriter = ConnectorServiceV1.create(getMaxRetries(), getAppIdentifier(), getSessionIdentifier())
+            ItemWriter updateWriter = ConnectorServiceV1.of(getClient())
                      .updateFileHeaders();
 
             for (FileMetadata metadata : metaRequests) {
@@ -3258,21 +2718,10 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         @AutoValue.Builder
         abstract static class Builder extends ConnectorBase.Builder<Builder> {
-            abstract Builder setAppIdentifier(String value);
-            abstract Builder setSessionIdentifier(String value);
+            abstract Builder setFileBinaryRequestExecutor(FileBinaryRequestExecutor value);
             abstract Builder setDeleteTempFile(boolean value);
 
-            abstract FileWriter autoBuild();
-
-            FileWriter build() {
-                FileWriter writer = autoBuild();
-                Preconditions.checkState(writer.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && writer.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return writer;
-            }
+            abstract FileWriter build();
         }
     }
 

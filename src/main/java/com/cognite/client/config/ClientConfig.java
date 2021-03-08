@@ -12,8 +12,14 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 @AutoValue
 public abstract class ClientConfig implements Serializable {
-    private final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
-    private final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
+    /*
+    API request identifiers
+     */
+    private final static String SDK_IDENTIFIER = "cognite-beam-sdk-0.9.x";
+    private final static String DEFAULT_APP_IDENTIFIER = "cognite-java-sdk";
+    private final static String DEFAULT_SESSION_IDENTIFIER = "cognite-java-sdk";
+
+
     private final static UpsertMode DEFAULT_UPSERT_MODE = UpsertMode.UPDATE;
     private final static int DEFAULT_LIST_PARTITIONS = 8;
 
@@ -38,6 +44,7 @@ public abstract class ClientConfig implements Serializable {
 
     private static Builder builder() {
         return new AutoValue_ClientConfig.Builder()
+                .setSdkIdentifier(SDK_IDENTIFIER)
                 .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
                 .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
                 .setMaxRetries(DEFAULT_RETRIES)
@@ -60,6 +67,7 @@ public abstract class ClientConfig implements Serializable {
 
     abstract Builder toBuilder();
 
+    public abstract String getSdkIdentifier();
     public abstract String getAppIdentifier();
     public abstract String getSessionIdentifier();
     public abstract int getMaxRetries();
@@ -167,6 +175,7 @@ public abstract class ClientConfig implements Serializable {
 
     @AutoValue.Builder
     static abstract class Builder {
+        abstract Builder setSdkIdentifier(String value);
         abstract Builder setAppIdentifier(String value);
         abstract Builder setSessionIdentifier(String value);
         abstract Builder setMaxRetries(int value);

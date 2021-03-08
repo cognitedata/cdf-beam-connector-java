@@ -103,9 +103,7 @@ public abstract class SecurityCategories extends ApiBase {
      */
     public List<SecurityCategory> create(List<SecurityCategory> securityCategories) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSecurityCategories()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSecurityCategories();
 
         UpsertItems<SecurityCategory> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withIdFunction(this::getSecurityCategoryName);
@@ -134,9 +132,7 @@ public abstract class SecurityCategories extends ApiBase {
         List<List<SecurityCategory>> batches = Partition.ofSize(securityCategories, 100);
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSecurityCategories()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSecurityCategories();
 
         for (List<SecurityCategory> batch : batches) {
             List<Long> items = new ArrayList<>();

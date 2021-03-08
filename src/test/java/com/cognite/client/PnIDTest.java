@@ -112,21 +112,28 @@ class PnIDTest {
                     Struct.newBuilder()
                             .putFields("searchText", Values.of("1N914"))
                             .putFields("name", Values.of("The name of 1N914"))
-                            .putFields("type", Values.of("Asset"))
+                            .putFields("resourceType", Values.of("Asset"))
                             .putFields("externalId", Values.of("my-external-id-1"))
                             .putFields("id", Values.of(146379580567867L))
                             .build(),
-                    Structs.of(
-                            "searchText", Values.of(ListValue.newBuilder()
+                    Struct.newBuilder()
+                            .putFields("searchText", Values.of(ListValue.newBuilder()
                                     .addValues(Values.of("02-100-PE-N"))
                                     .addValues(Values.of("01-100-PE-N"))
-                                    .build()),
-                            "type", Values.of("Asset"),
-                            "externalId", Values.of("my-external-id-2")),
-                    Structs.of(
-                            "searchText", Values.of("01-100-PE-N"),
-                            "type", Values.of("Asset"),
-                            "externalId", Values.of("my-external-id-3")));
+                                    .build()))
+                            .putFields("name", Values.of("The name of 02-100-PE-N"))
+                            .putFields("resourceType", Values.of("Asset"))
+                            .putFields("externalId", Values.of("my-external-id-2"))
+                            .putFields("id", Values.of(146379580567345L))
+                            .build(),
+                    Struct.newBuilder()
+                            .putFields("searchText", Values.of("01-100-PE-N"))
+                            .putFields("name", Values.of("The name of 01-100-PE-N"))
+                            .putFields("resourceType", Values.of("Asset"))
+                            .putFields("externalId", Values.of("my-external-id-3"))
+                            .putFields("id", Values.of(146379345567867L))
+                            .build()
+                    );
 
             final List<Item> fileItems = uploadFilesResult.stream()
                     .map(metadata -> Item.newBuilder()

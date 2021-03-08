@@ -20,12 +20,9 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
-import com.cognite.client.CogniteClient;
 import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.beam.io.RequestParameters;
 import com.google.common.base.Preconditions;
-import org.apache.beam.sdk.metrics.Distribution;
-import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
@@ -76,9 +73,10 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
 
         // Read the items
         try {
-            Iterator<List<TimeseriesPoint>> resultsIterator = listItems(getClient(projectConfig, readerConfig),
-                    requestParameters,
-                    requestParameters.getPartitions().toArray(new String[requestParameters.getPartitions().size()]));
+            Iterator<List<TimeseriesPoint>> resultsIterator = getClient(projectConfig, readerConfig)
+                    .timeseries()
+                    .dataPoints()
+                    .retrieve(requestParameters.getRequest());
             Instant pageStartInstant = Instant.now();
             int totalNoItems = 0;
             while (resultsIterator.hasNext()) {
@@ -114,6 +112,7 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
         }
     }
 
+    /*
     protected Iterator<List<TimeseriesPoint>> listItems(CogniteClient client,
                                                      RequestParameters requestParameters,
                                                      String... partitions) throws Exception {
@@ -121,4 +120,6 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
                 "Partitions is not supported for data points");
         return client.timeseries().dataPoints().retrieve(requestParameters.getRequest());
     }
+
+     */
 }

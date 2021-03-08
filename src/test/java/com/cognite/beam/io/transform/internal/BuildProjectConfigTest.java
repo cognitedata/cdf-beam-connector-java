@@ -30,7 +30,6 @@ class BuildProjectConfigTest extends TestConfigProviderV1 {
 
         PCollection<ProjectConfig> projectConfig = pipeline
                 .apply("Build project config", BuildProjectConfig.create()
-                        .withSessionIdentifier(sessionId)
                         .withProjectConfigParameters(ProjectConfig.create()
                                 .withApiKeyFromGcpSecret(GcpSecretConfig.of(
                                         "719303257135",

@@ -131,10 +131,7 @@ public abstract class DataPoints extends ApiBase {
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
         for (Request request : splitRetrieveRequest(requestParameters)) {
-            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
-                    .withExecutorService(getClient().getExecutorService())
-                    .withHttpClient(getClient().getHttpClient()));
-            // todo: move executor service and client spec to connector service config
+            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request)));
         }
 
         // The iterator that will collect results across multiple results streams
@@ -213,9 +210,7 @@ public abstract class DataPoints extends ApiBase {
         }
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsDatapointsProto()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsDatapointsProto();
 
         /*
         Start the upsert:
@@ -496,10 +491,7 @@ public abstract class DataPoints extends ApiBase {
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
         for (Request request : requestList) {
-            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
-                    .withExecutorService(getClient().getExecutorService())
-                    .withHttpClient(getClient().getHttpClient()));
-            // todo: move executor service and client spec to connector service config
+            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request)));
         }
 
         // The iterator that will collect results across multiple results streams
@@ -527,9 +519,7 @@ public abstract class DataPoints extends ApiBase {
 
     public List<Item> delete(List<Item> dataPoints) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteDatapoints()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteDatapoints();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .withDeleteItemMappingFunction(this::toRequestDeleteItem);
@@ -1065,13 +1055,16 @@ public abstract class DataPoints extends ApiBase {
      * In case of string data points, this method returns 0 (i.e. no splitting per time window for string
      * time series).
      *
+     * This method is intended for advanced use cases with distributed computing frameworks that
+     * implement their own split and parallelization algorithms.
+     *
      * @param requestParameters
      * @param startOfWindow
      * @param endOfWindow
      * @return
      * @throws Exception
      */
-    private double getMaxFrequency(Request requestParameters,
+    public double getMaxFrequency(Request requestParameters,
                                    Instant startOfWindow,
                                    Instant endOfWindow) throws Exception {
         final String loggingPrefix = "getMaxFrequency() - " + RandomStringUtils.randomAlphanumeric(5) + " - ";
@@ -1163,7 +1156,13 @@ public abstract class DataPoints extends ApiBase {
     }
 
     /**
-     * Gets the max average TS count from a query.
+     * Gets the max average TS count from a data points count aggregates query.
+     *
+     * The query must specify a count aggregate and this method will calculate the average count
+     * across all TS and aggregation windows.
+     *
+     * This method is intended for advanced use cases with distributed computing frameworks that
+     * implement their own split and parallelization algorithms.
      * @param query
      * @return
      * @throws Exception

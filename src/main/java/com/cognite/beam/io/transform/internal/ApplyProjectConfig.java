@@ -77,9 +77,7 @@ public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestP
         PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                 .apply("Build project config", BuildProjectConfig.create()
                         .withProjectConfigFile(getProjectConfigFile())
-                        .withProjectConfigParameters(getProjectConfigParameters())
-                        .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                        .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                        .withProjectConfigParameters(getProjectConfigParameters()))
                 .apply("To list view", View.<ProjectConfig>asList());
 
         PCollection<RequestParameters> outputCollection = input

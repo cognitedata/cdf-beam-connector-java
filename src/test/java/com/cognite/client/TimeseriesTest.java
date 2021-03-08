@@ -46,7 +46,7 @@ class TimeseriesTest {
             LOG.info(loggingPrefix + "Finished upserting timeseries. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
 
-            Thread.sleep(15000); // wait for eventual consistency
+            Thread.sleep(20000); // wait for eventual consistency
 
             LOG.info(loggingPrefix + "Start reading timeseries.");
             List<TimeseriesMetadata> listTimeseriesResults = new ArrayList<>();

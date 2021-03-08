@@ -191,9 +191,7 @@ public abstract class Assets {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // Conditional streaming
@@ -302,9 +300,7 @@ public abstract class Assets {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Asset> outputCollection = input
@@ -463,9 +459,7 @@ public abstract class Assets {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getReaderConfig().getAppIdentifier())
-                            .withSessionIdentifier(getReaderConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Aggregate> outputCollection = input
@@ -642,9 +636,7 @@ public abstract class Assets {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
 
@@ -936,9 +928,7 @@ public abstract class Assets {
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withAppIdentifier(getWriterConfig().getAppIdentifier())
-                            .withSessionIdentifier(getWriterConfig().getSessionIdentifier()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
             PCollection<Item> outputCollection = input

@@ -67,9 +67,7 @@ public abstract class RawDatabases extends ApiBase {
     public Iterator<List<String>> list() throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ResultFutureIterator<String> futureIterator =
-                connector.readRawDbNames(getClient().buildAuthConfig())
-                        .withExecutorService(getClient().getExecutorService())
-                        .withHttpClient(getClient().getHttpClient());
+                connector.readRawDbNames(getClient().buildAuthConfig());
 
         return AdapterIterator.of(FanOutIterator.of(ImmutableList.of(futureIterator)), this::parseName);
     }
@@ -90,9 +88,7 @@ public abstract class RawDatabases extends ApiBase {
         List<String> deduplicated = new ArrayList<>(new HashSet<>(databases));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawDbNames()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawDbNames();
 
         List<List<String>> batches = Partition.ofSize(deduplicated, 100);
         for (List<String> batch : batches) {
@@ -132,9 +128,7 @@ public abstract class RawDatabases extends ApiBase {
         List<String> deduplicated = new ArrayList<>(new HashSet<>(databases));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawDbNames()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawDbNames();
 
         List<List<String>> batches = Partition.ofSize(deduplicated, 100);
         for (List<String> batch : batches) {

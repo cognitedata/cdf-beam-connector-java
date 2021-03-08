@@ -133,12 +133,8 @@ public abstract class Relationships extends ApiBase {
      */
     public List<Relationship> upsert(List<Relationship> relationships) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRelationships()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRelationships()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRelationships();
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRelationships();
 
         UpsertItems<Relationship> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withDeleteItemWriter(deleteItemWriter)
@@ -163,9 +159,7 @@ public abstract class Relationships extends ApiBase {
      */
     public List<Item> delete(List<Item> relationships) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRelationships()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRelationships();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .addParameter("ignoreUnknownIds", true);

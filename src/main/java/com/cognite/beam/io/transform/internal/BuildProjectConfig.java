@@ -19,8 +19,6 @@ package com.cognite.beam.io.transform.internal;
 import com.cognite.beam.io.config.GcpSecretConfig;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.client.dto.LoginStatus;
-import com.cognite.client.servicesV1.ConnectorServiceV1;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionRequest;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionResponse;
@@ -52,14 +50,11 @@ import java.util.List;
 @AutoValue
 public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<ProjectConfig>> {
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
-    protected final int MAX_RETRIES = 3;
 
     private static BuildProjectConfig.Builder builder() {
         return new AutoValue_BuildProjectConfig.Builder()
                 .setProjectConfigFile(ValueProvider.StaticValueProvider.of("."))
-                .setProjectConfigParameters(ProjectConfig.create())
-                .setSessionIdentifier(ReaderConfig.create().getSessionIdentifier())
-                .setAppIdentifier(ReaderConfig.create().getAppIdentifier());
+                .setProjectConfigParameters(ProjectConfig.create());
     }
 
     public static BuildProjectConfig create() {
@@ -69,8 +64,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
 
     abstract ValueProvider<String> getProjectConfigFile();
     abstract ProjectConfig getProjectConfigParameters();
-    abstract String getAppIdentifier();
-    abstract String getSessionIdentifier();
 
     public BuildProjectConfig withProjectConfigFile(ValueProvider<String> filePath) {
         Preconditions.checkNotNull(filePath, "File path cannot be null");
@@ -80,16 +73,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
     public BuildProjectConfig withProjectConfigParameters(ProjectConfig config) {
         Preconditions.checkNotNull(config, "Config cannot be null");
         return toBuilder().setProjectConfigParameters(config).build();
-    }
-
-    public BuildProjectConfig withAppIdentifier(String identifier) {
-        Preconditions.checkNotNull(identifier, "App identifier cannot be null.");
-        return toBuilder().setAppIdentifier(identifier).build();
-    }
-
-    public BuildProjectConfig withSessionIdentifier(String identifier) {
-        Preconditions.checkNotNull(identifier, "Session identifier cannot be null.");
-        return toBuilder().setSessionIdentifier(identifier).build();
     }
 
     @Override
@@ -106,11 +89,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
         PCollection<ProjectConfig> outputCollection = input
                 .apply("Build config object", Create.of(ProjectConfig.create()))
                 .apply("Populate config", ParDo.of(new DoFn<ProjectConfig, ProjectConfig>() {
-                    final ConnectorServiceV1 connector = ConnectorServiceV1.builder()
-                            .setMaxRetries(MAX_RETRIES)
-                            .setAppIdentifier(getAppIdentifier())
-                            .setSessionIdentifier(getSessionIdentifier())
-                            .build();
 
                     @ProcessElement
                     public void processElement(@Element ProjectConfig inputConfig,
@@ -126,21 +104,19 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                         // Source from 1) file and 2) parameters
                         if (context.sideInput(projectConfigFileView).size() > 0) {
                             LOG.info(loggingPrefix + "Project config found in file.");
-                            output = buildProjectConfig(context.sideInput(projectConfigFileView).get(0), loggingPrefix);
+                            output = context.sideInput(projectConfigFileView).get(0);
                         }
                         if (getProjectConfigParameters().isConfigured()) {
                             LOG.info(loggingPrefix + "Project config found via parameters.");
                             // if the project config is set via parameter, it should overwrite the file based config.
                             if (null != getProjectConfigParameters().getApiKey()) {
                                 LOG.info(loggingPrefix + "Api key specified via parameters");
-                                output = buildProjectConfig(getProjectConfigParameters(), loggingPrefix);
+                                output = getProjectConfigParameters();
                             } else if (null != getProjectConfigParameters().getGcpSecretConfig()) {
                                 LOG.info(loggingPrefix + "Api key specified via GCP Secret Manager.");
-                                output = buildProjectConfig(
-                                        getProjectConfigParameters()
+                                output = getProjectConfigParameters()
                                                 .withApiKey(getGcpSecret(getProjectConfigParameters().getGcpSecretConfig(),
-                                                loggingPrefix)),
-                                        loggingPrefix);
+                                                loggingPrefix));
                             }
                         }
 
@@ -172,16 +148,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                         return returnValue;
                     }
 
-                    private ProjectConfig buildProjectConfig(ProjectConfig input, String loggingPrefix) throws Exception {
-                        LoginStatus loginStatus = connector.readLoginStatusByApiKey(input.getHost().get(), input.getApiKey().get());
-                        if (loginStatus.getProject().isEmpty()) {
-                            LOG.warn(loggingPrefix + "Could not find the project for the api key.");
-                        }
-                        LOG.info(loggingPrefix + "Project identified for the api key. Project: {}", loginStatus.getProject());
-                        return input.withProject(loginStatus.getProject());
-                    }
-                    // todo: Remove the project lookup. The Java SDK will handle this.
-
                 }).withSideInputs(projectConfigFileView))
                 ;
 
@@ -192,8 +158,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
     public static abstract class Builder {
         public abstract Builder setProjectConfigFile(ValueProvider<String> value);
         public abstract Builder setProjectConfigParameters(ProjectConfig value);
-        abstract Builder setAppIdentifier(String value);
-        abstract Builder setSessionIdentifier(String value);
 
         public abstract BuildProjectConfig build();
     }

@@ -69,9 +69,7 @@ public abstract class RawTables extends ApiBase {
     public Iterator<List<String>> list(String dbName) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
         ConnectorServiceV1.ResultFutureIterator<String> futureIterator =
-                connector.readRawTableNames(dbName, getClient().buildAuthConfig())
-                        .withExecutorService(getClient().getExecutorService())
-                        .withHttpClient(getClient().getHttpClient());
+                connector.readRawTableNames(dbName, getClient().buildAuthConfig());
 
         return AdapterIterator.of(FanOutIterator.of(ImmutableList.of(futureIterator)), this::parseName);
     }
@@ -97,9 +95,7 @@ public abstract class RawTables extends ApiBase {
         List<String> deduplicated = new ArrayList<>(new HashSet<>(tables));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawTableNames(dbName)
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeRawTableNames(dbName);
 
         List<List<String>> batches = Partition.ofSize(deduplicated, 100);
         for (List<String> batch : batches) {
@@ -145,9 +141,7 @@ public abstract class RawTables extends ApiBase {
         List<String> deduplicated = new ArrayList<>(new HashSet<>(tables));
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawTableNames(dbName)
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteRawTableNames(dbName);
 
         List<List<String>> batches = Partition.ofSize(deduplicated, 100);
         for (List<String> batch : batches) {

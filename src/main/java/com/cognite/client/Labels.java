@@ -110,12 +110,8 @@ public abstract class Labels extends ApiBase {
      */
     public List<Label> upsert(List<Label> labels) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWrite = connector.writeLabels()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteLabels()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWrite = connector.writeLabels();
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteLabels();
 
         UpsertItems<Label> upsertItems = UpsertItems.of(createItemWrite, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withDeleteItemWriter(deleteItemWriter)
@@ -138,9 +134,7 @@ public abstract class Labels extends ApiBase {
      */
     public List<Item> delete(List<Item> labels) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteLabels()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteLabels();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig());
 

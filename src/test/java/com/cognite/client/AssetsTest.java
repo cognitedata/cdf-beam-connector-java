@@ -38,7 +38,7 @@ class AssetsTest {
 
         try {
             LOG.info(loggingPrefix + "Start upserting assets.");
-            List<Asset> upsertAssetsList = DataGenerator.generateAssetHierarchy(1680);
+            List<Asset> upsertAssetsList = DataGenerator.generateAssetHierarchy(1280);
             client.assets().upsert(upsertAssetsList);
             LOG.info(loggingPrefix + "Finished upserting assets. Duration: {}",
                     Duration.between(startInstant, Instant.now()));
