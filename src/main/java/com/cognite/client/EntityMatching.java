@@ -394,9 +394,7 @@ public abstract class EntityMatching extends ApiBase {
      */
     public List<Item> delete(List<Item> entityMatchingModels) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEntityMatcherModels()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEntityMatcherModels();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 //.addParameter("ignoreUnknownIds", true)

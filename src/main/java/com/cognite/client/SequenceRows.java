@@ -201,9 +201,7 @@ public abstract class SequenceRows extends ApiBase {
         }
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSequencesRows()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSequencesRows();
 
         /*
         Start the upsert:
@@ -331,9 +329,7 @@ public abstract class SequenceRows extends ApiBase {
         }
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSequencesRows()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSequencesRows();
 
         // Delete and completed lists
         List<SequenceBody> elementListDelete = sequenceRows;

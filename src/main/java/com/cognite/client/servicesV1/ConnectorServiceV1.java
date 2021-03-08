@@ -160,8 +160,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -180,8 +179,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -200,8 +198,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -222,10 +219,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -246,10 +240,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -270,10 +261,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -294,8 +282,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -314,8 +301,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -334,8 +320,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -356,10 +341,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -380,10 +362,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -404,10 +383,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -428,8 +404,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -448,8 +423,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -468,8 +442,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -490,8 +463,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.of(requestProvider)
-                .withMaxRetries(getMaxRetries().get())
+        return ItemWriter.of(getClient(), requestProvider)
                 .withDuplicatesResponseParser(JsonErrorMessageDuplicateResponseParser.builder().build());
     }
 
@@ -513,10 +485,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -537,10 +506,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -561,8 +527,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -583,10 +548,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -607,10 +569,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -631,8 +590,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -651,8 +609,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -671,8 +628,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -693,10 +649,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -717,10 +670,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -741,10 +691,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -768,8 +715,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         TSPointsResponseParser responseParser = TSPointsResponseParser.builder().build()
                 .withRequest(queryParameters);
 
-        return ResultFutureIterator.<String>of(requestProvider, responseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, responseParser);
     }
 
     /**
@@ -794,8 +740,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         TSPointsProtoResponseParser responseParser = TSPointsProtoResponseParser.builder().build()
                 .withRequest(queryParameters);
 
-        return ResultFutureIterator.<DataPointListItem>of(requestProvider, responseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<DataPointListItem>of(getClient(), requestProvider, responseParser);
     }
 
     /**
@@ -814,8 +759,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -836,10 +780,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -860,10 +801,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -884,10 +822,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -908,8 +843,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -931,8 +865,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonRawRowResponseParser.builder().build());
     }
 
     /**
@@ -952,8 +885,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.<String>of(requestProvider, JsonRawRowResponseParser.builder().build())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.<String>of(getClient(),
+                requestProvider, JsonRawRowResponseParser.builder().build());
     }
 
     /**
@@ -972,8 +905,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -993,10 +925,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1017,10 +946,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1042,8 +968,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1063,10 +988,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1086,10 +1008,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1114,8 +1033,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1138,10 +1056,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1164,10 +1079,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1188,8 +1100,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1208,8 +1119,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -1228,8 +1138,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1243,11 +1152,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         LOG.debug(loggingPrefix + "Initiating read File binaries by ids service.");
         this.validate();
 
-        return FileBinaryReader.builder()
-                .setMaxRetries(getMaxRetries().get())
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
-                .build();
+        return FileBinaryReader.of(getClient());
     }
 
     /**
@@ -1272,10 +1177,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1291,11 +1193,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
         LOG.debug(loggingPrefix + "Initiating write file proto service.");
         this.validate();
 
-        return FileWriter.builder()
-                .setMaxRetries(getMaxRetries().get())
-                .setAppIdentifier(getAppIdentifier())
-                .setSessionIdentifier(getSessionIdentifier())
-                .build();
+        return FileWriter.of(getClient());
     }
 
     /**
@@ -1316,10 +1214,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1340,10 +1235,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1366,8 +1258,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         JsonResponseParser responseParser = JsonResponseParser.create();
 
-        SingleRequestItemReader<String> itemReader = SingleRequestItemReader.of(requestProvider, responseParser)
-                .withMaxRetries(getMaxRetries().get());
+        SingleRequestItemReader<String> itemReader =
+                SingleRequestItemReader.of(getClient(), requestProvider, responseParser);
 
         // Send the request to the Cognite api
         ResponseItems<String> responseItems = itemReader.getItems(Request.create()
@@ -1406,8 +1298,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setBetaEnabled(true)
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1426,8 +1317,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1449,10 +1339,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setBetaEnabled(true)
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1474,10 +1361,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setBetaEnabled(true)
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1498,10 +1382,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1522,8 +1403,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1542,8 +1422,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonResponseParser.create());
     }
 
     /**
@@ -1562,8 +1441,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1584,10 +1462,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1608,8 +1483,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1630,10 +1504,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1654,10 +1525,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1678,8 +1546,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ResultFutureIterator.<String>of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return ResultFutureIterator.<String>of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1700,10 +1567,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1724,10 +1588,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1759,9 +1620,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     /**
@@ -1792,9 +1652,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     /**
@@ -1813,8 +1672,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return SingleRequestItemReader.of(requestProvider, JsonItemResponseParser.create())
-                .withMaxRetries(getMaxRetries().get());
+        return SingleRequestItemReader.of(getClient(), requestProvider, JsonItemResponseParser.create());
     }
 
     /**
@@ -1834,10 +1692,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return ItemWriter.builder()
-                .setRequestProvider(requestProvider)
-                .setMaxRetries(getMaxRetries().get())
-                .build();
+        return ItemWriter.of(getClient(), requestProvider);
     }
 
     /**
@@ -1868,9 +1723,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 .setSessionIdentifier(getSessionIdentifier())
                 .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonItemResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonItemResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     /**
@@ -1901,9 +1755,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                         .setSessionIdentifier(getSessionIdentifier())
                         .build();
 
-        return AsyncJobReader.of(jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
-                .withJobStartResponseParser(jobStartResponseParser)
-                .withMaxRetries(getMaxRetries().get());
+        return AsyncJobReader.of(getClient(), jobStartRequestProvider, jobResultsRequestProvider, JsonResponseParser.create())
+                .withJobStartResponseParser(jobStartResponseParser);
     }
 
     // TODO 3d models, revisions and nodes
@@ -2146,9 +1999,9 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
         private final String loggingPrefix = "SingleRequestItemReader [" + randomIdString + "] -";
 
-        private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
+        /*private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
                 .withValidResponseCodes(ImmutableList.of(400, 401, 409, 422))
-                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);
+                .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES);*/
 
         static <T> Builder<T> builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_SingleRequestItemReader.Builder<T>()
@@ -2311,7 +2164,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         static <T> Builder<T> builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_AsyncJobReader.Builder<T>()
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
+                    //.setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
                     .setJobStartResponseParser(DEFAULT_JOB_START_RESPONSE_PARSER)
                     .setJobTimeoutDuration(DEFAULT_ASYNC_API_JOB_TIMEOUT)
                     .setPollingInterval(DEFAULT_ASYNC_API_JOB_POLLING_INTERVAL)

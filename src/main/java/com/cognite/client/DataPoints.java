@@ -131,10 +131,7 @@ public abstract class DataPoints extends ApiBase {
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
         for (Request request : splitRetrieveRequest(requestParameters)) {
-            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
-                    .withExecutorService(getClient().getExecutorService())
-                    .withHttpClient(getClient().getHttpClient()));
-            // todo: move executor service and client spec to connector service config
+            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request)));
         }
 
         // The iterator that will collect results across multiple results streams
@@ -213,9 +210,7 @@ public abstract class DataPoints extends ApiBase {
         }
 
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsDatapointsProto()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsDatapointsProto();
 
         /*
         Start the upsert:
@@ -496,10 +491,7 @@ public abstract class DataPoints extends ApiBase {
         // Build the api iterators.
         List<Iterator<CompletableFuture<ResponseItems<DataPointListItem>>>> iterators = new ArrayList<>();
         for (Request request : requestList) {
-            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request))
-                    .withExecutorService(getClient().getExecutorService())
-                    .withHttpClient(getClient().getHttpClient()));
-            // todo: move executor service and client spec to connector service config
+            iterators.add(getClient().getConnectorService().readTsDatapointsProto(addAuthInfo(request)));
         }
 
         // The iterator that will collect results across multiple results streams
@@ -527,9 +519,7 @@ public abstract class DataPoints extends ApiBase {
 
     public List<Item> delete(List<Item> dataPoints) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteDatapoints()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteDatapoints();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .withDeleteItemMappingFunction(this::toRequestDeleteItem);
