@@ -2897,12 +2897,8 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .setSessionIdentifier(getSessionIdentifier())
                     .build();
 
-            RequestExecutor requestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
-                    .withValidResponseCodes(ImmutableList.of(400, 409, 422))
-                    .withMaxRetries(getMaxRetries());
-
             // Get the file download links
-            ResponseItems<String> fileItemsResponse = requestExecutor
+            ResponseItems<String> fileItemsResponse = getRequestExecutor()
                     .executeRequestAsync(requestProvider
                             .withRequest(items)
                             .buildRequest(Optional.empty()))
@@ -2979,17 +2975,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             abstract Builder setForceTempStorage(boolean value);
             abstract Builder setTempStoragePath(URI value);
 
-            abstract FileBinaryReader autoBuild();
-
-            FileBinaryReader build() {
-                FileBinaryReader reader = autoBuild();
-                Preconditions.checkState(reader.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && reader.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return reader;
-            }
+            abstract FileBinaryReader build();
         }
     }
 
@@ -3005,21 +2991,19 @@ public abstract class ConnectorServiceV1 implements Serializable {
         private final int CPU_MULTIPLIER = 8;
         private final int MAX_CPU = 20;
 
-        private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
+        /*private final RequestExecutor baseRequestExecutor = RequestExecutor.of(DEFAULT_CLIENT)
                 .withValidResponseCodes(ImmutableList.of(400))
                 .withMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
                 .withExecutor(new ForkJoinPool(
-                        Math.min(Runtime.getRuntime().availableProcessors() * CPU_MULTIPLIER, MAX_CPU)));
+                        Math.min(Runtime.getRuntime().availableProcessors() * CPU_MULTIPLIER, MAX_CPU)));*/
 
-        private final FileBinaryRequestExecutor baseFileBinaryRequestExecutor = FileBinaryRequestExecutor.of(DEFAULT_CLIENT)
-                .withMaxRetries(DEFAULT_MAX_RETRIES);
+       /* private final FileBinaryRequestExecutor baseFileBinaryRequestExecutor = FileBinaryRequestExecutor.of(DEFAULT_CLIENT)
+                .withMaxRetries(DEFAULT_MAX_RETRIES);*/
 
         static Builder builder() {
             return new com.cognite.client.servicesV1.AutoValue_ConnectorServiceV1_FileWriter.Builder()
                     .setAppIdentifier(DEFAULT_APP_IDENTIFIER)
                     .setSessionIdentifier(DEFAULT_SESSION_IDENTIFIER)
-                    .setMaxRetries(ConnectorConstants.DEFAULT_MAX_RETRIES)
-                    .setRequestExecutor(DEFAULT_REQUEST_EXECUTOR)
                     .setRequestProvider(PostJsonRequestProvider.builder()
                             .setEndpoint("files")
                             .setRequest(Request.create())
@@ -3027,8 +3011,22 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .setDeleteTempFile(true);
         }
 
+        static FileWriter of(CogniteClient client) {
+            return FileWriter.builder()
+                    .setClient(client)
+                    .setRequestExecutor(RequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries())
+                            .withValidResponseCodes(ImmutableList.of(400)))
+                    .setFileBinaryRequestExecutor(FileBinaryRequestExecutor.of(client.getHttpClient())
+                            .withExecutor(client.getExecutorService())
+                            .withMaxRetries(client.getClientConfig().getMaxRetries()))
+                    .build();
+        }
+
         abstract Builder toBuilder();
 
+        abstract FileBinaryRequestExecutor getFileBinaryRequestExecutor();
         abstract String getAppIdentifier();
         abstract String getSessionIdentifier();
         abstract boolean isDeleteTempFile();
@@ -3108,9 +3106,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .setSessionIdentifier(getSessionIdentifier())
                     .build();
 
-            RequestExecutor requestExecutor = baseRequestExecutor
-                    .withMaxRetries(getMaxRetries());
-
             // Build the file metadata request
             FileMetadata fileMetadata = fileContainer.getFileMetadata();
             FileMetadata fileMetadataExtraAssets = null;
@@ -3131,7 +3126,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                     .withRequestParameters(FileParser.toRequestInsertItem(fileMetadata));
 
             // Post the file metadata and get the file upload links
-            ResponseBinary fileUploadResponse = requestExecutor
+            ResponseBinary fileUploadResponse = getRequestExecutor()
                     .executeRequestAsync(requestProvider
                             .withRequest(postFileMetaRequest)
                             .buildRequest(Optional.empty()))
@@ -3159,8 +3154,6 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
             // Start upload of the file binaries on a separate thread
             URL fileUploadURL = new URL((String) fileUploadResponseItem.get(uploadUrlKey));
-            FileBinaryRequestExecutor fileBinaryRequestExecutor = baseFileBinaryRequestExecutor
-                    .withMaxRetries(getMaxRetries());
 
             CompletableFuture<ResponseItems<String>> future;
             if (fileContainer.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY
@@ -3172,7 +3165,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
                 future = CompletableFuture.completedFuture(
                         ResponseItems.of(JsonResponseParser.create(), fileUploadResponse));
             } else {
-                future = fileBinaryRequestExecutor.uploadBinaryAsync(fileContainer.getFileBinary(), fileUploadURL)
+                future = getFileBinaryRequestExecutor().uploadBinaryAsync(fileContainer.getFileBinary(), fileUploadURL)
                         .thenApply(responseBinary -> {
                             long requestDuration = System.currentTimeMillis() - responseBinary.getResponse().sentRequestAtMillis();
                             LOG.info(loggingPrefix + "Upload complete for file [{}], size {}MB in {}s at {}mb/s",
@@ -3225,7 +3218,7 @@ public abstract class ConnectorServiceV1 implements Serializable {
             }
             metaRequests.add(tempMeta);
 
-            ItemWriter updateWriter = ConnectorServiceV1.create(getMaxRetries(), getAppIdentifier(), getSessionIdentifier())
+            ItemWriter updateWriter = ConnectorServiceV1.of(getClient())
                      .updateFileHeaders();
 
             for (FileMetadata metadata : metaRequests) {
@@ -3247,21 +3240,12 @@ public abstract class ConnectorServiceV1 implements Serializable {
 
         @AutoValue.Builder
         abstract static class Builder extends ConnectorBase.Builder<Builder> {
+            abstract Builder setFileBinaryRequestExecutor(FileBinaryRequestExecutor value);
             abstract Builder setAppIdentifier(String value);
             abstract Builder setSessionIdentifier(String value);
             abstract Builder setDeleteTempFile(boolean value);
 
-            abstract FileWriter autoBuild();
-
-            FileWriter build() {
-                FileWriter writer = autoBuild();
-                Preconditions.checkState(writer.getMaxRetries() <= ConnectorConstants.MAX_MAX_RETRIES
-                                && writer.getMaxRetries() >= ConnectorConstants.MIN_MAX_RETRIES
-                        , "Max retries out of range. Must be between "
-                                + ConnectorConstants.MIN_MAX_RETRIES + " and " + ConnectorConstants.MAX_MAX_RETRIES);
-
-                return writer;
-            }
+            abstract FileWriter build();
         }
     }
 

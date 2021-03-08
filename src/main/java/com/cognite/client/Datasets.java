@@ -143,12 +143,8 @@ public abstract class Datasets extends ApiBase {
      */
     public List<DataSet> upsert(List<DataSet> datasets) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeDataSets()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateDataSets()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeDataSets();
+        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateDataSets();
 
         UpsertItems<DataSet> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)

@@ -150,12 +150,8 @@ public abstract class Sequences extends ApiBase {
      */
     public List<SequenceMetadata> upsert(List<SequenceMetadata> sequences) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSequencesHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateSequencesHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeSequencesHeaders();
+        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateSequencesHeaders();
 
         UpsertItems<SequenceMetadata> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)
@@ -182,9 +178,7 @@ public abstract class Sequences extends ApiBase {
      */
     public List<Item> delete(List<Item> sequences) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSequencesHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteSequencesHeaders();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig());
 

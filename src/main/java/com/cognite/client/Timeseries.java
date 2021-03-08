@@ -152,12 +152,8 @@ public abstract class Timeseries extends ApiBase {
      */
     public List<TimeseriesMetadata> upsert(List<TimeseriesMetadata> timeseries) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateTsHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeTsHeaders();
+        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateTsHeaders();
 
         UpsertItems<TimeseriesMetadata> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)
@@ -175,9 +171,7 @@ public abstract class Timeseries extends ApiBase {
 
     public List<Item> delete(List<Item> timeseries) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteTsHeaders()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteTsHeaders();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .addParameter("ignoreUnknownIds", true);

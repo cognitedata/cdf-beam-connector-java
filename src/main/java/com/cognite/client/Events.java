@@ -140,12 +140,8 @@ public abstract class Events extends ApiBase {
      */
     public List<Event> upsert(List<Event> events) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeEvents()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
-        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateEvents()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter createItemWriter = connector.writeEvents();
+        ConnectorServiceV1.ItemWriter updateItemWriter = connector.updateEvents();
 
         UpsertItems<Event> upsertItems = UpsertItems.of(createItemWriter, this::toRequestInsertItem, getClient().buildAuthConfig())
                 .withUpdateItemWriter(updateItemWriter)
@@ -173,9 +169,7 @@ public abstract class Events extends ApiBase {
      */
     public List<Item> delete(List<Item> events) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEvents()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteEvents();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig())
                 .addParameter("ignoreUnknownIds", true);

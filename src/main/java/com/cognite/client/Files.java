@@ -833,9 +833,7 @@ public abstract class Files extends ApiBase {
      */
     public List<Item> delete(List<Item> files) throws Exception {
         ConnectorServiceV1 connector = getClient().getConnectorService();
-        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteFiles()
-                .withHttpClient(getClient().getHttpClient())
-                .withExecutorService(getClient().getExecutorService());
+        ConnectorServiceV1.ItemWriter deleteItemWriter = connector.deleteFiles();
 
         DeleteItems deleteItems = DeleteItems.of(deleteItemWriter, getClient().buildAuthConfig());
 
