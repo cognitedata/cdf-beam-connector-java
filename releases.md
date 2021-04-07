@@ -27,6 +27,10 @@ Changes are grouped as follows:
 
 ## [0.9.16-SNAPSHOT]
 
+### Fixed
+
+- Duplicates when reading `file header`.
+
 ## [0.9.15]
 
 ### Added
