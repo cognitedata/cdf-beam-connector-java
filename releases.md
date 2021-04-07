@@ -25,6 +25,7 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Separate the generic Java SDK from the Beam specific code (the "Beam Connector").
 
+## [0.9.17-SNAPSHOT]
 
 ## [0.9.16]
 
@@ -68,7 +69,7 @@ Changes are grouped as follows:
 
 - Fixed a null pointer exception when using GCS temp storage for files--in some cases GCS is unable to report a correct content size.
 
-## 0.9.14
+## [0.9.14]
 
 ### Fixed
 
