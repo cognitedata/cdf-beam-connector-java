@@ -23,6 +23,7 @@ import com.cognite.beam.io.fn.IOBaseFn;
 import com.cognite.client.dto.FileContainer;
 import com.cognite.client.dto.FileMetadata;
 import com.google.common.base.Preconditions;
+import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
@@ -38,16 +39,14 @@ import java.util.List;
  * be overwritten.
  *
  */
-public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, FileMetadata> {
+public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, KV<Iterable<FileContainer>, Iterable<FileMetadata>>> {
     private final static Logger LOG = LoggerFactory.getLogger(UpsertFileFn.class);
 
     final WriterConfig writerConfig;
-    final boolean deleteTempFile;
     final PCollectionView<List<ProjectConfig>> projectConfigView;
 
     public UpsertFileFn(Hints hints,
                         WriterConfig writerConfig,
-                        boolean deleteTempFile,
                         PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints);
         Preconditions.checkNotNull(writerConfig, "Writer config cannot be null.");
@@ -55,7 +54,6 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, FileMetadata
 
         this.projectConfigView = projectConfigView;
         this.writerConfig = writerConfig;
-        this.deleteTempFile = deleteTempFile;
     }
 
     /**
@@ -69,7 +67,7 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, FileMetadata
      */
     @ProcessElement
     public void processElement(@Element Iterable<FileContainer> items,
-                               OutputReceiver<FileMetadata> outputReceiver,
+                               OutputReceiver<KV<Iterable<FileContainer>, Iterable<FileMetadata>>> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         final Instant batchStartInstant = Instant.now();
@@ -90,7 +88,7 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, FileMetadata
 
         // Write the items
         try {
-            List<FileMetadata> results = getClient(projectConfig, writerConfig).files().upload(upsertItems, deleteTempFile);
+            List<FileMetadata> results = getClient(projectConfig, writerConfig).files().upload(upsertItems, false);
 
             if (writerConfig.isMetricsEnabled()) {
                 apiBatchSize.update(results.size());
@@ -100,7 +98,7 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, FileMetadata
                     results.size(),
                     Duration.between(batchStartInstant, Instant.now()).toString());
 
-            results.forEach(item -> outputReceiver.output(item));
+            outputReceiver.output(KV.of(items, results));
         } catch (Exception e) {
             LOG.error(batchLogPrefix + "Error when writing to Cognite Data Fusion: {}",
                     e.toString());
