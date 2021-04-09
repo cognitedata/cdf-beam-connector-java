@@ -535,7 +535,7 @@ public abstract class Files {
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
-            PCollection<FileMetadata> outputCollection = input
+            PCollection<KV<Iterable<FileContainer>, Iterable<FileMetadata>>> outputCollectionFiles = input
                     .apply("Check id", MapElements.into(TypeDescriptor.of(FileContainer.class))
                             .via((FileContainer inputItem) -> {
                                 if (inputItem.getFileMetadata().hasExternalId() || inputItem.getFileMetadata().hasId()) {
@@ -560,7 +560,11 @@ public abstract class Files {
                     .apply("Remove key", Values.<Iterable<FileContainer>>create())
                     .apply("Upsert files", ParDo.of(
                             new UpsertFileFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView))
+                            .withSideInputs(projectConfigView));
+
+
+            PCollection<FileMetadata> outputCollection = outputCollectionFiles
+                    .apply("Wait on: Upsert files", Wait.on(outputCollectionFiles))
                     .apply("Remove temp binary", ParDo.of(new RemoveTempFile(isDeleteTempFile())));
 
             return outputCollection;
