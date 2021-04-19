@@ -27,6 +27,12 @@ Changes are grouped as follows:
 
 ## [0.9.17-SNAPSHOT]
 
+### Fixed
+
+- Null pointer when writing large file binaries. Under certain circumstances writing large file binaries to CDF 
+could result in an error (null pointer). This could happen if the network connection to CDF was interrupted while transferring
+  the file binary.
+
 ## [0.9.16]
 
 ### Fixed

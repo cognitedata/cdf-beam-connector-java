@@ -562,7 +562,6 @@ public abstract class Files {
                             new UpsertFileFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
-
             PCollection<FileMetadata> outputCollection = outputCollectionFiles
                     .apply("Wait on: Upsert files", Wait.on(outputCollectionFiles))
                     .apply("Remove temp binary", ParDo.of(new RemoveTempFile(isDeleteTempFile())));
