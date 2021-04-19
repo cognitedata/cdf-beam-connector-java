@@ -41,7 +41,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <beam.version>2.28.0</beam.version>
-        <cdf-java-sdk.version>0.9.2</cdf-java-sdk.version>
+        <cdf-java-sdk.version>0.9.3-SNAPSHOT</cdf-java-sdk.version>
         <auto.version>1.7.4</auto.version>
         <tomlj.version>1.0.0</tomlj.version>
         <junit.version>5.7.0</junit.version>
