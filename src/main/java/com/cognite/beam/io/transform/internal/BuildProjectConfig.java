@@ -18,7 +18,6 @@ package com.cognite.beam.io.transform.internal;
 
 import com.cognite.beam.io.config.GcpSecretConfig;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.ReaderConfig;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionRequest;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionResponse;
@@ -112,10 +111,10 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                             if (null != getProjectConfigParameters().getApiKey()) {
                                 LOG.info(loggingPrefix + "Api key specified via parameters");
                                 output = getProjectConfigParameters();
-                            } else if (null != getProjectConfigParameters().getGcpSecretConfig()) {
+                            } else if (null != getProjectConfigParameters().getApiKeyGcpSecretConfig()) {
                                 LOG.info(loggingPrefix + "Api key specified via GCP Secret Manager.");
                                 output = getProjectConfigParameters()
-                                                .withApiKey(getGcpSecret(getProjectConfigParameters().getGcpSecretConfig(),
+                                                .withApiKey(getGcpSecret(getProjectConfigParameters().getApiKeyGcpSecretConfig(),
                                                 loggingPrefix));
                             }
                         }
