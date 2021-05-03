@@ -181,9 +181,13 @@ public abstract class ProjectConfig implements Serializable {
                         && getProject().isAccessible() && !getProject().get().isEmpty() && getProject().get() != null,
                 "Could not obtain Cognite project name");
 
-        checkArgument(getApiKey() != null
-                        && getApiKey().isAccessible() && !getApiKey().get().isEmpty() && getApiKey().get() != null,
-                "Could not obtain Cognite api key");
+        checkArgument(
+                (getApiKey() != null && getApiKey().isAccessible() && getApiKey().get() != null && !getApiKey().get().isBlank())
+                || (getClientId() != null && getClientId().isAccessible() && getClientId().get() != null && !getClientId().get().isBlank()
+                        && getClientSecret() != null && getClientSecret().isAccessible() && getClientSecret().get() != null && !getClientSecret().get().isBlank()
+                        && getTokenUrl() != null && getTokenUrl().isAccessible() && getTokenUrl().get() != null && !getTokenUrl().get().isBlank())
+                ,
+                "Could not obtain Cognite api key nor OpenID client credentials.");
     }
 
     @Override
