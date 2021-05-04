@@ -1,3 +1,20 @@
+#------------------------------------------------------------------------
+# Configuration file for Cognite Data fusion authentication settings.
+#
+# You should choose either 1) OpenID connect client credentials
+# or 2) api keys.
+#------------------------------------------------------------------------
 [project]
 host = "https://api.cognitedata.com"
-api_key = "my-key"
+
+#------------------------------------------------------------------------
+# OpenID connect client credentials
+#------------------------------------------------------------------------
+client_id = "my-client-id-from-the-identity-provider"
+client_secret = "my-client-id-from-the-identity-provider"
+token_url = "https://login.microsoftonline.com/<azure-ad-tenant-id>/oauth2/v2.0/token"
+
+#------------------------------------------------------------------------
+# API key
+#------------------------------------------------------------------------
+api_key = "my-key-from-cdf"
