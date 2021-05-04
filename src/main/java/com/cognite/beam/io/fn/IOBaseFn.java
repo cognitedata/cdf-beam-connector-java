@@ -28,6 +28,8 @@ import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URL;
+
 /**
  * Base class for DoFns interacting with Cognite Data Fusion.
  *
@@ -57,14 +59,27 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
     protected CogniteClient getClient(ProjectConfig projectConfig, ConfigBase configBase) throws Exception {
         if (null == client) {
             // Client is not configured. Either because this class has been serialized or it is the first method call
-            Preconditions.checkState(null != projectConfig.getApiKey() && projectConfig.getApiKey().isAccessible(),
-                    "API key cannot be accessed. Please check that it is configured.");
-            client = CogniteClient.ofKey(projectConfig.getApiKey().get())
-                    .withBaseUrl(projectConfig.getHost().get())
-                    .withClientConfig(ClientConfig.create()
-                            .withMaxRetries(hints.getMaxRetries().get())
-                            .withAppIdentifier(configBase.getAppIdentifier())
-                            .withSessionIdentifier(configBase.getSessionIdentifier()));
+
+            if (configHasClientCredentials(projectConfig)) {
+                // client credentials take precedence over api key
+                client = CogniteClient.ofClientCredentials(projectConfig.getClientId().get(),
+                        projectConfig.getClientSecret().get(), new URL(projectConfig.getTokenUrl().get()))
+                        .withBaseUrl(projectConfig.getHost().get())
+                        .withClientConfig(ClientConfig.create()
+                                .withMaxRetries(hints.getMaxRetries().get())
+                                .withAppIdentifier(configBase.getAppIdentifier())
+                                .withSessionIdentifier(configBase.getSessionIdentifier()));
+            } else if (configHasApiKey(projectConfig)) {
+                client = CogniteClient.ofKey(projectConfig.getApiKey().get())
+                        .withBaseUrl(projectConfig.getHost().get())
+                        .withClientConfig(ClientConfig.create()
+                                .withMaxRetries(hints.getMaxRetries().get())
+                                .withAppIdentifier(configBase.getAppIdentifier())
+                                .withSessionIdentifier(configBase.getSessionIdentifier()));
+            } else {
+                throw new Exception("Neither client credentials nor API key cannot be accessed. Please check that it is configured.");
+            }
+
 
             if (null != projectConfig.getProject() && projectConfig.getProject().isAccessible()) {
                 client = client.withProject(projectConfig.getProject().get());
@@ -72,5 +87,22 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
         }
 
         return client;
+    }
+
+    /*
+    Returns true if the project config contains accessible client credentials.
+     */
+    private boolean configHasClientCredentials(ProjectConfig projectConfig) {
+        return (null != projectConfig.getClientId() && projectConfig.getClientId().isAccessible()
+                && null != projectConfig.getClientSecret() && projectConfig.getClientSecret().isAccessible()
+                && null != projectConfig.getTokenUrl() && projectConfig.getTokenUrl().isAccessible()
+        );
+    }
+
+    /*
+    Returns true if the project config contains an accessible api key.
+     */
+    private boolean configHasApiKey(ProjectConfig projectConfig) {
+        return (null != projectConfig.getApiKey() && projectConfig.getApiKey().isAccessible());
     }
 }
