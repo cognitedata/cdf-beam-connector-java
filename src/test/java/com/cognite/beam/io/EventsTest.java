@@ -55,7 +55,7 @@ class EventsTest extends TestConfigProviderV1 {
         PCollection<Event> results = p.apply(events)
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write events", CogniteIO.writeEvents()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
