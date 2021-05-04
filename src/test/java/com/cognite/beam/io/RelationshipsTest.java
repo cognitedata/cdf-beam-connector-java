@@ -62,7 +62,7 @@ class RelationshipsTest extends TestConfigProviderV1 {
         PCollection<Relationship> results = p.apply(relationships)
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write events", CogniteIO.writeRelationships()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -102,7 +102,7 @@ class RelationshipsTest extends TestConfigProviderV1 {
 
         PCollection<Relationship> readResults = p2
                 .apply("Read rels", CogniteIO.readRelationships()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -117,7 +117,7 @@ class RelationshipsTest extends TestConfigProviderV1 {
                                 .build()
                 ))
                 .apply("Delete items", CogniteIO.deleteRelationships()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))

@@ -40,7 +40,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
         final String myMetaKey = "myMetaValue";
 
         Assets.Read assetReader = CogniteIO.readAssets()
-                .withProjectConfig(projectConfig)
+                .withProjectConfig(projectConfigApiKey)
                 .withRequestParameters(RequestParameters.create()
                         .withRootParameter("limit", limit)
                         .withFilterMetadataParameter("myMetaKey", myMetaKey));
@@ -149,7 +149,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<Event> events = pipeline.apply(CogniteIO.readEvents()
-                .withProjectConfig(projectConfig)
+                .withProjectConfig(projectConfigApiKey)
                 .withRequestParameters(RequestParameters.create()
                         .withFilterParameter("source", TestUtilsV1.sourceValue))
 
@@ -216,7 +216,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<Event> events = pipeline.apply(CogniteIO.readEvents()
-                .withProjectConfig(projectConfig)
+                .withProjectConfig(projectConfigApiKey)
                 .withRequestParameters(RequestParameters.create()
                         .withFilterParameter("source", TestUtilsV1.sourceValue))
         );
@@ -252,7 +252,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
 
         final PCollection<TimeseriesMetadata> tsmeta = thePipeline
                 .apply(CogniteIO.readTimeseriesMetadata()
-                        .withProjectConfig(projectConfig));
+                        .withProjectConfig(projectConfigApiKey));
 
         tsmeta
                 .apply("Format results",
@@ -279,7 +279,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
 
         final PCollection<TimeseriesPoint> tspoints = thePipeline
                 .apply(CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withRequestParameters(filter));
 
         tspoints
@@ -307,7 +307,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
 
         final PCollection<TimeseriesMetadata> tsmeta = thePipeline
                 .apply(CogniteIO.readTimeseriesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withRequestParameters(tsMetadataFilter)
                 );
 
@@ -325,7 +325,7 @@ class CogniteIOTest extends TestConfigProviderV1 {
 
         final PCollection<TimeseriesPoint> tspoints = thePipeline
                 .apply(CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withRequestParameters(tsPointsFilter));
 
         tspoints

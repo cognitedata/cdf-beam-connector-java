@@ -55,7 +55,7 @@ class EventsTest extends TestConfigProviderV1 {
         PCollection<Event> results = p.apply(events)
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write events", CogniteIO.writeEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -87,7 +87,7 @@ class EventsTest extends TestConfigProviderV1 {
 
         PCollection<Event> readResults = p2
                 .apply("Read events", CogniteIO.readEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -106,7 +106,7 @@ class EventsTest extends TestConfigProviderV1 {
                                 .build()
                 ))
                 .apply("Delete items", CogniteIO.deleteEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -148,7 +148,7 @@ class EventsTest extends TestConfigProviderV1 {
 
         PCollection<Event> readResults = pipeline
                 .apply("Read events", CogniteIO.readEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId)
@@ -193,7 +193,7 @@ class EventsTest extends TestConfigProviderV1 {
 
         p.apply("Input data", Create.of(TestUtilsV1.generateEvents(2356)))
                 .apply("write events", CogniteIO.writeEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -209,7 +209,7 @@ class EventsTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read events aggregates", CogniteIO.readEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -222,7 +222,7 @@ class EventsTest extends TestConfigProviderV1 {
                                         .setExternalId(event.getExternalId().getValue())
                                         .build()))
                 .apply("Ready event by id", CogniteIO.readAllEventsByIds()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)))
@@ -241,7 +241,7 @@ class EventsTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read events headers", CogniteIO.readEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -253,7 +253,7 @@ class EventsTest extends TestConfigProviderV1 {
                                 .build()
                         ))
                 .apply("Delete events", CogniteIO.deleteEvents()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)))

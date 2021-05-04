@@ -41,7 +41,7 @@ class DataSetsTest extends TestConfigProviderV1 {
                         .putMetadata("type", TestUtilsV1.sourceValue)
                         .build()))
                 .apply("write data set", CogniteIO.writeDataSets()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -81,7 +81,7 @@ class DataSetsTest extends TestConfigProviderV1 {
 
         PCollection<DataSet> readResults = p2
                 .apply("Read dataset", CogniteIO.readDataSets()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
