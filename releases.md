@@ -25,13 +25,13 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Separate the generic Java SDK from the Beam specific code (the "Beam Connector").
 
-## [0.9.17-SNAPSHOT]
+## [0.9.17]
 
 ### Added
 
 - Support for Java 11.
 - Support for Beam 2.29.0.
-- CDF Java SDK 0.9.3.
+- CDF Java SDK 0.9.4.
 - Support for authenticating towards Cognite Data Fusion using OpenID Connect.
 
 ### Fixed
