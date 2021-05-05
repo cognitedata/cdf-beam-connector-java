@@ -27,6 +27,13 @@ Changes are grouped as follows:
 
 ## [0.9.17-SNAPSHOT]
 
+### Added
+
+- Support for Java 11.
+- Support for Beam 2.29.0.
+- CDF Java SDK 0.9.3.
+- Support for authenticating towards Cognite Data Fusion using OpenID Connect.
+
 ### Fixed
 
 - Null pointer when writing large file binaries. Under certain circumstances writing large file binaries to CDF 

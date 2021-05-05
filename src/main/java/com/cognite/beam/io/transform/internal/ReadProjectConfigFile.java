@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Utility transform for reading a project config (toml) file from the specified location and parsing it into
- * {@code KV<String, String>}.
+ * {@link ProjectConfig}.
  */
 @AutoValue
 public abstract class ReadProjectConfigFile extends PTransform<PBegin, PCollection<ProjectConfig>> {

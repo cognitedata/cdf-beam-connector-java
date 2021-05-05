@@ -31,17 +31,25 @@ import java.util.List;
 
 /**
  * Parses a String TOML config into a ProjectConfig object.
+ *
+ * It will look for the authentication configuration in the following order:
+ * 1. OpenID Connect, client credentials.
+ * 2. API keys.
  */
 public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
+    private final static String HOST_KEY = "host";
+    private final static String API_KEY = "api_key";
+    private final static String CLIENT_ID_KEY = "client_id";
+    private final static String CLIENT_SECRET_KEY = "client_secret";
+    private final static String TOKEN_URL_KEY = "token_url";
+
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
-    private final ImmutableList<String> configKeyList = ImmutableList.of("host", "project", "api_key");
-    private final ImmutableList<String> mandatoryConfigKeyList = ImmutableList.of("project", "api_key");
-
-    @Setup
-    public void setup() {
-        LOG.info("Setting up ProjectReadConfigFile.");
-    }
+    private final ImmutableList<String> configKeyList = ImmutableList.of(HOST_KEY, API_KEY,
+            CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY);
+    private final ImmutableList<String> mandatoryConfigKeyListApiKey = ImmutableList.of(API_KEY);
+    private final ImmutableList<String> mandatoryConfigKeyListClientCredentials =
+            ImmutableList.of(CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY);
 
     @ProcessElement
     public void processElement(@Element String tomlString,
@@ -60,27 +68,36 @@ public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
 
         TomlTable configTable = parseResult.getTableOrEmpty("project");
 
-        // Check that the all mandatory keys are defined.
-        List<String> keys = new ArrayList<>(3);
+        // Collect the valid config keys from the file.
+        List<String> keys = new ArrayList<>();
         for (String keyName : configKeyList) {
             if (configTable.contains(keyName)) {
                 keys.add(keyName);
             }
         }
         LOG.info("Found {} keys in the project configuration setting", keys.size());
-        if (keys.size() == 0) {
-            LOG.warn("Could not find any valid keys in the project configuration setting.");
-        }
-        if (!keys.containsAll(mandatoryConfigKeyList)) {
-            LOG.warn("Could not find all mandatory keys in the project configuration setting.");
+
+        // Build the project config. OpenID takes precedence over api keys
+        // Check that the all mandatory keys are defined.
+        ProjectConfig returnObject = ProjectConfig.create();
+        if (keys.containsAll(mandatoryConfigKeyListClientCredentials)) {
+            returnObject = returnObject
+                    .withClientId(configTable.getString(CLIENT_ID_KEY))
+                    .withClientSecret(configTable.getString(CLIENT_SECRET_KEY))
+                    .withTokenUrl(configTable.getString(TOKEN_URL_KEY));
+
+        } else if (keys.containsAll(mandatoryConfigKeyListApiKey)) {
+            returnObject = returnObject
+                    .withApiKey(configTable.getString(API_KEY));
+        } else {
+            // Could not find any valid configs
+            LOG.warn("Could not find the mandatory keys in the project configuration setting. Cannot build project config.");
             return;
         }
 
-        ProjectConfig returnObject = ProjectConfig.create()
-                .withProject(configTable.getString("project"))
-                .withApiKey(configTable.getString("api_key"));
-        if (configTable.contains("host")) {
-            returnObject = returnObject.withHost(configTable.getString("host"));
+        // Add the optional host parameter if set.
+        if (configTable.contains(HOST_KEY)) {
+            returnObject = returnObject.withHost(configTable.getString(HOST_KEY));
         }
         out.output(returnObject);
     }

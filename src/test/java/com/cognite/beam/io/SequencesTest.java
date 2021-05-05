@@ -52,7 +52,7 @@ class SequencesTest extends TestConfigProviderV1 {
 
         p.apply("Input data", Create.of(TestUtilsV1.generateSequenceMetadata(5)))
                 .apply("write sequences", CogniteIO.writeSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -68,7 +68,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence headers", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -77,7 +77,7 @@ class SequencesTest extends TestConfigProviderV1 {
                 .apply("Add sequence rows", MapElements.into(TypeDescriptor.of(SequenceBody.class))
                         .via(sequence -> TestUtilsV1.generateSequenceRows(sequence, 567)))
                 .apply("Write rows", CogniteIO.writeSequenceRows()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -89,7 +89,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence headers", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -101,7 +101,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .build()
                         ))
                 .apply("Write updates", CogniteIO.writeSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -117,7 +117,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence headers", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -128,7 +128,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .withRootParameter("externalId", sequence.getExternalId().getValue())
                         ))
                 .apply("Read rows", CogniteIO.readAllSequenceRows()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)))
@@ -156,7 +156,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 }
                                 ))
                 .apply("Delete rows", CogniteIO.deleteSequenceRows()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -168,7 +168,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence headers", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -180,7 +180,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .build()
                         ))
                 .apply("Delete sequences", CogniteIO.deleteSequences()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -208,7 +208,7 @@ class SequencesTest extends TestConfigProviderV1 {
 
         p.apply("Input data", Create.of(TestUtilsV1.generateSequenceMetadata(35)))
                 .apply("write sequences", CogniteIO.writeSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -224,7 +224,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence aggregates", CogniteIO.readAggregatesSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -244,7 +244,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence headers", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -256,7 +256,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .build()
                         ))
                 .apply("Delete sequences", CogniteIO.deleteSequences()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -284,7 +284,7 @@ class SequencesTest extends TestConfigProviderV1 {
 
         p.apply("Input data", Create.of(TestUtilsV1.generateSequenceMetadata(1345)))
                 .apply("write sequences", CogniteIO.writeSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -300,7 +300,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequences", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -312,7 +312,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                         .setExternalId(sequenceMetadata.getExternalId().getValue())
                                         .build()))
                 .apply("Ready Seq by id", CogniteIO.readAllSequencesMetadataByIds()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)))
@@ -331,7 +331,7 @@ class SequencesTest extends TestConfigProviderV1 {
         p = Pipeline.create();
         p
                 .apply("Read sequence headers", CogniteIO.readSequencesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -343,7 +343,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .build()
                         ))
                 .apply("Delete sequences", CogniteIO.deleteSequences()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)))

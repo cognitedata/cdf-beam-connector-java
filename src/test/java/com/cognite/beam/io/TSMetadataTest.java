@@ -31,7 +31,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
         PCollection<TimeseriesMetadata> writeResults = pipeline
                 .apply("Create TS objects", Create.of(TestUtilsV1.generateTsHeaderObjects(9500)))
                 .apply("Write TS headers", CogniteIO.writeTimeseriesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -57,7 +57,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesMetadata> readResults = p2
                 .apply("Read TS headers", CogniteIO.readTimeseriesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withRequestParameters(RequestParameters.create()
                                 .withFilterMetadataParameter("source", TestUtilsV1.sourceValue))
                         .withReaderConfig(ReaderConfig.create()
@@ -74,7 +74,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
                                 .build()
                         ))
                         .apply("write items", CogniteIO.writeTimeseriesMetadata()
-                                .withProjectConfig(projectConfig)
+                                .withProjectConfig(projectConfigApiKey)
                                 .withWriterConfig(WriterConfig.create()
                                         .withAppIdentifier("Beam SDK unit test")
                                         .withSessionIdentifier(sessionId))
@@ -97,7 +97,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesMetadata> readResults = p2
                 .apply("Read TS headers", CogniteIO.readTimeseriesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -121,7 +121,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
                                         .build()
                         ))
                         .apply("Delete items", CogniteIO.deleteTimeseries()
-                                .withProjectConfig(projectConfig)
+                                .withProjectConfig(projectConfigApiKey)
                                 .withWriterConfig(WriterConfig.create()
                                         .withAppIdentifier("Beam SDK unit test")
                                         .withSessionIdentifier(sessionId))

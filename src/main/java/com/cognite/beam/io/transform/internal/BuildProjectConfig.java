@@ -18,7 +18,6 @@ package com.cognite.beam.io.transform.internal;
 
 import com.cognite.beam.io.config.GcpSecretConfig;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.ReaderConfig;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionRequest;
 import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionResponse;
@@ -43,8 +42,8 @@ import java.util.List;
  * 2. File reference
  * 3. GCP secrets manager
  *
- * For all options, this transform will perform an active lookup of the project/tenant to use. I.e. the required input
- * is an api key and (optinally) a host specification.
+ * The auth config can be based on OpenID Connect client credentials or api key.
+ * OpenID Connect will take precedence over api key.
  *
  */
 @AutoValue
@@ -95,7 +94,7 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                                                OutputReceiver<ProjectConfig> out,
                                                ProcessContext context) throws Exception {
                         final String loggingPrefix = "BuildProjectConfig ["
-                                + RandomStringUtils.randomAlphanumeric(6)
+                                + RandomStringUtils.randomAlphanumeric(5)
                                 + "] - ";
                         LOG.debug(loggingPrefix + "Received config to process: {}", inputConfig.toString());
 
@@ -109,13 +108,26 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                         if (getProjectConfigParameters().isConfigured()) {
                             LOG.info(loggingPrefix + "Project config found via parameters.");
                             // if the project config is set via parameter, it should overwrite the file based config.
-                            if (null != getProjectConfigParameters().getApiKey()) {
+
+                            if (null != getProjectConfigParameters().getClientId()
+                                        && null != getProjectConfigParameters().getTokenUrl()
+                                        && null != getProjectConfigParameters().getClientSecret()) {
+                                LOG.info(loggingPrefix + "Client credentials specified via parameters");
+                                output = getProjectConfigParameters();
+                            } else if (null != getProjectConfigParameters().getClientId()
+                                    && null != getProjectConfigParameters().getTokenUrl()
+                                    && null != getProjectConfigParameters().getClientSecretGcpSecretConfig()) {
+                                LOG.info(loggingPrefix + "Client credentials specified via GCP Secret Manager");
+                                output = getProjectConfigParameters()
+                                        .withClientSecret(getGcpSecret(getProjectConfigParameters().getClientSecretGcpSecretConfig(),
+                                                loggingPrefix));
+                            } else if (null != getProjectConfigParameters().getApiKey()) {
                                 LOG.info(loggingPrefix + "Api key specified via parameters");
                                 output = getProjectConfigParameters();
-                            } else if (null != getProjectConfigParameters().getGcpSecretConfig()) {
+                            } else if (null != getProjectConfigParameters().getApiKeyGcpSecretConfig()) {
                                 LOG.info(loggingPrefix + "Api key specified via GCP Secret Manager.");
                                 output = getProjectConfigParameters()
-                                                .withApiKey(getGcpSecret(getProjectConfigParameters().getGcpSecretConfig(),
+                                        .withApiKey(getGcpSecret(getProjectConfigParameters().getApiKeyGcpSecretConfig(),
                                                 loggingPrefix));
                             }
                         }

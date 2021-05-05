@@ -1,6 +1,7 @@
 package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.client.config.TokenUrl;
 import com.google.common.base.Strings;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -19,7 +20,8 @@ import java.time.format.DateTimeFormatter;
 
 public class TestConfigProviderV1 {
     private final static String apiVersion = "v1";
-    protected static ProjectConfig projectConfig;
+    protected static ProjectConfig projectConfigApiKey;
+    protected static ProjectConfig projectConfigClientCredentials;
     protected static String appIdentifier = "Beam SDK unit test";
     protected static String rawDbName = "the_best_tests";
     protected static String rawTableName = "best_table";
@@ -27,9 +29,19 @@ public class TestConfigProviderV1 {
     protected static String deltaTable = "timestamp.test";
 
     public static void init() {
-        projectConfig = ProjectConfig.create()
+        projectConfigApiKey = ProjectConfig.create()
                 .withHost(getHost())
                 .withApiKey(getApiKey());
+
+        try {
+            projectConfigClientCredentials = ProjectConfig.create()
+                    .withHost(getHost())
+                    .withClientId(getClientId())
+                    .withClientSecret(getClientSecret())
+                    .withTokenUrl(TokenUrl.generateAzureAdURL(getTenantId()).toString());
+        }  catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     protected static String getProject() {
@@ -50,6 +62,33 @@ public class TestConfigProviderV1 {
         }
 
         return apiKey;
+    }
+
+    public static String getClientId() {
+        String clientId = System.getenv("TEST_CLIENT_ID");
+
+        if (Strings.isNullOrEmpty(clientId)) {
+            clientId = "default";
+        }
+        return clientId;
+    }
+
+    public static String getClientSecret() {
+        String clientSecret = System.getenv("TEST_CLIENT_SECRET");
+
+        if (Strings.isNullOrEmpty(clientSecret)) {
+            clientSecret = "default";
+        }
+        return clientSecret;
+    }
+
+    public static String getTenantId() {
+        String tenantId = System.getenv("TEST_TENANT_ID");
+
+        if (Strings.isNullOrEmpty(tenantId)) {
+            tenantId = "default";
+        }
+        return tenantId;
     }
 
     protected static String getHost() {
@@ -73,8 +112,8 @@ public class TestConfigProviderV1 {
         return new Request.Builder()
                 //.header("Content-Type", "application/json")
                 .header("Accept", "application/json")
-                .header("api-key", projectConfig.getApiKey().get())
-                .url(projectConfig.getHost() + "/api/" + apiVersion + "/projects/" + projectConfig
+                .header("api-key", projectConfigApiKey.getApiKey().get())
+                .url(projectConfigApiKey.getHost() + "/api/" + apiVersion + "/projects/" + projectConfigApiKey
                         .getProject() + "/" + resource)
                 .post(RequestBody.create(jsonString, MediaType.get("application/json; charset=utf-8")))
                 .build();

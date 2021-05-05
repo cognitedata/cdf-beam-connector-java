@@ -31,120 +31,192 @@ import static com.google.common.base.Preconditions.*;
 @AutoValue
 @DefaultCoder(SerializableCoder.class)
 public abstract class ProjectConfig implements Serializable {
-  private final static String DEFAULT_HOST = "https://api.cognitedata.com";
-  private final static String DEFAULT_PROJECT = "undefined";
-  private final static String DEFAULT_API_KEY = "undefined";
+    private final static String DEFAULT_HOST = "https://api.cognitedata.com";
 
-  private static Builder builder() {
-    return new com.cognite.beam.io.config.AutoValue_ProjectConfig.Builder()
-            .setHost(ValueProvider.StaticValueProvider.of(DEFAULT_HOST))
-            .setConfigured(false);
-  }
+    private static Builder builder() {
+        return new com.cognite.beam.io.config.AutoValue_ProjectConfig.Builder()
+                .setHost(ValueProvider.StaticValueProvider.of(DEFAULT_HOST))
+                .setConfigured(false);
+    }
 
-  public static ProjectConfig create() {
-    return ProjectConfig.builder().build();
-  }
+    public static ProjectConfig create() {
+        return ProjectConfig.builder().build();
+    }
 
-  @Nullable public abstract ValueProvider<String> getProject();
-  @Nullable public abstract ValueProvider<String> getApiKey();
-  public abstract ValueProvider<String> getHost();
-  public abstract boolean isConfigured();
-  @Nullable  public abstract GcpSecretConfig getGcpSecretConfig();
+    @Nullable public abstract ValueProvider<String> getProject();
+    @Nullable public abstract ValueProvider<String> getApiKey();
+    @Nullable public abstract ValueProvider<String> getClientId();
+    @Nullable public abstract ValueProvider<String> getClientSecret();
+    @Nullable public abstract ValueProvider<String> getTokenUrl();
+    public abstract ValueProvider<String> getHost();
+    public abstract boolean isConfigured();
+    @Nullable  public abstract GcpSecretConfig getApiKeyGcpSecretConfig();
+    @Nullable  public abstract GcpSecretConfig getClientSecretGcpSecretConfig();
 
-  public abstract ProjectConfig.Builder toBuilder();
+    public abstract ProjectConfig.Builder toBuilder();
 
-  /**
-   * Returns a new {@code ProjectConfig} that represents the specified host.
-   * @param value The project id interact with.
-   */
-  public ProjectConfig withHost(ValueProvider<String> value) {
-    return toBuilder().setHost(value).setConfigured(true).build();
-  }
+    /**
+     * Returns a new {@code ProjectConfig} that represents the specified host.
+     * @param value The Cognite Data Fusion host.
+     */
+    public ProjectConfig withHost(ValueProvider<String> value) {
+        return toBuilder().setHost(value).setConfigured(true).build();
+    }
 
-  /**
-   * Returns a new {@code ProjectConfig} that represents the specified host.
-   * @param value The project id interact with.
-   */
-  public ProjectConfig withHost(String value) {
-    return withHost(ValueProvider.StaticValueProvider.of(value));
-  }
+    /**
+     * Returns a new {@code ProjectConfig} that represents the specified host.
+     * @param value The Cognite Data Fusion host.
+     */
+    public ProjectConfig withHost(String value) {
+        return withHost(ValueProvider.StaticValueProvider.of(value));
+    }
 
-  /**
-   * Returns a new {@code ProjectConfig} that represents the specified project.
-   * @param value The project id interact with.
-   */
-  public ProjectConfig withProject(ValueProvider<String> value) {
-    return toBuilder().setProject(value).setConfigured(true).build();
-  }
+    /**
+     * Returns a new {@code ProjectConfig} that represents the specified project.
+     * @param value The project id to interact with.
+     */
+    public ProjectConfig withProject(ValueProvider<String> value) {
+        return toBuilder().setProject(value).setConfigured(true).build();
+    }
 
-  /**
-   * Returns a new {@code ProjectConfig} that represents the specified project.
-   * @param value The project id interact with.
-   */
-  public ProjectConfig withProject(String value) {
-    return withProject(ValueProvider.StaticValueProvider.of(value));
-  }
+    /**
+     * Returns a new {@code ProjectConfig} that represents the specified project.
+     * @param value The project id to interact with.
+     */
+    public ProjectConfig withProject(String value) {
+        return withProject(ValueProvider.StaticValueProvider.of(value));
+    }
 
-  /**
-   * Returns a new {@code ProjectConfig} that represents the specified api key.
-   * @param value The project id interact with.
-   */
-  public ProjectConfig withApiKey(ValueProvider<String> value) {
-    return toBuilder().setApiKey(value).setConfigured(true).build();
-  }
+    /**
+     * Returns a new {@code ProjectConfig} with the specified api key.
+     * @param value The api key.
+     */
+    public ProjectConfig withApiKey(ValueProvider<String> value) {
+        return toBuilder().setApiKey(value).setConfigured(true).build();
+    }
 
-  /**
-   * Returns a new {@code ProjectConfig} that represents the specified api key.
-   * @param value The project id interact with.
-   */
-  public ProjectConfig withApiKey(String value) {
-    return withApiKey(ValueProvider.StaticValueProvider.of(value));
-  }
+    /**
+     * Returns a new {@code ProjectConfig} with the specified api key.
+     * @param value The api key.
+     */
+    public ProjectConfig withApiKey(String value) {
+        return withApiKey(ValueProvider.StaticValueProvider.of(value));
+    }
 
-  /**
-   * Returns a new {@code ProjectConfig} with the api key stored in GCP Secret Manager.
-   *
-   * @param config The reference to the secret in GCP Secret Manager
-   * @return
-   */
-  public ProjectConfig withApiKeyFromGcpSecret(GcpSecretConfig config) {
-    return toBuilder().setGcpSecretConfig(config).setConfigured(true).build();
-  }
+    /**
+     * Returns a new {@code ProjectConfig} with the api key stored in GCP Secret Manager.
+     *
+     * @param config The reference to the secret in GCP Secret Manager
+     * @return
+     */
+    public ProjectConfig withApiKeyFromGcpSecret(GcpSecretConfig config) {
+        return toBuilder().setApiKeyGcpSecretConfig(config).setConfigured(true).build();
+    }
 
-  public void validate() {
-    checkState(isConfigured(), "ProjectConfig parameters have not been configured.");
-    checkArgument(getHost() != null
-                    && getHost().isAccessible() && !getHost().get().isEmpty(),
-            "Could not obtain Cognite host name");
+    /**
+     * Returns a new {@code ProjectConfig} with the specified client id.
+     * @param value The client id.
+     */
+    public ProjectConfig withClientId(ValueProvider<String> value) {
+        return toBuilder().setClientId(value).setConfigured(true).build();
+    }
 
-    checkArgument(getProject() != null
-                    && getProject().isAccessible() && !getProject().get().isEmpty() && getProject().get() != null,
-            "Could not obtain Cognite project name");
+    /**
+     * Returns a new {@code ProjectConfig} with the specified client id.
+     * @param value The client id.
+     */
+    public ProjectConfig withClientId(String value) {
+        return toBuilder().setClientId(ValueProvider.StaticValueProvider.of(value)).setConfigured(true).build();
+    }
 
-    checkArgument(getApiKey() != null
-                    && getApiKey().isAccessible() && !getApiKey().get().isEmpty() && getApiKey().get() != null,
-            "Could not obtain Cognite api key");
-  }
+    /**
+     * Returns a new {@code ProjectConfig} with the specified client secret.
+     * @param value The client secret.
+     */
+    public ProjectConfig withClientSecret(ValueProvider<String> value) {
+        return toBuilder().setClientSecret(value).setConfigured(true).build();
+    }
 
-  @Override
-  public final String toString() {
-    return "ProjectConfig{"
-            + "project=" + getProject() + ", "
-            + "apiKey=" + "*********" + ", "
-            + "host=" + getHost() + ", "
-            + "GcpSecretConfig=" + getGcpSecretConfig() + ", "
-            + "configured=" + isConfigured()
-            + "}";
-  }
+    /**
+     * Returns a new {@code ProjectConfig} with the specified client secret.
+     * @param value The client secret.
+     */
+    public ProjectConfig withClientSecret(String value) {
+        return toBuilder().setClientSecret(ValueProvider.StaticValueProvider.of(value)).setConfigured(true).build();
+    }
 
-  @AutoValue.Builder public abstract static class Builder {
+    /**
+     * Returns a new {@code ProjectConfig} with the client secret stored in GCP Secret Manager.
+     *
+     * @param config The reference to the secret in GCP Secret Manager
+     * @return
+     */
+    public ProjectConfig withClientSecretFromGcpSecret(GcpSecretConfig config) {
+        return toBuilder().setClientSecretGcpSecretConfig(config).setConfigured(true).build();
+    }
 
-    public abstract ProjectConfig build();
+    /**
+     * Returns a new {@code ProjectConfig} with the specified token URL.
+     * @param value The token URL.
+     */
+    public ProjectConfig withTokenUrl(ValueProvider<String> value) {
+        return toBuilder().setTokenUrl(value).setConfigured(true).build();
+    }
 
-    abstract Builder setProject(ValueProvider<String> value);
-    abstract Builder setHost(ValueProvider<String> value);
-    abstract Builder setApiKey(ValueProvider<String> value);
-    abstract Builder setConfigured(boolean value);
-    abstract Builder setGcpSecretConfig(GcpSecretConfig value);
-  }
+    /**
+     * Returns a new {@code ProjectConfig} with the specified token URL.
+     * @param value The token URL.
+     */
+    public ProjectConfig withTokenUrl(String value) {
+        return toBuilder().setTokenUrl(ValueProvider.StaticValueProvider.of(value)).setConfigured(true).build();
+    }
+
+    public void validate() {
+        checkState(isConfigured(), "ProjectConfig parameters have not been configured.");
+        checkArgument(getHost() != null
+                        && getHost().isAccessible() && !getHost().get().isEmpty(),
+                "Could not obtain Cognite host name");
+
+        checkArgument(getProject() != null
+                        && getProject().isAccessible() && !getProject().get().isEmpty() && getProject().get() != null,
+                "Could not obtain Cognite project name");
+
+        checkArgument(
+                (getApiKey() != null && getApiKey().isAccessible() && getApiKey().get() != null && !getApiKey().get().isBlank())
+                || (getClientId() != null && getClientId().isAccessible() && getClientId().get() != null && !getClientId().get().isBlank()
+                        && getClientSecret() != null && getClientSecret().isAccessible() && getClientSecret().get() != null && !getClientSecret().get().isBlank()
+                        && getTokenUrl() != null && getTokenUrl().isAccessible() && getTokenUrl().get() != null && !getTokenUrl().get().isBlank())
+                ,
+                "Could not obtain Cognite api key nor OpenID client credentials.");
+    }
+
+    @Override
+    public final String toString() {
+        return "ProjectConfig{"
+                + "project=" + getProject() + ", "
+                + "apiKey=" + "*********" + ", "
+                + "host=" + getHost() + ", "
+                + "apiKeyGcpSecretConfig=" + getApiKeyGcpSecretConfig() + ", "
+                + "clientId=" + getClientId() + ", "
+                + "clientSecret=" + "*********" + ", "
+                + "clientSecretGcpSecretConfig=" + getClientSecretGcpSecretConfig() + ", "
+                + "tokenUrl=" + getTokenUrl() + ", "
+                + "configured=" + isConfigured()
+                + "}";
+    }
+
+    @AutoValue.Builder public abstract static class Builder {
+
+        public abstract ProjectConfig build();
+
+        abstract Builder setProject(ValueProvider<String> value);
+        abstract Builder setHost(ValueProvider<String> value);
+        abstract Builder setApiKey(ValueProvider<String> value);
+        abstract Builder setClientId(ValueProvider<String> value);
+        abstract Builder setClientSecret(ValueProvider<String> value);
+        abstract Builder setTokenUrl(ValueProvider<String> value);
+        abstract Builder setConfigured(boolean value);
+        abstract Builder setApiKeyGcpSecretConfig(GcpSecretConfig value);
+        abstract Builder setClientSecretGcpSecretConfig(GcpSecretConfig value);
+    }
 }

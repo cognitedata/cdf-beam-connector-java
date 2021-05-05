@@ -63,7 +63,7 @@ class TSPointsTest extends TestConfigProviderV1 {
         PCollection<TimeseriesMetadata> headerWriteResults = pipeline
                 .apply("Create TS objects", Create.of(tsMetaList))
                 .apply("Write TS headers", CogniteIO.writeTimeseriesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -73,7 +73,7 @@ class TSPointsTest extends TestConfigProviderV1 {
                 .apply("Create TS points", ParDo.of(new GenerateTsPointsFn(noTsPoints, tsPointsFrequency,
                         noTsPointsVariation, frequencyVariation)))
                 .apply("Write TS points", CogniteIO.writeTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -107,7 +107,7 @@ class TSPointsTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesPoint> readRawPointsSingleIteration = readPipeline
                 .apply("Read Raw points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -124,7 +124,7 @@ class TSPointsTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesPoint> readRawPointsMultiIteration = readPipeline
                 .apply("Read Raw points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -147,7 +147,7 @@ class TSPointsTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesPoint> readAggPointsSingleIteration = readAggPipeline
                 .apply("Read Agg points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -172,7 +172,7 @@ class TSPointsTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesPoint> readAggPointsMultiIteration = readAggPipeline
                 .apply("Read Agg points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -218,7 +218,7 @@ class TSPointsTest extends TestConfigProviderV1 {
         PCollection<TimeseriesMetadata> headerWriteResults = pipeline
                 .apply("Create TS objects", Create.of(tsMetaList))
                 .apply("Write TS headers", CogniteIO.writeTimeseriesMetadata()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -229,7 +229,7 @@ class TSPointsTest extends TestConfigProviderV1 {
                 .apply("Create TS points", ParDo.of(new GenerateTsPointsFn(noTsPoints, tsPointsFrequency,
                         noTsPointsVariation, frequencyVariation)))
                 .apply("Write TS points", CogniteIO.writeTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -260,7 +260,7 @@ class TSPointsTest extends TestConfigProviderV1 {
                 .apply("Create TS points", Create.of(TestUtilsV1.generateTsDatapointsObjects(243,
                         0.02d, TestUtilsV1.sourceValue)))
                 .apply("Write TS points", CogniteIO.writeTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -311,7 +311,7 @@ class TSPointsTest extends TestConfigProviderV1 {
         // Cannot read a collection of time series as the direct runner will crash on the aggregate.
         PCollection<TimeseriesPoint> readResults = pipeline
                 .apply("Read TS points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -348,7 +348,7 @@ class TSPointsTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesPoint> readResults = pipeline
                 .apply("Read TS points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId))
@@ -377,7 +377,7 @@ class TSPointsTest extends TestConfigProviderV1 {
 
         PCollection<TimeseriesPoint> readResults = pipeline
                 .apply("Read TS points", CogniteIO.readTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .enableNewCodePath()
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
@@ -400,7 +400,7 @@ class TSPointsTest extends TestConfigProviderV1 {
                                 .setValueNum(inputPoint.getValueNum())
                                 .build()))
                 .apply("Write TS", CogniteIO.writeTimeseriesPoints()
-                        .withProjectConfig(projectConfig)
+                        .withProjectConfig(projectConfigApiKey)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId)));
