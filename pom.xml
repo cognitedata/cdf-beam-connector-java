@@ -36,17 +36,18 @@
     </scm>
 
     <properties>
+        <java.version>11</java.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <beam.version>2.29.0</beam.version>
-        <cdf-java-sdk.version>0.9.4</cdf-java-sdk.version>
-        <auto.version>1.7.4</auto.version>
+        <cdf-java-sdk.version>0.9.5</cdf-java-sdk.version>
+        <auto.version>1.8.1</auto.version>
+        <auto-service.version>1.0</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
         <junit.version>5.7.0</junit.version>
 
-        <java.version>11</java.version>
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
         <compiler.error.flag>-Werror</compiler.error.flag>
@@ -85,10 +86,9 @@
             <version>${auto.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.google.auto.value</groupId>
-            <artifactId>auto-value</artifactId>
-            <version>${auto.version}</version>
-            <scope>provided</scope>
+            <groupId>com.google.auto.service</groupId>
+            <artifactId>auto-service-annotations</artifactId>
+            <version>${auto-service.version}</version>
         </dependency>
         <dependency>
             <groupId>com.cognite</groupId>
@@ -194,6 +194,18 @@
                     <showWarnings>true</showWarnings>
                     <!-- Another temp override, to be set to true in due course. -->
                     <showDeprecation>false</showDeprecation>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.auto.value</groupId>
+                            <artifactId>auto-value</artifactId>
+                            <version>${auto.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.google.auto.service</groupId>
+                            <artifactId>auto-service</artifactId>
+                            <version>${auto-service.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
                 <executions>
                     <execution>
