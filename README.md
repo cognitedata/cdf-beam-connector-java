@@ -30,10 +30,13 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
 <dependency>    
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.17</version>
+    <version>0.9.18</version>
 </dependency>
 ````
-    
+Requirements:
+- Java 11.
+- Apache Beam 2.29.0.
+
 #### I/O feature table
 
 | Resource | Read | Insert | Update | Delete | Read aggregates | Streaming read | Streaming write
