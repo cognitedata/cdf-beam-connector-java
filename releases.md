@@ -25,6 +25,14 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Separate the generic Java SDK from the Beam specific code (the "Beam Connector").
 
+## [0.9.18]
+
+### Fixed
+
+- TLS / SSL handshake errors when running on Dataflow and connecting to Google APIs. This was due to Dataflow disabling 
+  a set of crypto algorithms on its workers (because of poor Java 8 implementations). Now that we are on Java 11, we 
+  override the Dataflow config and allow all Java 11 algorithms.
+
 ## [0.9.17]
 
 ### Added
