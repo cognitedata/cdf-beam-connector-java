@@ -30,7 +30,7 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
 <dependency>    
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.18</version>
+    <version>0.9.19</version>
 </dependency>
 ````
 Requirements:
