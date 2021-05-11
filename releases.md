@@ -23,7 +23,14 @@ Changes are grouped as follows:
 ### Short term
 
 - OOTB incremental read support for time series.
-- Separate the generic Java SDK from the Beam specific code (the "Beam Connector").
+- Geo-location attribute and resource type.
+
+## [0.9.19]
+
+### Fixed
+
+- Repeated annotations when generating interactive P&IDs.
+
 
 ## [0.9.18]
 
