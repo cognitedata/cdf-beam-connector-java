@@ -25,6 +25,12 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.20-SNAPSHOT]
+
+### Fixed
+
+- Assets delete wasn't recursive. A regression introduced with the Java SDK refactoring.
+
 ## [0.9.19]
 
 ### Fixed

@@ -83,7 +83,7 @@ public class DeleteItemsFn extends IOBaseFn<Iterable<Item>, Item> {
             List<Item> resultsItems;
             switch (resourceType) {
                 case ASSET:
-                    resultsItems = getClient(projectConfig, writerConfig).assets().delete(itemsList);
+                    resultsItems = getClient(projectConfig, writerConfig).assets().delete(itemsList, true);
                     break;
                 case EVENT:
                     resultsItems = getClient(projectConfig, writerConfig).events().delete(itemsList);
