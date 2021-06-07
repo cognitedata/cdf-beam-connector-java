@@ -1,0 +1,10 @@
+project: test-project
+host: https://api.cognitedata.com
+clientId: boo
+clientSecret: foo
+tokenUrl: https://google.com
+configured: true
+clientSecretGcpSecretConfig:
+  projectId: test-project
+  secretId: secret-name
+  secretVersion: latest

@@ -1,0 +1,4 @@
+project: test-project
+host: https://api.cognitedata.com
+apiKey: something
+configured: true
