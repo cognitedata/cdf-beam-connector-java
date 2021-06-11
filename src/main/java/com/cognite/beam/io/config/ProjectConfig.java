@@ -16,22 +16,32 @@
 
 package com.cognite.beam.io.config;
 
-import java.io.Serializable;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.auto.value.AutoValue;
+import com.squareup.moshi.JsonAdapter;
+import com.squareup.moshi.JsonClass;
+import com.squareup.moshi.Moshi;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.ValueProvider;
-
-import com.google.auto.value.AutoValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.Serializable;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 @AutoValue
 @DefaultCoder(SerializableCoder.class)
+@JsonClass(generateAdapter = true, generator = "avm")
 public abstract class ProjectConfig implements Serializable {
     private final static String DEFAULT_HOST = "https://api.cognitedata.com";
+    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_ProjectConfig.Builder()
@@ -57,6 +67,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} that represents the specified host.
+     *
      * @param value The Cognite Data Fusion host.
      */
     public ProjectConfig withHost(ValueProvider<String> value) {
@@ -65,6 +76,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} that represents the specified host.
+     *
      * @param value The Cognite Data Fusion host.
      */
     public ProjectConfig withHost(String value) {
@@ -73,6 +85,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} that represents the specified project.
+     *
      * @param value The project id to interact with.
      */
     public ProjectConfig withProject(ValueProvider<String> value) {
@@ -81,6 +94,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} that represents the specified project.
+     *
      * @param value The project id to interact with.
      */
     public ProjectConfig withProject(String value) {
@@ -89,6 +103,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified api key.
+     *
      * @param value The api key.
      */
     public ProjectConfig withApiKey(ValueProvider<String> value) {
@@ -97,6 +112,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified api key.
+     *
      * @param value The api key.
      */
     public ProjectConfig withApiKey(String value) {
@@ -115,6 +131,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified client id.
+     *
      * @param value The client id.
      */
     public ProjectConfig withClientId(ValueProvider<String> value) {
@@ -123,6 +140,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified client id.
+     *
      * @param value The client id.
      */
     public ProjectConfig withClientId(String value) {
@@ -131,6 +149,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified client secret.
+     *
      * @param value The client secret.
      */
     public ProjectConfig withClientSecret(ValueProvider<String> value) {
@@ -139,6 +158,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified client secret.
+     *
      * @param value The client secret.
      */
     public ProjectConfig withClientSecret(String value) {
@@ -157,6 +177,7 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified token URL.
+     *
      * @param value The token URL.
      */
     public ProjectConfig withTokenUrl(ValueProvider<String> value) {
@@ -165,11 +186,34 @@ public abstract class ProjectConfig implements Serializable {
 
     /**
      * Returns a new {@code ProjectConfig} with the specified token URL.
+     *
      * @param value The token URL.
      */
     public ProjectConfig withTokenUrl(String value) {
         return toBuilder().setTokenUrl(ValueProvider.StaticValueProvider.of(value)).setConfigured(true).build();
     }
+
+    /**
+     * Returns a new {@code ProjectConfig} with the specified properties from YAML document.
+     *
+     * @param yaml The YAML document with {@code ProjectConfig} properties.
+     */
+    public ProjectConfig withYaml(String yaml) {
+        try {
+            ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
+            Object obj = yamlReader.readValue(yaml, Object.class);
+            ObjectMapper jsonWriter = new ObjectMapper();
+            String json = jsonWriter.writeValueAsString(obj); //YAML => JSON
+            Moshi moshi = new Moshi.Builder().add(new ValueProviderAdapter()).build();
+            JsonAdapter<ProjectConfig> adapter = moshi.adapter(ProjectConfig.class); //AutoValue extension to parse JSON
+            return adapter.fromJson(json);
+        }
+        catch (IOException ex) {
+            LOG.error("Unable to parse YAML document", ex);
+        }
+        return this;
+    }
+
 
     public void validate() {
         checkState(isConfigured(), "ProjectConfig parameters have not been configured.");
@@ -183,7 +227,7 @@ public abstract class ProjectConfig implements Serializable {
 
         checkArgument(
                 (getApiKey() != null && getApiKey().isAccessible() && getApiKey().get() != null && !getApiKey().get().isBlank())
-                || (getClientId() != null && getClientId().isAccessible() && getClientId().get() != null && !getClientId().get().isBlank()
+                        || (getClientId() != null && getClientId().isAccessible() && getClientId().get() != null && !getClientId().get().isBlank()
                         && getClientSecret() != null && getClientSecret().isAccessible() && getClientSecret().get() != null && !getClientSecret().get().isBlank()
                         && getTokenUrl() != null && getTokenUrl().isAccessible() && getTokenUrl().get() != null && !getTokenUrl().get().isBlank())
                 ,
@@ -205,18 +249,27 @@ public abstract class ProjectConfig implements Serializable {
                 + "}";
     }
 
-    @AutoValue.Builder public abstract static class Builder {
+    @AutoValue.Builder
+    public abstract static class Builder {
 
         public abstract ProjectConfig build();
 
         abstract Builder setProject(ValueProvider<String> value);
+
         abstract Builder setHost(ValueProvider<String> value);
+
         abstract Builder setApiKey(ValueProvider<String> value);
+
         abstract Builder setClientId(ValueProvider<String> value);
+
         abstract Builder setClientSecret(ValueProvider<String> value);
+
         abstract Builder setTokenUrl(ValueProvider<String> value);
+
         abstract Builder setConfigured(boolean value);
+
         abstract Builder setApiKeyGcpSecretConfig(GcpSecretConfig value);
+
         abstract Builder setClientSecretGcpSecretConfig(GcpSecretConfig value);
     }
 }
