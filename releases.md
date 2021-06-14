@@ -25,6 +25,13 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.22-SNAPSHOT]
+We skip a few versions due to updating our build pipeline.
+
+### Added
+
+- Support for Beam 2.30.0
+
 ## [0.9.19]
 
 ### Fixed
