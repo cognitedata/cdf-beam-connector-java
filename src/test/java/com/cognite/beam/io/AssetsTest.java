@@ -6,7 +6,6 @@ import com.cognite.client.dto.Asset;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.UpsertMode;
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.transforms.*;
@@ -56,10 +55,10 @@ class AssetsTest extends TestConfigProviderV1 {
     void writeAssetSelfReference() {
         List<Asset> assets = AssetsTest.generateAssetHierarchies();
         assets.add(Asset.newBuilder()
-                .setExternalId(StringValue.of("B_D"))
-                .setParentExternalId(StringValue.of("B_D"))
+                .setExternalId("B_D")
+                .setParentExternalId("B_D")
                 .setName("ChildB_D")
-                .setDescription(StringValue.of("Child asset B_D"))
+                .setDescription("Child asset B_D")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build());
 
@@ -89,9 +88,9 @@ class AssetsTest extends TestConfigProviderV1 {
         List<Asset> assets = AssetsTest.generateAssetHierarchies();
         assets.add(Asset.newBuilder()
                 //.setExternalId(StringValue.of("B_D"))
-                .setParentExternalId(StringValue.of("B"))
+                .setParentExternalId("B")
                 .setName("ChildB_D")
-                .setDescription(StringValue.of("Child asset B_D"))
+                .setDescription("Child asset B_D")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build());
 
@@ -120,10 +119,10 @@ class AssetsTest extends TestConfigProviderV1 {
     void writeAssetDuplicates() {
         List<Asset> assets = AssetsTest.generateAssetHierarchies();
         assets.add(Asset.newBuilder()
-                .setExternalId(StringValue.of("B_A"))
-                .setParentExternalId(StringValue.of("B"))
+                .setExternalId("B_A")
+                .setParentExternalId("B")
                 .setName("ChildB_A")
-                .setDescription(StringValue.of("Child asset B_A"))
+                .setDescription("Child asset B_A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build());
 
@@ -152,17 +151,17 @@ class AssetsTest extends TestConfigProviderV1 {
     void writeAssetCycles() {
         List<Asset> assets = AssetsTest.generateAssetHierarchies();
         assets.add(Asset.newBuilder()
-                .setExternalId(StringValue.of("B_A_A"))
-                .setParentExternalId(StringValue.of("B_A_A_A"))
+                .setExternalId("B_A_A")
+                .setParentExternalId("B_A_A_A")
                 .setName("ChildB_A_A")
-                .setDescription(StringValue.of("Child asset B_A_A"))
+                .setDescription("Child asset B_A_A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build());
         assets.add(Asset.newBuilder()
-                .setExternalId(StringValue.of("B_A_A_A"))
-                .setParentExternalId(StringValue.of("B_A_A"))
+                .setExternalId("B_A_A_A")
+                .setParentExternalId("B_A_A")
                 .setName("ChildB_A_A")
-                .setDescription(StringValue.of("Child asset B_A_A"))
+                .setDescription("Child asset B_A_A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build());
 
@@ -207,8 +206,8 @@ class AssetsTest extends TestConfigProviderV1 {
                                     .clearDescription()
                                     .clearMetadata()
                                     .putMetadata("addedMetadata", "newMeta2");
-                            if (input.getExternalId().getValue().equalsIgnoreCase("A_B")) {
-                                outputBuilder.setParentExternalId(StringValue.of("A_A"));
+                            if (input.getExternalId().equalsIgnoreCase("A_B")) {
+                                outputBuilder.setParentExternalId("A_A");
                                 System.out.println("Entering change parentExternalId");
                             }
 
@@ -253,8 +252,8 @@ class AssetsTest extends TestConfigProviderV1 {
                             Asset.Builder outputBuilder = input.toBuilder()
                                     .clearDescription()
                                     .putMetadata("addedMetadata", "newMeta");
-                            if (input.getExternalId().getValue().equalsIgnoreCase("A_B")) {
-                                outputBuilder.setParentExternalId(StringValue.of("A_A"));
+                            if (input.getExternalId().equalsIgnoreCase("A_B")) {
+                                outputBuilder.setParentExternalId("A_A");
                                 System.out.println("Entering change parentExternalId");
                             }
 
@@ -283,15 +282,15 @@ class AssetsTest extends TestConfigProviderV1 {
     @Tag("remoteCDP")
     void synchronizeTwoHierarchiesBatch() {
         Asset rootA = Asset.newBuilder()
-                .setExternalId(StringValue.of("A"))
+                .setExternalId("A")
                 .setName("RootA")
-                .setDescription(StringValue.of("Root asset A"))
+                .setDescription("Root asset A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
         Asset rootB = Asset.newBuilder()
-                .setExternalId(StringValue.of("B"))
+                .setExternalId("B")
                 .setName("RootB")
-                .setDescription(StringValue.of("Root asset B"))
+                .setDescription("Root asset B")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
 
@@ -392,7 +391,7 @@ class AssetsTest extends TestConfigProviderV1 {
                         .into(TypeDescriptor.of(Item.class))
                         .via((Asset input) ->
                                 Item.newBuilder()
-                                        .setExternalId(input.getExternalId().getValue())
+                                        .setExternalId(input.getExternalId())
                                         .build()
                         ))
                         .apply("Delete items", CogniteIO.deleteAssets()
@@ -413,10 +412,10 @@ class AssetsTest extends TestConfigProviderV1 {
         List<Asset> objects = new ArrayList<>(numberOfAssets);
         for (int i = 0; i < numberOfAssets; i++) {
             objects.add(Asset.newBuilder()
-                    .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
+                    .setExternalId(RandomStringUtils.randomAlphanumeric(10))
                     .setName("test_asset_" + RandomStringUtils.randomAlphanumeric(5))
-                    .setDescription(StringValue.of("test_asset_ " + RandomStringUtils.randomAlphanumeric(50)))
-                    .setParentExternalId(StringValue.of(parentExternalId))
+                    .setDescription("test_asset_ " + RandomStringUtils.randomAlphanumeric(50))
+                    .setParentExternalId(parentExternalId)
                     .putMetadata("type", TestUtilsV1.sourceValue)
                     .putMetadata("source", TestUtilsV1.sourceValue)
                     .build());
@@ -427,44 +426,44 @@ class AssetsTest extends TestConfigProviderV1 {
     private static List<Asset> generateAssetHierarchies() {
         List<Asset> outputList = new ArrayList<>();
         Asset rootA = Asset.newBuilder()
-                .setExternalId(StringValue.of("A"))
+                .setExternalId("A")
                 .setName("RootA")
-                .setDescription(StringValue.of("Root asset A"))
+                .setDescription("Root asset A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
         outputList.add(rootA);
 
         Asset childA_A = Asset.newBuilder()
-                .setExternalId(StringValue.of("A_A"))
-                .setParentExternalId(StringValue.of("A"))
+                .setExternalId("A_A")
+                .setParentExternalId("A")
                 .setName("ChildA_A")
-                .setDescription(StringValue.of("Child asset A_A"))
+                .setDescription("Child asset A_A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
         outputList.add(childA_A);
 
         Asset childA_B = Asset.newBuilder()
-                .setExternalId(StringValue.of("A_B"))
-                .setParentExternalId(StringValue.of("A"))
+                .setExternalId("A_B")
+                .setParentExternalId("A")
                 .setName("ChildA_B")
-                .setDescription(StringValue.of("Child asset A_B"))
+                .setDescription("Child asset A_B")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
         outputList.add(childA_B);
 
         Asset rootB = Asset.newBuilder()
-                .setExternalId(StringValue.of("B"))
+                .setExternalId("B")
                 .setName("RootB")
-                .setDescription(StringValue.of("Root asset B"))
+                .setDescription("Root asset B")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
         outputList.add(rootB);
 
         Asset childB_A = Asset.newBuilder()
-                .setExternalId(StringValue.of("B_A"))
-                .setParentExternalId(StringValue.of("B"))
+                .setExternalId("B_A")
+                .setParentExternalId("B")
                 .setName("ChildB_A")
-                .setDescription(StringValue.of("Child asset B_A"))
+                .setDescription("Child asset B_A")
                 .putMetadata("type", TestUtilsV1.sourceValue)
                 .build();
         outputList.add(childB_A);

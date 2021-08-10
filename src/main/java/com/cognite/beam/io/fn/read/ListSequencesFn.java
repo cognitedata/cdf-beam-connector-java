@@ -47,6 +47,6 @@ public class ListSequencesFn extends ListItemsBaseFn<SequenceMetadata> {
 
     @Override
     protected long getTimestamp(SequenceMetadata item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

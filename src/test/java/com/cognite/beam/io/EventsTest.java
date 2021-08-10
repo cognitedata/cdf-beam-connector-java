@@ -5,7 +5,6 @@ import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.client.util.DataGenerator;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
@@ -44,9 +43,9 @@ class EventsTest extends TestConfigProviderV1 {
 
         TestStream<Event> events = TestStream.create(ProtoCoder.of(Event.class)).addElements(
                 Event.newBuilder()
-                        .setExternalId(StringValue.of("extId_A"))
-                        .setDescription(StringValue.of("Test_event"))
-                        .setType(StringValue.of(DataGenerator.sourceValue))
+                        .setExternalId("extId_A")
+                        .setDescription("Test_event")
+                        .setType(DataGenerator.sourceValue)
                         .build(),
                 DataGenerator.generateEvents(9567).toArray(new Event[9567])
         )
@@ -102,7 +101,7 @@ class EventsTest extends TestConfigProviderV1 {
                 .into(TypeDescriptor.of(Item.class))
                 .via((Event input) ->
                         Item.newBuilder()
-                                .setId(input.getId().getValue())
+                                .setId(input.getId())
                                 .build()
                 ))
                 .apply("Delete items", CogniteIO.deleteEvents()
@@ -219,7 +218,7 @@ class EventsTest extends TestConfigProviderV1 {
                 .apply("Build by id request", MapElements.into(TypeDescriptor.of(Item.class))
                         .via(event ->
                                 Item.newBuilder()
-                                        .setExternalId(event.getExternalId().getValue())
+                                        .setExternalId(event.getExternalId())
                                         .build()))
                 .apply("Ready event by id", CogniteIO.readAllEventsByIds()
                         .withProjectConfig(projectConfigApiKey)
@@ -249,7 +248,7 @@ class EventsTest extends TestConfigProviderV1 {
                                 .withFilterMetadataParameter(TestUtilsV1.sourceKey, TestUtilsV1.sourceValue)))
                 .apply("Build delete events request", MapElements.into(TypeDescriptor.of(Item.class))
                         .via(element -> Item.newBuilder()
-                                .setExternalId(element.getExternalId().getValue())
+                                .setExternalId(element.getExternalId())
                                 .build()
                         ))
                 .apply("Delete events", CogniteIO.deleteEvents()

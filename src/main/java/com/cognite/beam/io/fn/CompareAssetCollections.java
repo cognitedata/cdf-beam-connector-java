@@ -148,8 +148,7 @@ public class CompareAssetCollections extends DoFn<KV<String, CoGbkResult>, KV<St
         }
         result = result && (one.hasDataSetId() == other.hasDataSetId());
         if (one.hasDataSetId()) {
-            result = result && one.getDataSetId()
-                    .equals(other.getDataSetId());
+            result = result && one.getDataSetId() == other.getDataSetId();
         }
         result = result && (one.getLabelsList().equals(other.getLabelsList()));
 

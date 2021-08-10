@@ -3,8 +3,6 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.DataSet;
-import com.google.protobuf.BoolValue;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.io.TextIO;
@@ -17,7 +15,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-
 
 class DataSetsTest extends TestConfigProviderV1 {
 
@@ -34,10 +31,10 @@ class DataSetsTest extends TestConfigProviderV1 {
 
         PCollection<DataSet> results = p.apply(Create.of(
                 DataSet.newBuilder()
-                        .setName(StringValue.of("unitTest_dataset"))
-                        .setExternalId(StringValue.of("dataset:unitTest_dataset"))
-                        .setDescription(StringValue.of("Dataset created by unit test."))
-                        .setWriteProtected(BoolValue.of(false))
+                        .setName("unitTest_dataset")
+                        .setExternalId("dataset:unitTest_dataset")
+                        .setDescription("Dataset created by unit test.")
+                        .setWriteProtected(false)
                         .putMetadata("type", TestUtilsV1.sourceValue)
                         .build()))
                 .apply("write data set", CogniteIO.writeDataSets()

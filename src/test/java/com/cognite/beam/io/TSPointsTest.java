@@ -159,10 +159,10 @@ class TSPointsTest extends TestConfigProviderV1 {
         readAggPointsSingleIteration
                 .apply("Format agg output", MapElements.into(TypeDescriptors.strings())
                         .via(tsPoint -> new StringBuilder()
-                                .append("externalId: " + tsPoint.getExternalId().getValue() + ";")
+                                .append("externalId: " + tsPoint.getExternalId() + ";")
                                 .append("id: " + tsPoint.getId() + ";")
                                 .append("timestamp: " + tsPoint.getTimestamp() + ";")
-                                .append("count: " + tsPoint.getValueAggregates().getCount().getValue() + ";")
+                                .append("count: " + tsPoint.getValueAggregates().getCount() + ";")
                                 .toString()
                         ))
                 .apply("Write read s_iter output", TextIO.write().to("./UnitTest_tsPoints_writeReadMultiTSBatch_readAggSingleICount_output")
@@ -186,10 +186,10 @@ class TSPointsTest extends TestConfigProviderV1 {
         readAggPointsMultiIteration
                 .apply("Format agg output", MapElements.into(TypeDescriptors.strings())
                         .via(tsPoint -> new StringBuilder()
-                                .append("externalId: " + tsPoint.getExternalId().getValue() + ";")
+                                .append("externalId: " + tsPoint.getExternalId() + ";")
                                 .append("id: " + tsPoint.getId() + ";")
                                 .append("timestamp: " + tsPoint.getTimestamp() + ";")
-                                .append("count: " + tsPoint.getValueAggregates().getCount().getValue() + ";")
+                                .append("count: " + tsPoint.getValueAggregates().getCount() + ";")
                                 .toString()
                         ))
                 .apply("Write read s_iter output", TextIO.write().to("./UnitTest_tsPoints_writeReadMultiTSBatch_readAggMultiICount_output")
@@ -426,7 +426,7 @@ class TSPointsTest extends TestConfigProviderV1 {
         RequestParameters requestParameters = RequestParameters.create();
         List<Map<String, Object>> items = new ArrayList<>();
         for (TimeseriesMetadata item : tsList) {
-            items.add(ImmutableMap.of("externalId", item.getExternalId().getValue()));
+            items.add(ImmutableMap.of("externalId", item.getExternalId()));
         }
         return requestParameters.withItems(items);
     }
@@ -453,7 +453,7 @@ class TSPointsTest extends TestConfigProviderV1 {
             for (int i = 0; i < numberOfItems; i++) {
                 timeStamp = timeStamp.minusMillis(Math.round(1000l / newFrequency));
                 outputReceiver.output(TimeseriesPointPost.newBuilder()
-                        .setExternalId(input.getExternalId().getValue())
+                        .setExternalId(input.getExternalId())
                         .setTimestamp(timeStamp.toEpochMilli())
                         .setValueNum(ThreadLocalRandom.current().nextLong(-10, 20))
                         .build());
@@ -466,7 +466,7 @@ class TSPointsTest extends TestConfigProviderV1 {
         public void processElement(@Element TimeseriesPoint input, OutputReceiver<String> outputReceiver) {
             StringBuilder outputString = new StringBuilder();
             outputString.append("-----------------------").append(System.lineSeparator());
-            outputString.append("externalId: ").append(input.getExternalId().getValue()).append(System.lineSeparator());
+            outputString.append("externalId: ").append(input.getExternalId()).append(System.lineSeparator());
             outputString.append("id: ").append(input.getId()).append(System.lineSeparator());
             outputString.append("timestamp: ").append(input.getTimestamp()).append(System.lineSeparator());
             outputString.append("valueNum: ").append(input.getValueNum()).append(System.lineSeparator());

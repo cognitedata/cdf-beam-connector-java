@@ -56,11 +56,11 @@ public abstract class BuildAssetLookup extends PTransform<PCollection<Asset>, PC
         // Lookup view with root assets
         PCollectionView<Map<Long, Asset>> rootAssetView = input
                 .apply("Filter root assets", Filter.by(
-                        asset -> asset.getRootId().getValue() == asset.getId().getValue()))
+                        asset -> asset.getRootId() == asset.getId()))
                 .apply("Add key based on id", WithKeys.of(
                         asset -> {
                             LOG.info("Identified root asset: {}", asset);
-                            return asset.getId().getValue();
+                            return asset.getId();
                         }))
                         .setCoder(KvCoder.of(BigEndianLongCoder.of(), ProtoCoder.of(Asset.class)))
                 .apply("To map view", View.asMap());
@@ -75,7 +75,7 @@ public abstract class BuildAssetLookup extends PTransform<PCollection<Asset>, PC
 
                         // build basic dto
                         AssetLookup.Builder outputBuilder = AssetLookup.newBuilder()
-                                .setId(element.getId().getValue())
+                                .setId(element.getId())
                                 .setName(element.getName())
                                 .putAllMetadata(element.getMetadataMap())
                                 .addAllLabels(element.getLabelsList());
@@ -111,18 +111,17 @@ public abstract class BuildAssetLookup extends PTransform<PCollection<Asset>, PC
                         }
 
                         // add root asset name
-                        if (element.hasRootId() && rootAssets.containsKey(element.getRootId().getValue())) {
-                            outputBuilder.setRootName(StringValue.of(
-                                    rootAssets.get(element.getRootId().getValue()).getName()));
+                        if (element.hasRootId() && rootAssets.containsKey(element.getRootId())) {
+                            outputBuilder.setRootName(rootAssets.get(element.getRootId()).getName());
                         } else {
                             LOG.warn("Could not identify the root asset name for externalId [{}]: \r\n"
                                     + "id: [{}] \r\n"
                                     + "name: [{}] \r\n"
                                     + "rootId: [{}]",
-                                    element.getExternalId().getValue(),
-                                    element.getId().getValue(),
+                                    element.getExternalId(),
+                                    element.getId(),
                                     element.getName(),
-                                    element.getRootId().getValue());
+                                    element.getRootId());
                         }
                         LOG.debug("Generated AssetLookup object: \r\n {}", outputBuilder);
 

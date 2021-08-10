@@ -103,7 +103,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
                                 .withSessionIdentifier(sessionId))
                 )
                 .apply("Filter TS", Filter.by(element -> {
-                    if (element.getExternalId().getValue().equals(TestUtilsV1.sourceValue)) {
+                    if (element.getExternalId().equals(TestUtilsV1.sourceValue)) {
                         return true;
                     }
                     if (!element.getMetadataMap().containsKey("source")) {
@@ -117,7 +117,7 @@ class TSMetadataTest extends TestConfigProviderV1 {
                         .into(TypeDescriptor.of(Item.class))
                         .via((TimeseriesMetadata input) ->
                                 Item.newBuilder()
-                                        .setId(input.getId().getValue())
+                                        .setId(input.getId())
                                         .build()
                         ))
                         .apply("Delete items", CogniteIO.deleteTimeseries()

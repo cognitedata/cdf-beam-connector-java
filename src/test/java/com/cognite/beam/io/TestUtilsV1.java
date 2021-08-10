@@ -7,8 +7,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.Int64Value;
-import com.google.protobuf.StringValue;
 import com.google.protobuf.Value;
 import com.google.protobuf.util.Values;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -433,12 +431,12 @@ public class TestUtilsV1 {
         List<TimeseriesMetadata> objects = new ArrayList<>(noObjects);
         for (int i = 0; i < noObjects; i++) {
             objects.add(TimeseriesMetadata.newBuilder()
-                    .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
-                    .setName(StringValue.of("test_ts_" + RandomStringUtils.randomAlphanumeric(5)))
+                    .setExternalId(RandomStringUtils.randomAlphanumeric(10))
+                    .setName("test_ts_" + RandomStringUtils.randomAlphanumeric(5))
                     .setIsString(false)
                     .setIsStep(false)
-                    .setDescription(StringValue.of(RandomStringUtils.randomAlphanumeric(50)))
-                    .setUnit(StringValue.of("TestUnits"))
+                    .setDescription(RandomStringUtils.randomAlphanumeric(50))
+                    .setUnit("TestUnits")
                     .putMetadata("type", TestUtilsV1.sourceValue)
                     .putMetadata(sourceKey, TestUtilsV1.sourceValue)
                     .build());
@@ -502,16 +500,16 @@ public class TestUtilsV1 {
             for (int j = 0; j < noColumns; j++) {
                 columns.add(SequenceColumn.newBuilder()
                         .setExternalId(RandomStringUtils.randomAlphanumeric(20))
-                        .setName(StringValue.of("test_column_" + RandomStringUtils.randomAlphanumeric(5)))
-                        .setDescription(StringValue.of(RandomStringUtils.randomAlphanumeric(50)))
+                        .setName("test_column_" + RandomStringUtils.randomAlphanumeric(5))
+                        .setDescription(RandomStringUtils.randomAlphanumeric(50))
                         .setValueTypeValue(ThreadLocalRandom.current().nextInt(0,2))
                         .build());
             }
 
             objects.add(SequenceMetadata.newBuilder()
-                    .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
-                    .setName(StringValue.of("test_sequence_" + RandomStringUtils.randomAlphanumeric(5)))
-                    .setDescription(StringValue.of(RandomStringUtils.randomAlphanumeric(50)))
+                    .setExternalId(RandomStringUtils.randomAlphanumeric(10))
+                    .setName("test_sequence_" + RandomStringUtils.randomAlphanumeric(5))
+                    .setDescription(RandomStringUtils.randomAlphanumeric(50))
                     .putMetadata("type", TestUtilsV1.sourceValue)
                     .putMetadata(sourceKey, TestUtilsV1.sourceValue)
                     .addAllColumns(columns)
@@ -560,13 +558,13 @@ public class TestUtilsV1 {
         List<Event> objects = new ArrayList<>(noObjects);
         for (int i = 0; i < noObjects; i++) {
             objects.add(Event.newBuilder()
-                    .setExternalId(StringValue.of(RandomStringUtils.randomAlphanumeric(10)))
-                    .setStartTime(Int64Value.of(1552566113 + ThreadLocalRandom.current().nextInt(10000)))
-                    .setEndTime(Int64Value.of(1553566113 + ThreadLocalRandom.current().nextInt(10000)))
-                    .setDescription(StringValue.of("test_event_" + RandomStringUtils.randomAlphanumeric(50)))
-                    .setType(StringValue.of("test_event"))
-                    .setSubtype(StringValue.of(
-                            ThreadLocalRandom.current().nextInt(0,2) == 0 ? "test_event_sub_type" : "test_event_sub_type_2"))
+                    .setExternalId(RandomStringUtils.randomAlphanumeric(10))
+                    .setStartTime(1552566113 + ThreadLocalRandom.current().nextInt(10000))
+                    .setEndTime(1553566113 + ThreadLocalRandom.current().nextInt(10000))
+                    .setDescription("test_event_" + RandomStringUtils.randomAlphanumeric(50))
+                    .setType("test_event")
+                    .setSubtype(ThreadLocalRandom.current()
+                            .nextInt(0,2) == 0 ? "test_event_sub_type" : "test_event_sub_type_2")
                     .putMetadata("type", TestUtilsV1.sourceValue)
                     .putMetadata(sourceKey, TestUtilsV1.sourceValue)
                     .build());

@@ -47,6 +47,6 @@ public class ListEventsFn extends ListItemsBaseFn<Event> {
 
     @Override
     protected long getTimestamp(Event item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

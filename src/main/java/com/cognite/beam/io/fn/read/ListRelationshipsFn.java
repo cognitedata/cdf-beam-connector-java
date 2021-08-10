@@ -47,6 +47,6 @@ public class ListRelationshipsFn extends ListItemsBaseFn<Relationship> {
 
     @Override
     protected long getTimestamp(Relationship item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

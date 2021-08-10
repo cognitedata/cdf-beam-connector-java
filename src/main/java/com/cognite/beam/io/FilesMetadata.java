@@ -223,7 +223,7 @@ public abstract class FilesMetadata {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((FileMetadata fileHeader) -> fileHeader.getLastUpdatedTime().getValue()))
+                            .via((FileMetadata fileHeader) -> fileHeader.getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -387,7 +387,7 @@ public abstract class FilesMetadata {
                                     return inputItem;
                                 } else {
                                     return FileMetadata.newBuilder(inputItem)
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
                                 }
                             }))

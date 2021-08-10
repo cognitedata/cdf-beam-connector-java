@@ -67,12 +67,12 @@ public class SortAssetsForUpsertFn extends DoFn<Iterable<Asset>, List<Asset>> {
             if (!element.hasExternalId()) {
                 missingExternalIdList.add(element);
             } else if (element.hasParentExternalId()
-                    && element.getParentExternalId().getValue().equals(element.getExternalId().getValue())) {
-                selfReferenceList.add(element.getExternalId().getValue());
-            } else if (element.hasExternalId() && inputMap.containsKey(element.getExternalId().getValue())) {
-                duplicatesList.add(element.getExternalId().getValue());
+                    && element.getParentExternalId().equals(element.getExternalId())) {
+                selfReferenceList.add(element.getExternalId());
+            } else if (element.hasExternalId() && inputMap.containsKey(element.getExternalId())) {
+                duplicatesList.add(element.getExternalId());
             }
-            inputMap.put(element.getExternalId().getValue(), element);
+            inputMap.put(element.getExternalId(), element);
         }
 
         if (!missingExternalIdList.isEmpty()) {
@@ -86,8 +86,8 @@ public class SortAssetsForUpsertFn extends DoFn<Iterable<Asset>, List<Asset>> {
             for (Asset item : missingExternalIdList) {
                 message.append("---------------------------").append(System.lineSeparator())
                         .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
-                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
-                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription()).append("]").append(System.lineSeparator())
                         .append("--------------------------");
             }
             LOG.error(message.toString());
@@ -130,14 +130,14 @@ public class SortAssetsForUpsertFn extends DoFn<Iterable<Asset>, List<Asset>> {
         }
         // add edges
         for (Asset asset : inputMap.values()) {
-            if (asset.hasParentExternalId() && inputMap.containsKey(asset.getParentExternalId().getValue())) {
-                graph.addEdge(inputMap.get(asset.getParentExternalId().getValue()), asset);
+            if (asset.hasParentExternalId() && inputMap.containsKey(asset.getParentExternalId())) {
+                graph.addEdge(inputMap.get(asset.getParentExternalId()), asset);
             }
         }
         CycleDetector<Asset, DefaultEdge> cycleDetector = new CycleDetector<>(graph);
         if (cycleDetector.detectCycles()) {
             Set<String> cycle = new HashSet<>();
-            cycleDetector.findCycles().stream().forEach((Asset item) -> cycle.add(item.getExternalId().getValue()));
+            cycleDetector.findCycles().stream().forEach((Asset item) -> cycle.add(item.getExternalId()));
             String message = batchLogPrefix + "Cycles detected. Number of asset in the cycle: " + cycle.size();
             LOG.error(message);
             LOG.error(batchLogPrefix + "Cycle: " + cycle.toString());
@@ -154,7 +154,7 @@ public class SortAssetsForUpsertFn extends DoFn<Iterable<Asset>, List<Asset>> {
                 Asset asset = iterator.next();
                 if (asset.hasParentExternalId()) {
                     // Check if the parent asset exists in the input collection. If no, it is safe to write the asset.
-                    if (!inputMap.containsKey(asset.getParentExternalId().getValue())) {
+                    if (!inputMap.containsKey(asset.getParentExternalId())) {
                         assetList.add(asset);
                         iterator.remove();
                     }

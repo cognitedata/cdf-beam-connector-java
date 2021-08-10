@@ -223,18 +223,18 @@ public abstract class Files {
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
                     .apply("Add key", WithKeys.of((FileMetadata metadata) ->
-                            metadata.getId().getValue()))
+                            metadata.getId()))
                     .setCoder(KvCoder.of(varLongCoder, metadataCoder))
                     .apply("Max by key", Max.perKey((Comparator<FileMetadata> & Serializable)
                             (FileMetadata left, FileMetadata right) ->
-                            Long.compare(left.getLastUpdatedTime().getValue(), right.getLastUpdatedTime().getValue())));
+                            Long.compare(left.getLastUpdatedTime(), right.getLastUpdatedTime())));
 
             // Download the file binaries matching the file metadata
             PCollection<KV<Long, FileBinary>> fileBinaryPCollection = fileMetadataPCollection
                     .apply("Convert to items", MapElements.into(TypeDescriptor.of(Item.class))
                             .via(fileMetadata ->
                                     Item.newBuilder()
-                                            .setId(fileMetadata.getValue().getId().getValue())
+                                            .setId(fileMetadata.getValue().getId())
                                             .build()))
                     .apply("Read file binary", CogniteIO.readAllFilesBinariesByIds()
                             .withHints(getHints())
@@ -272,7 +272,7 @@ public abstract class Files {
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
                             .via((FileContainer fileContainer) ->
-                                    fileContainer.getFileMetadata().getLastUpdatedTime().getValue()))
+                                    fileContainer.getFileMetadata().getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -544,7 +544,7 @@ public abstract class Files {
                                     LOG.warn(loggingPrefix + "File does not contain id nor externalId. "
                                             + "Will generate a UUID to use as externalID.");
                                     FileMetadata metadata = inputItem.getFileMetadata().toBuilder()
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
                                     return inputItem.toBuilder()
                                             .setFileMetadata(metadata)

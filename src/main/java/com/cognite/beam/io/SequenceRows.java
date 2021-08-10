@@ -286,7 +286,7 @@ public abstract class SequenceRows {
                                     return inputItem;
                                 } else {
                                     return SequenceBody.newBuilder(inputItem)
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
                                 }
                             }))

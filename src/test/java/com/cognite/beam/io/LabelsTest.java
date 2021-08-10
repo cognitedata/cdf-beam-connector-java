@@ -4,7 +4,6 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Label;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
@@ -43,12 +42,12 @@ class LabelsTest extends TestConfigProviderV1 {
                 Label.newBuilder()
                         .setExternalId("extId_A")
                         .setName("Label A")
-                        .setDescription(StringValue.of("Test label A"))
+                        .setDescription("Test label A")
                         .build(),
                 Label.newBuilder()
                         .setExternalId("extId_B")
                         .setName("Label B")
-                        .setDescription(StringValue.of("Test label B"))
+                        .setDescription("Test label B")
                         .build())
                 .advanceWatermarkToInfinity();
 
