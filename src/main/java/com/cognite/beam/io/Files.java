@@ -555,7 +555,7 @@ public abstract class Files {
                             String.valueOf(ThreadLocalRandom.current().nextInt(getHints().getWriteShards()))
                     )).setCoder(keyValueCoder)
                     .apply("Batch items", GroupIntoBatches.<String, FileContainer>of(keyValueCoder)
-                            .withMaxBatchSize(WRITE_BATCH_SIZE)
+                            .withMaxBatchSize(getHints().getWriteFileBatchSize())
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<FileContainer>>create())
                     .apply("Upsert files", ParDo.of(

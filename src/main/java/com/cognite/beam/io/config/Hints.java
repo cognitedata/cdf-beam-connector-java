@@ -75,6 +75,15 @@ public abstract class Hints implements Serializable {
     // Hints for the write TS batch optimization
     private static final UpdateFrequency DEFAULT_WRITE_TS_POINTS_UPDATE_FREQUENCY = UpdateFrequency.SECOND;
 
+    // File binary batching
+    private static final int DEFAULT_READ_FILE_BINARY_BATCH_SIZE = 4;
+    private static final int MIN_READ_FILE_BINARY_BATCH_SIZE = 1;
+    private static final int MAX_READ_FILE_BINARY_BATCH_SIZE = 10;
+
+    private static final int DEFAULT_WRITE_FILE_BATCH_SIZE = 4;
+    private static final int MIN_WRITE_FILE_BATCH_SIZE = 1;
+    private static final int MAX_WRITE_FILE_BATCH_SIZE = 10;
+
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_Hints.Builder()
                 .setReadShards(DEFAULT_READ_SHARDS)
@@ -85,6 +94,8 @@ public abstract class Hints implements Serializable {
                 .setMaxRetries(DEFAULT_RETRIES)
                 .setWriteTsPointsUpdateFrequency(DEFAULT_WRITE_TS_POINTS_UPDATE_FREQUENCY)
                 .setContextMaxBatchSize(DEFAULT_CONTEXT_MAX_BATCH_SIZE)
+                .setReadFileBinaryBatchSize(DEFAULT_READ_FILE_BINARY_BATCH_SIZE)
+                .setWriteFileBatchSize(DEFAULT_WRITE_FILE_BATCH_SIZE)
                 ;
     }
 
@@ -100,6 +111,8 @@ public abstract class Hints implements Serializable {
     public abstract Duration getWriteMaxBatchLatency();
     public abstract ValueProvider<Integer> getMaxRetries();
     public abstract UpdateFrequency getWriteTsPointsUpdateFrequency();
+    public abstract int getReadFileBinaryBatchSize();
+    public abstract int getWriteFileBatchSize();
 
     abstract Builder toBuilder();
 
@@ -208,6 +221,42 @@ public abstract class Hints implements Serializable {
     }
 
     /**
+     * Sets the max batch size when reading binary files.
+     *
+     * In some cases you may have to adjust this batch size if you see signs of api saturation.
+     *
+     * The default batch size is set to 4 items.
+     * @param value
+     * @return
+     */
+    public Hints withReadFileBinaryBatchSize(int value) {
+        checkArgument(value >= MIN_READ_FILE_BINARY_BATCH_SIZE
+                        && value <= MAX_READ_FILE_BINARY_BATCH_SIZE,
+                String.format("Max read file binary batch size must be between %d and %d", MIN_READ_FILE_BINARY_BATCH_SIZE,
+                        MAX_READ_FILE_BINARY_BATCH_SIZE));
+
+        return toBuilder().setWriteRawMaxBatchSize(value).build();
+    }
+
+    /**
+     * Sets the max batch size when writing files to CDF.
+     *
+     * In some cases you may have to adjust this batch size if you see signs of api saturation.
+     *
+     * The default batch size is set to 4 items.
+     * @param value
+     * @return
+     */
+    public Hints withWriteFileBatchSize(int value) {
+        checkArgument(value >= MIN_WRITE_FILE_BATCH_SIZE
+                        && value <= MAX_WRITE_FILE_BATCH_SIZE,
+                String.format("Max write file batch size must be between %d and %d", MIN_WRITE_FILE_BATCH_SIZE,
+                        MAX_WRITE_FILE_BATCH_SIZE));
+
+        return toBuilder().setWriteRawMaxBatchSize(value).build();
+    }
+
+    /**
      * Sets the max batch size when executing contextualization operations.
      *
      * The default batch size is set to 1000 items.
@@ -287,6 +336,8 @@ public abstract class Hints implements Serializable {
         abstract Builder setMaxRetries(ValueProvider<Integer> value);
         abstract Builder setWriteMaxBatchLatency(Duration value);
         abstract Builder setWriteTsPointsUpdateFrequency(UpdateFrequency value);
+        abstract Builder setReadFileBinaryBatchSize(int value);
+        abstract Builder setWriteFileBatchSize(int value);
 
         abstract Hints autoBuild();
         Hints build() {

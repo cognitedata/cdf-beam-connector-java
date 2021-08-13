@@ -104,7 +104,7 @@ public abstract class FilesBinary {
 
             PCollection<FileBinary> outputCollection = input
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
-                            .setMaxBatchSize(4)
+                            .setMaxBatchSize(getHints().getReadFileBinaryBatchSize())
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
                             .setWriteShards(getHints().getWriteShards())
                             .build())
