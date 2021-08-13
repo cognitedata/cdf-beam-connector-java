@@ -235,7 +235,7 @@ public abstract class Hints implements Serializable {
                 String.format("Max read file binary batch size must be between %d and %d", MIN_READ_FILE_BINARY_BATCH_SIZE,
                         MAX_READ_FILE_BINARY_BATCH_SIZE));
 
-        return toBuilder().setWriteRawMaxBatchSize(value).build();
+        return toBuilder().setReadFileBinaryBatchSize(value).build();
     }
 
     /**
@@ -253,7 +253,7 @@ public abstract class Hints implements Serializable {
                 String.format("Max write file batch size must be between %d and %d", MIN_WRITE_FILE_BATCH_SIZE,
                         MAX_WRITE_FILE_BATCH_SIZE));
 
-        return toBuilder().setWriteRawMaxBatchSize(value).build();
+        return toBuilder().setWriteFileBatchSize(value).build();
     }
 
     /**
