@@ -76,11 +76,11 @@ public abstract class Hints implements Serializable {
     private static final UpdateFrequency DEFAULT_WRITE_TS_POINTS_UPDATE_FREQUENCY = UpdateFrequency.SECOND;
 
     // File binary batching
-    private static final int DEFAULT_READ_FILE_BINARY_BATCH_SIZE = 4;
+    private static final int DEFAULT_READ_FILE_BINARY_BATCH_SIZE = 8;
     private static final int MIN_READ_FILE_BINARY_BATCH_SIZE = 1;
     private static final int MAX_READ_FILE_BINARY_BATCH_SIZE = 10;
 
-    private static final int DEFAULT_WRITE_FILE_BATCH_SIZE = 4;
+    private static final int DEFAULT_WRITE_FILE_BATCH_SIZE = 8;
     private static final int MIN_WRITE_FILE_BATCH_SIZE = 1;
     private static final int MAX_WRITE_FILE_BATCH_SIZE = 10;
 
@@ -225,7 +225,7 @@ public abstract class Hints implements Serializable {
      *
      * In some cases you may have to adjust this batch size if you see signs of api saturation.
      *
-     * The default batch size is set to 4 items.
+     * The default batch size is set to 8 items.
      * @param value
      * @return
      */
@@ -243,7 +243,7 @@ public abstract class Hints implements Serializable {
      *
      * In some cases you may have to adjust this batch size if you see signs of api saturation.
      *
-     * The default batch size is set to 4 items.
+     * The default batch size is set to 8 items.
      * @param value
      * @return
      */
