@@ -30,7 +30,7 @@ We skip a few versions due to updating our build pipeline.
 
 ### Added
 
-- Support for Beam 2.30.0
+- Support for Beam 2.31.0
 - Configurable batch size for file binary download and upload
 
 ### Changed
