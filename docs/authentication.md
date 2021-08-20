@@ -1,3 +1,5 @@
+
+
 ## Authentication
 
 There are two authentication options:
@@ -22,7 +24,8 @@ from Azure AD) as inputs to the SDK:
 ProjectConfig projectConfig = ProjectConfig.create()
         .withClientId(<clientId>)
         .withClientSecret(<clientSecret>)
-        .withTokenUrl(TokenUrl.generateAzureAdURL(<azureAdTenantId>).toString());
+        .withTokenUrl(TokenUrl.generateAzureAdURL(<azureAdTenantId>).toString())
+        .withProject("myCdfProject");
 
 // ... and then injected to the I/O transforms
 PCollection<Event> readResults = pipeline
@@ -39,7 +42,8 @@ You simply supply the API key when creating the client:
 ```java
 // The auth is configured via the ProjectConfig object
 ProjectConfig projectConfig = ProjectConfig.create()
-        .withApiKey(<myApiKey>);
+        .withApiKey(<myApiKey>)
+        .withProject("myCdfProject");
 
 // ... and then injected to the I/O transforms
 PCollection<Event> readResults = pipeline
@@ -71,7 +75,8 @@ String azureAdTenantId = readFromMyConfigHandler();
 ProjectConfig projectConfig = ProjectConfig.create()
         .withClientId(clientId)
         .withClientSecret(clientSecret)
-        .withTokenUrl(TokenUrl.generateAzureAdURL(azureAdTenantId).toString());
+        .withTokenUrl(TokenUrl.generateAzureAdURL(azureAdTenantId).toString())
+        .withProject("myCdfProject");
 ```
 
 ## Config file
@@ -99,6 +104,7 @@ The TOML file itself should contain all the necessary config parameters:
 #------------------------------------------------------------------------
 [project]
 host = "https://api.cognitedata.com"
+cdf_project = "my-cdf-project"
 
 #------------------------------------------------------------------------
 # OpenID connect client credentials

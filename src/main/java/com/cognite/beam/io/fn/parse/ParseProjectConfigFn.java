@@ -38,6 +38,7 @@ import java.util.List;
  */
 public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
     private final static String HOST_KEY = "host";
+    private final static String CDF_PROJECT_KEY = "cdf_project";
     private final static String API_KEY = "api_key";
     private final static String CLIENT_ID_KEY = "client_id";
     private final static String CLIENT_SECRET_KEY = "client_secret";
@@ -45,11 +46,11 @@ public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
 
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
-    private final ImmutableList<String> configKeyList = ImmutableList.of(HOST_KEY, API_KEY,
+    private final ImmutableList<String> configKeyList = ImmutableList.of(HOST_KEY, CDF_PROJECT_KEY, API_KEY,
             CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY);
     private final ImmutableList<String> mandatoryConfigKeyListApiKey = ImmutableList.of(API_KEY);
     private final ImmutableList<String> mandatoryConfigKeyListClientCredentials =
-            ImmutableList.of(CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY);
+            ImmutableList.of(CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY, CDF_PROJECT_KEY);
 
     @ProcessElement
     public void processElement(@Element String tomlString,
@@ -84,11 +85,16 @@ public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
             returnObject = returnObject
                     .withClientId(configTable.getString(CLIENT_ID_KEY))
                     .withClientSecret(configTable.getString(CLIENT_SECRET_KEY))
-                    .withTokenUrl(configTable.getString(TOKEN_URL_KEY));
+                    .withTokenUrl(configTable.getString(TOKEN_URL_KEY))
+                    .withProject(configTable.getString(CDF_PROJECT_KEY));
 
         } else if (keys.containsAll(mandatoryConfigKeyListApiKey)) {
             returnObject = returnObject
                     .withApiKey(configTable.getString(API_KEY));
+            if (keys.contains(CDF_PROJECT_KEY)) {
+                returnObject = returnObject
+                        .withProject(configTable.getString(CDF_PROJECT_KEY));
+            }
         } else {
             // Could not find any valid configs
             LOG.warn("Could not find the mandatory keys in the project configuration setting. Cannot build project config.");
