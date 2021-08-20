@@ -42,7 +42,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <beam.version>2.30.0</beam.version>
-        <cdf-java-sdk.version>0.9.10</cdf-java-sdk.version>
+        <cdf-java-sdk.version>1.0.1</cdf-java-sdk.version>
         <auto.version>1.8.2</auto.version>
         <auto-service.version>1.0</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
@@ -73,7 +73,7 @@
             <dependency>
                 <groupId>com.google.cloud</groupId>
                 <artifactId>libraries-bom</artifactId>
-                <version>20.9.0</version>
+                <version>20.7.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
