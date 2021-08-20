@@ -6,7 +6,6 @@
 
 # Beam sdk for CDF
 
-
 Beam I/O connector for reading and writing from/to CDF resources.
 
 The connector implements a sub-connector per resource type (Asset, Event, etc.) and is configured
