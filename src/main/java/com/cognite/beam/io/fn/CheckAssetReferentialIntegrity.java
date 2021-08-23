@@ -45,15 +45,15 @@ public class CheckAssetReferentialIntegrity extends DoFn<KV<String, Iterable<Ass
         LOG.info(batchLogPrefix + "Checking asset input table for integrity. Asset table root externalId: "
                 + elements.getKey());
         for (Asset element : elements.getValue()) {
-            if (element.getParentExternalId().getValue().isEmpty()) {
+            if (element.getParentExternalId().isEmpty()) {
                 rootNodeList.add(element);
             }
-            inputMap.put(element.getExternalId().getValue(), element);
+            inputMap.put(element.getExternalId(), element);
         }
 
         for (Asset element : elements.getValue()) {
-            if (!element.getParentExternalId().getValue().isEmpty()
-                    && !inputMap.containsKey(element.getParentExternalId().getValue())) {
+            if (!element.getParentExternalId().isEmpty()
+                    && !inputMap.containsKey(element.getParentExternalId())) {
                 invalidReferenceList.add(element);
             }
         }
@@ -68,10 +68,10 @@ public class CheckAssetReferentialIntegrity extends DoFn<KV<String, Iterable<Ass
             message.append("Root nodes (max 10 displayed): " + System.lineSeparator());
             for (Asset item : rootNodeList) {
                 message.append("---------------------------").append(System.lineSeparator())
-                        .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("externalId: [").append(item.getExternalId()).append("]").append(System.lineSeparator())
                         .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
-                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
-                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription()).append("]").append(System.lineSeparator())
                         .append("--------------------------");
             }
             LOG.error(message.toString());
@@ -88,10 +88,10 @@ public class CheckAssetReferentialIntegrity extends DoFn<KV<String, Iterable<Ass
             message.append("Items with invalid parentExternalId (max 10 displayed): " + System.lineSeparator());
             for (Asset item : invalidReferenceList) {
                 message.append("---------------------------").append(System.lineSeparator())
-                        .append("externalId: [").append(item.getExternalId().getValue()).append("]").append(System.lineSeparator())
+                        .append("externalId: [").append(item.getExternalId()).append("]").append(System.lineSeparator())
                         .append("name: [").append(item.getName()).append("]").append(System.lineSeparator())
-                        .append("parentExternalId: [").append(item.getParentExternalId().getValue()).append("]").append(System.lineSeparator())
-                        .append("description: [").append(item.getDescription().getValue()).append("]").append(System.lineSeparator())
+                        .append("parentExternalId: [").append(item.getParentExternalId()).append("]").append(System.lineSeparator())
+                        .append("description: [").append(item.getDescription()).append("]").append(System.lineSeparator())
                         .append("--------------------------");
             }
             LOG.error(message.toString());

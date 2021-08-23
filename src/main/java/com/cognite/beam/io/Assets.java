@@ -230,7 +230,7 @@ public abstract class Assets {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((Asset asset) -> asset.getLastUpdatedTime().getValue()))
+                            .via((Asset asset) -> asset.getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -748,13 +748,13 @@ public abstract class Assets {
 
             PCollectionView<Map<String, Asset>> cdfRootAssetsViewExtId = cdfRootAssets
                     .apply("Add externalId as key", WithKeys
-                            .of((Asset asset) -> asset.getExternalId().getValue()))
+                            .of((Asset asset) -> asset.getExternalId()))
                             .setCoder(KvCoder.of(StringUtf8Coder.of(), ProtoCoder.of(Asset.class)))
                     .apply("To map view externalId", View.asMap());
 
             PCollectionView<Map<Long, Asset>> cdfRootAssetsViewId = cdfRootAssets
                     .apply("Add id as key", WithKeys
-                            .of((Asset asset) -> asset.getId().getValue()))
+                            .of((Asset asset) -> asset.getId()))
                     .setCoder(KvCoder.of(VarLongCoder.of(), ProtoCoder.of(Asset.class)))
                     .apply("To map view id", View.asMap());
 
@@ -762,7 +762,7 @@ public abstract class Assets {
             // assets collection to synchronize with.
             PCollectionView<List<Long>> targetDataSetIds = input
                     .apply("Extract data sets", MapElements.into(TypeDescriptors.longs())
-                            .via(item -> item.getValue().getDataSetId().getValue()))
+                            .via(item -> item.getValue().getDataSetId()))
                     .apply("Select distinct", Distinct.create())
                     .apply("Log id", MapElements.into(TypeDescriptors.longs())
                             .via(expression -> {
@@ -792,7 +792,7 @@ public abstract class Assets {
                             target data set ids.
                              */
                             if ((dataSetIds.contains(0L) && !asset.hasDataSetId())
-                                    || (asset.hasDataSetId() && dataSetIds.contains(asset.getDataSetId().getValue()))) {
+                                    || (asset.hasDataSetId() && dataSetIds.contains(asset.getDataSetId()))) {
                                 outputReceiver.output(asset);
                             }
 
@@ -811,11 +811,11 @@ public abstract class Assets {
 
                         // build key
                         String rootExternalId = "noRootExternalId";
-                        if (externalIdMap.containsKey(item.getRootId().getValue())) {
-                            rootExternalId = externalIdMap.get(item.getRootId().getValue()).getExternalId().getValue();
+                        if (externalIdMap.containsKey(item.getRootId())) {
+                            rootExternalId = externalIdMap.get(item.getRootId()).getExternalId();
                         }
 
-                        outputReceiver.output(KV.of(rootExternalId + delimiter + item.getExternalId().getValue(), item));
+                        outputReceiver.output(KV.of(rootExternalId + delimiter + item.getExternalId(), item));
                         }
                 }).withSideInputs(cdfRootAssetsViewId));
 
@@ -829,7 +829,7 @@ public abstract class Assets {
                         public void processElement(@Element KV<String, Asset> item,
                                             OutputReceiver<KV<String, Asset>> outputReceiver) throws Exception {
                             outputReceiver.output(
-                                    KV.of(item.getKey() + delimiter + item.getValue().getExternalId().getValue(),
+                                    KV.of(item.getKey() + delimiter + item.getValue().getExternalId(),
                                             item.getValue()));
                         }
                     }));
@@ -851,7 +851,7 @@ public abstract class Assets {
                     .apply("Remove key", Values.create())
                     .apply("Build delete items", MapElements.into(TypeDescriptor.of(Item.class))
                             .via(asset -> Item.newBuilder()
-                                    .setExternalId(asset.getExternalId().getValue())
+                                    .setExternalId(asset.getExternalId())
                                     .build()))
                     .apply("Delete assets", CogniteIO.deleteAssets()
                             .withProjectConfig(getProjectConfig())

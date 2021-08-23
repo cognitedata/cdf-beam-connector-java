@@ -119,7 +119,7 @@ public class GroupIntoBatchesSequencesBodiesFn
                                @TimerId("expiry") Timer expiryTimer,
                                @TimerId("stale") Timer staleTimer) throws Exception {
 
-        LOG.trace("Received sequences body item to buffer: {}", element.getValue().getExternalId().getValue());
+        LOG.trace("Received sequences body item to buffer: {}", element.getValue().getExternalId());
         Preconditions.checkArgument(element.getValue().hasExternalId() || element.getValue().hasId(),
                 "Sequences must have either externalId or id set.");
 

@@ -47,6 +47,6 @@ public class ListLabelsFn extends ListItemsBaseFn<Label> {
 
     @Override
     protected long getTimestamp(Label item) {
-        return item.getCreatedTime().getValue();
+        return item.getCreatedTime();
     }
 }

@@ -4,7 +4,6 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
-import com.google.protobuf.FloatValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
@@ -46,7 +45,7 @@ class RelationshipsTest extends TestConfigProviderV1 {
                         .setSourceType(Relationship.ResourceType.ASSET)
                         .setTargetExternalId("extId_B")
                         .setTargetType(Relationship.ResourceType.ASSET)
-                        .setConfidence(FloatValue.of(1f))
+                        .setConfidence(1f)
                         .build(),
                 Relationship.newBuilder()
                         .setExternalId("extId_B")
@@ -54,7 +53,7 @@ class RelationshipsTest extends TestConfigProviderV1 {
                         .setSourceType(Relationship.ResourceType.ASSET)
                         .setTargetExternalId("extId_A")
                         .setTargetType(Relationship.ResourceType.ASSET)
-                        .setConfidence(FloatValue.of(1f))
+                        .setConfidence(1f)
                         .build()
         )
                 .advanceWatermarkToInfinity();

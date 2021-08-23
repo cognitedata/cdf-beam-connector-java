@@ -4,7 +4,6 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.*;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.io.TextIO;
@@ -59,15 +58,15 @@ class FilesTest extends TestConfigProviderV1 {
                 .setExternalId(fileExtIdB)
                 .build();
         final FileMetadata fileMetadataA = FileMetadata.newBuilder()
-                .setExternalId(StringValue.of(fileExtIdA))
-                .setName(StringValue.of("Test_file"))
-                .setMimeType(StringValue.of(fileType))
+                .setExternalId(fileExtIdA)
+                .setName("Test_file")
+                .setMimeType(fileType)
                 .putMetadata(metaKey, metaValue)
                 .build();
         final FileMetadata fileMetadataB = FileMetadata.newBuilder()
-                .setExternalId(StringValue.of(fileExtIdB))
-                .setName(StringValue.of("Test_file_2"))
-                .setMimeType(StringValue.of(fileType))
+                .setExternalId(fileExtIdB)
+                .setName("Test_file_2")
+                .setMimeType(fileType)
                 .putMetadata(metaKey, metaValue)
                 .build();
 
@@ -153,7 +152,7 @@ class FilesTest extends TestConfigProviderV1 {
                         .into(TypeDescriptor.of(Item.class))
                         .via((FileContainer input) ->
                                 Item.newBuilder()
-                                        .setId(input.getFileMetadata().getId().getValue())
+                                        .setId(input.getFileMetadata().getId())
                                         .build()
                         ))
                         .apply("Delete files", CogniteIO.deleteFiles()

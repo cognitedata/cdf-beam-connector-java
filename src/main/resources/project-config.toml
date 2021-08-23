@@ -6,6 +6,7 @@
 #------------------------------------------------------------------------
 [project]
 host = "https://api.cognitedata.com"
+cdf_project = "my-cdf-project"
 
 #------------------------------------------------------------------------
 # OpenID connect client credentials

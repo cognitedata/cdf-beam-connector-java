@@ -47,6 +47,6 @@ public class ListDataSetsFn extends ListItemsBaseFn<DataSet> {
 
     @Override
     protected long getTimestamp(DataSet item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

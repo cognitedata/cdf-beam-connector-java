@@ -227,7 +227,7 @@ public abstract class Events {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((Event event) -> event.getLastUpdatedTime().getValue()))
+                            .via((Event event) -> event.getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -551,7 +551,7 @@ public abstract class Events {
                                     return inputItem;
                                 } else {
                                     return inputItem.toBuilder()
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
 
                                 }

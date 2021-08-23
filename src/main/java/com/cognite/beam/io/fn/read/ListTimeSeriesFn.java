@@ -47,6 +47,6 @@ public class ListTimeSeriesFn extends ListItemsBaseFn<TimeseriesMetadata> {
 
     @Override
     protected long getTimestamp(TimeseriesMetadata item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

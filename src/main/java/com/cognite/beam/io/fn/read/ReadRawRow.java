@@ -59,6 +59,6 @@ public class ReadRawRow extends ListItemsBaseFn<RawRow> {
 
     @Override
     protected long getTimestamp(RawRow item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

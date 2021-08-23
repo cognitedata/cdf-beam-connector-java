@@ -30,7 +30,14 @@ We skip a few versions due to updating our build pipeline.
 
 ### Added
 
-- Support for Beam 2.30.0
+- Support for Beam 2.31.0
+- Configurable batch size for file binary download and upload
+
+### Changed
+
+- Breaking change: Remove the use of wrapper objects from the data transfer objects (`Asset`, `Event`, etc.). Please
+  refer to the [documentation](https://github.com/cognitedata/cdf-sdk-java/blob/main/docs/readAndWriteData.md#migrating-from-sdk-099)
+  for more information.
 
 ## [0.9.19]
 

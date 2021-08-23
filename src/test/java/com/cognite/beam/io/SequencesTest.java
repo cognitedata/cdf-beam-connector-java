@@ -6,7 +6,6 @@ import com.cognite.client.dto.Item;
 import com.cognite.client.dto.SequenceBody;
 import com.cognite.client.dto.SequenceMetadata;
 import com.cognite.client.dto.SequenceRow;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.transforms.Count;
@@ -97,7 +96,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .withFilterMetadataParameter(TestUtilsV1.sourceKey, TestUtilsV1.sourceValue)))
                 .apply("Edit header", MapElements.into(TypeDescriptor.of(SequenceMetadata.class))
                         .via(sequence -> sequence.toBuilder()
-                                .setName(StringValue.of("Edited_value_" + sequence.getName().getValue()))
+                                .setName("Edited_value_" + sequence.getName())
                                 .build()
                         ))
                 .apply("Write updates", CogniteIO.writeSequencesMetadata()
@@ -125,7 +124,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .withFilterMetadataParameter(TestUtilsV1.sourceKey, TestUtilsV1.sourceValue)))
                 .apply("Build rows query", MapElements.into(TypeDescriptor.of(RequestParameters.class))
                         .via(sequence -> RequestParameters.create()
-                                .withRootParameter("externalId", sequence.getExternalId().getValue())
+                                .withRootParameter("externalId", sequence.getExternalId())
                         ))
                 .apply("Read rows", CogniteIO.readAllSequenceRows()
                         .withProjectConfig(projectConfigApiKey)
@@ -176,7 +175,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .withFilterMetadataParameter(TestUtilsV1.sourceKey, TestUtilsV1.sourceValue)))
                 .apply("Build delete sequences request", MapElements.into(TypeDescriptor.of(Item.class))
                         .via(sequenceBody -> Item.newBuilder()
-                                .setExternalId(sequenceBody.getExternalId().getValue())
+                                .setExternalId(sequenceBody.getExternalId())
                                 .build()
                         ))
                 .apply("Delete sequences", CogniteIO.deleteSequences()
@@ -252,7 +251,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .withFilterMetadataParameter(TestUtilsV1.sourceKey, TestUtilsV1.sourceValue)))
                 .apply("Build delete sequences request", MapElements.into(TypeDescriptor.of(Item.class))
                         .via(sequenceBody -> Item.newBuilder()
-                                .setExternalId(sequenceBody.getExternalId().getValue())
+                                .setExternalId(sequenceBody.getExternalId())
                                 .build()
                         ))
                 .apply("Delete sequences", CogniteIO.deleteSequences()
@@ -309,7 +308,7 @@ class SequencesTest extends TestConfigProviderV1 {
                 .apply("Build sequence id request", MapElements.into(TypeDescriptor.of(Item.class))
                         .via(sequenceMetadata ->
                                 Item.newBuilder()
-                                        .setExternalId(sequenceMetadata.getExternalId().getValue())
+                                        .setExternalId(sequenceMetadata.getExternalId())
                                         .build()))
                 .apply("Ready Seq by id", CogniteIO.readAllSequencesMetadataByIds()
                         .withProjectConfig(projectConfigApiKey)
@@ -339,7 +338,7 @@ class SequencesTest extends TestConfigProviderV1 {
                                 .withFilterMetadataParameter(TestUtilsV1.sourceKey, TestUtilsV1.sourceValue)))
                 .apply("Build delete sequences request", MapElements.into(TypeDescriptor.of(Item.class))
                         .via(sequenceBody -> Item.newBuilder()
-                                .setExternalId(sequenceBody.getExternalId().getValue())
+                                .setExternalId(sequenceBody.getExternalId())
                                 .build()
                         ))
                 .apply("Delete sequences", CogniteIO.deleteSequences()

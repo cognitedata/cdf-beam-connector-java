@@ -327,7 +327,7 @@ public abstract class DataSets {
                                     return inputItem;
                                 } else {
                                     return inputItem.toBuilder()
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
 
                                 }

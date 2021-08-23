@@ -47,6 +47,6 @@ public class ListAssetsFn extends ListItemsBaseFn<Asset> {
 
     @Override
     protected long getTimestamp(Asset item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

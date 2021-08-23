@@ -152,7 +152,7 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
                                     .setDbName(getRawTableName().get().split("\\.")[0])
                                     .setTableName(getRawTableName().get().split("\\.")[1])
                                     .setKey("default-row")
-                                    .setLastUpdatedTime(Int64Value.of(1L)) // set a low timestamp so real rows will take precedence.
+                                    .setLastUpdatedTime(1L) // set a low timestamp so real rows will take precedence.
                                     .setColumns(Struct.newBuilder()
                                             .putFields("timestamp", Value.newBuilder().setNumberValue(1D).build())
                                             .putFields("identifier", Value.newBuilder().setStringValue("default-row").build())
@@ -194,7 +194,7 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
                 .apply("Merge RawRow collections", Flatten.<RawRow>pCollections())
                 .apply("Get newest row", Max.globally((Comparator<RawRow> & Serializable)
                         (RawRow left, RawRow right) ->
-                                Long.compare(left.getLastUpdatedTime().getValue(), right.getLastUpdatedTime().getValue())
+                                Long.compare(left.getLastUpdatedTime(), right.getLastUpdatedTime())
                         ))
                 .apply("Parse row to timestamp", MapElements.into(TypeDescriptors.longs())
                         .via((RawRow row) -> {

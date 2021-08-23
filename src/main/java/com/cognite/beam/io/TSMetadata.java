@@ -224,7 +224,7 @@ public abstract class TSMetadata {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((TimeseriesMetadata tsMeta) -> tsMeta.getLastUpdatedTime().getValue()))
+                            .via((TimeseriesMetadata tsMeta) -> tsMeta.getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -546,7 +546,7 @@ public abstract class TSMetadata {
                                     return inputItem;
                                 } else {
                                     return TimeseriesMetadata.newBuilder(inputItem)
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
                                 }
                             }))

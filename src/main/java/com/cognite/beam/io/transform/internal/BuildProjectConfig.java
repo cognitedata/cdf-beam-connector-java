@@ -19,10 +19,7 @@ package com.cognite.beam.io.transform.internal;
 import com.cognite.beam.io.config.GcpSecretConfig;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.google.auto.value.AutoValue;
-import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionRequest;
-import com.google.cloud.secretmanager.v1beta1.AccessSecretVersionResponse;
-import com.google.cloud.secretmanager.v1beta1.SecretManagerServiceClient;
-import com.google.cloud.secretmanager.v1beta1.SecretVersionName;
+import com.google.cloud.secretmanager.v1.*;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
@@ -142,13 +139,11 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
 
                         // Initialize client that will be used to send requests.
                         try (SecretManagerServiceClient client = SecretManagerServiceClient.create()) {
-                            SecretVersionName name = SecretVersionName.of(config.getProjectId().get(),
+                            SecretVersionName secretVersionName = SecretVersionName.of(config.getProjectId().get(),
                                     config.getSecretId().get(), config.getSecretVersion().get());
 
                             // Access the secret version.
-                            AccessSecretVersionRequest request =
-                                    AccessSecretVersionRequest.newBuilder().setName(name.toString()).build();
-                            AccessSecretVersionResponse response = client.accessSecretVersion(request);
+                            AccessSecretVersionResponse response = client.accessSecretVersion(secretVersionName);
                             LOG.info(loggingPrefix + "Successfully read secret from GCP Secret Manager.");
 
                             returnValue = response.getPayload().getData().toStringUtf8();

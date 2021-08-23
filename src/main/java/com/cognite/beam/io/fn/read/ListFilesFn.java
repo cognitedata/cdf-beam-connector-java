@@ -47,6 +47,6 @@ public class ListFilesFn extends ListItemsBaseFn<FileMetadata> {
 
     @Override
     protected long getTimestamp(FileMetadata item) {
-        return item.getLastUpdatedTime().getValue();
+        return item.getLastUpdatedTime();
     }
 }

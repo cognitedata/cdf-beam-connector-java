@@ -207,7 +207,7 @@ public abstract class Sequences {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((SequenceMetadata seqMeta) -> seqMeta.getLastUpdatedTime().getValue()))
+                            .via((SequenceMetadata seqMeta) -> seqMeta.getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -534,7 +534,7 @@ public abstract class Sequences {
                                     return inputItem;
                                 } else {
                                     return SequenceMetadata.newBuilder(inputItem)
-                                            .setExternalId(StringValue.of(UUID.randomUUID().toString()))
+                                            .setExternalId(UUID.randomUUID().toString())
                                             .build();
                                 }
                             }))

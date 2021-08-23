@@ -202,7 +202,7 @@ public abstract class Relationships {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((Relationship rel) -> rel.getLastUpdatedTime().getValue()))
+                            .via((Relationship rel) -> rel.getLastUpdatedTime()))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())

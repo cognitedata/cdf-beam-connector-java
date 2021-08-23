@@ -4,7 +4,6 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.io.TextIO;
@@ -41,15 +40,15 @@ class FilesMetadataTest extends TestConfigProviderV1 {
 
         TestStream<FileMetadata> events = TestStream.create(ProtoCoder.of(FileMetadata.class)).addElements(
                 FileMetadata.newBuilder()
-                        .setExternalId(StringValue.of("extId_A"))
-                        .setName(StringValue.of("Test_file"))
-                        .setMimeType(StringValue.of(fileType))
+                        .setExternalId("extId_A")
+                        .setName("Test_file")
+                        .setMimeType(fileType)
                         .putMetadata(metaKey, metaValue)
                         .build(),
                 FileMetadata.newBuilder()
-                        .setExternalId(StringValue.of("extId_B"))
-                        .setName(StringValue.of("Test_file_2"))
-                        .setMimeType(StringValue.of(fileType))
+                        .setExternalId("extId_B")
+                        .setName("Test_file_2")
+                        .setMimeType(fileType)
                         .putMetadata(metaKey, metaValue)
                         .build()
         )
@@ -99,7 +98,7 @@ class FilesMetadataTest extends TestConfigProviderV1 {
                         .into(TypeDescriptor.of(Item.class))
                         .via((FileMetadata input) ->
                                 Item.newBuilder()
-                                        .setId(input.getId().getValue())
+                                        .setId(input.getId())
                                         .build()
                         ))
                         .apply("Delete files", CogniteIO.deleteFiles()
