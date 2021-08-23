@@ -13,5 +13,5 @@ The Apache Beam connector is built on top of the [Java SDK for Cognite Data Fusi
 and follows the structure of the SDK, which again follows the structure of the [CDF REST API](https://docs.cognite.com/api/v1/). 
 
 
-
 - [Client configuration. How to setup authentication.](authentication.md)
+- [Reading and writing data](readAndWriteData.md)

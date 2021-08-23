@@ -11,6 +11,18 @@ Beam I/O connector for reading and writing from/to CDF resources.
 The connector implements a sub-connector per resource type (Asset, Event, etc.) and is configured
 by passing it a config object and optionally a query object.
 
+Please refer to [the documentation](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md) for more
+information ([https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md)).
+
+## Breaking change in v0.9.24
+
+Connector v0.9.24 will introduce a breaking change in the definition of the data transfer objects
+(`Asset`, `Event`, `File`, etc.). This is the carefully considered change, and the last big item before locking down
+the SDK for v1 release.
+
+Please check [the documentation](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/readAndWriteData.md#migrating-from-sdk-0924) for more information.
+
+
 ```java
 PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
                    .withConfig(ProjectConfig.create()
