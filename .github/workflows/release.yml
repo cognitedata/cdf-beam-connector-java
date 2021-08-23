@@ -1,4 +1,4 @@
-name: java-main
+name: java-main-release
 on:
   push:
     branches:
