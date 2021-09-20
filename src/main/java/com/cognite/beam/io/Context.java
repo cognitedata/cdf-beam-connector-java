@@ -19,10 +19,10 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.client.dto.DiagramResponse;
 import com.cognite.client.dto.EntityMatch;
 import com.cognite.client.dto.Item;
-import com.cognite.client.dto.PnIDResponse;
-import com.cognite.beam.io.fn.context.CreateInteractivePnIDFn;
+import com.cognite.beam.io.fn.context.CreateInteractiveDiagramsFn;
 import com.cognite.beam.io.fn.context.MatchEntitiesFn;
 import com.cognite.beam.io.fn.context.MatchEntitiesWithContextFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -533,7 +533,7 @@ public abstract class Context {
      */
     @AutoValue
     public abstract static class CreateInteractivePnID
-            extends ConnectorBase<PCollection<Item>, PCollection<PnIDResponse>> {
+            extends ConnectorBase<PCollection<Item>, PCollection<DiagramResponse>> {
         private static final String DEFAULT_SEARCH_FIELD = "name";
         private static final boolean DEFAULT_PARTIAL_MATCH = false;
         private static final boolean DEFAULT_CONVERT_FILE = false;
@@ -619,7 +619,7 @@ public abstract class Context {
         }
 
         @Override
-        public PCollection<PnIDResponse> expand(PCollection<Item> input) {
+        public PCollection<DiagramResponse> expand(PCollection<Item> input) {
             LOG.info("Building create interactive P&ID composite transform.");
 
             // validate required config parameters
@@ -637,7 +637,7 @@ public abstract class Context {
                             .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
-            PCollection<PnIDResponse> outputCollection = input
+            PCollection<DiagramResponse> outputCollection = input
                     .apply("Shard items", WithKeys.of((Item inputItem) ->
                             String.valueOf(ThreadLocalRandom.current().nextInt(getHints().getWriteShards()))
                     )).setCoder(keyValueCoder)
@@ -645,7 +645,7 @@ public abstract class Context {
                             .withMaxBatchSize(getWorkerParallelization())
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Item>>create())
-                    .apply("Create int. PnID", ParDo.of(new CreateInteractivePnIDFn(getHints(), getReaderConfig(),
+                    .apply("Create int. PnID", ParDo.of(new CreateInteractiveDiagramsFn(getHints(), getReaderConfig(),
                             projectConfigView, getTargetView(), getSearchField(), isConvertFile(),
                             isPartialMatch(), getMinTokens()))
                     .withSideInputs(projectConfigView, getTargetView()));
