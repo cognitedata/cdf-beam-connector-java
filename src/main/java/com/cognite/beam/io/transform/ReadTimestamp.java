@@ -174,7 +174,7 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
                                 }
                         ))
                 .apply("Read results", ParDo.of(
-                        new ReadRawRow(getHints().withReadShards(1),
+                        new ReadRawRow(getHints(),
                                 getReaderConfig().withFullReadOverride(true),
                                 projectConfigView))
                         .withSideInputs(projectConfigView))
