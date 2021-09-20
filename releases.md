@@ -25,6 +25,12 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.25-SNAPSHOT]
+
+### Changed
+- The experimental feature `interactive P&IDs` has been refactored into `interactive engineering diagrams` in order to 
+be aligned with the new CDF API endpoint. The new transform is available at `CogniteIO.experimental().createInteractiveDiagram()`
+
 ## [0.9.24]
 We skip a few versions due to updating our build pipeline.
 
