@@ -464,6 +464,8 @@ class ContextTest extends TestConfigProviderV1 {
                         .withNoSpilling());
 
         pipeline.run().waitUntilFinish();
+
+
         LOG.info("unit test - Finished creating interactive P&IDs in "
                 + (System.currentTimeMillis() - startTime) + "millies.");
     }

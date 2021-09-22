@@ -39,7 +39,7 @@ import java.util.List;
  * be overwritten.
  *
  */
-public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, KV<Iterable<FileContainer>, Iterable<FileMetadata>>> {
+public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, KV<FileContainer, FileMetadata>> {
     private final static Logger LOG = LoggerFactory.getLogger(UpsertFileFn.class);
 
     final WriterConfig writerConfig;
@@ -54,7 +54,7 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, KV<Iterable<
 
         this.projectConfigView = projectConfigView;
         this.writerConfig = writerConfig;
-    }
+     }
 
     /**
      * Converts input to file upload request for files metadata/header. If the file exists from before, it will
@@ -67,7 +67,7 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, KV<Iterable<
      */
     @ProcessElement
     public void processElement(@Element Iterable<FileContainer> items,
-                               OutputReceiver<KV<Iterable<FileContainer>, Iterable<FileMetadata>>> outputReceiver,
+                               OutputReceiver<KV<FileContainer, FileMetadata>> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         final Instant batchStartInstant = Instant.now();
@@ -98,7 +98,28 @@ public class UpsertFileFn extends IOBaseFn<Iterable<FileContainer>, KV<Iterable<
                     results.size(),
                     Duration.between(batchStartInstant, Instant.now()).toString());
 
-            outputReceiver.output(KV.of(items, results));
+            // Join the input file container with the output file metadata object
+            for (FileContainer container : upsertItems) {
+                if (container.getFileMetadata().hasExternalId()) {
+                    FileMetadata fileMetadata = results.stream()
+                            .filter(metadata -> container.getFileMetadata()
+                                    .getExternalId()
+                                    .equals(metadata.getExternalId()))
+                            .findAny()
+                            .orElseThrow();
+
+                    outputReceiver.output(KV.of(container, fileMetadata));
+                } else if (container.getFileMetadata().hasId()) {
+                    FileMetadata fileMetadata = results.stream()
+                            .filter(metadata -> container.getFileMetadata().getId() == metadata.getId())
+                            .findAny()
+                            .orElseThrow();
+
+                    outputReceiver.output(KV.of(container, fileMetadata));
+                } else {
+                    throw new Exception("Input file container does not contain externalId / id.");
+                }
+            }
         } catch (Exception e) {
             LOG.error(batchLogPrefix + "Error when writing to Cognite Data Fusion: {}",
                     e.toString());
