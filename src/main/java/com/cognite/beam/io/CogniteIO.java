@@ -623,16 +623,20 @@ public class CogniteIO {
         return Context.MatchEntities.<T>create();
     }
 
-    /**
-     * Creates a transform for detecting annotations/entities in a PDF P&ID file and optionally
-     * generate SVG and PNG representations of that document.
-     *
-     * You must configure the {@link com.cognite.beam.io.Context.CreateInteractivePnID} transform
-     * with target {@code MatchTo} set of target entities to use for matching.
-     *
-     * @return A transform for creating interactive P&IDs.
-     */
-    public static Context.CreateInteractivePnID createInteractivePnID() {
-        return Context.CreateInteractivePnID.create();
+    public static class Experimental {
+
+        /**
+         * Creates a transform for detecting annotations/entities in a PDF P&ID file and optionally
+         * generate SVG and PNG representations of that document.
+         *
+         * You must configure the {@link Context.CreateInteractiveDiagram} transform
+         * with target {@code MatchTo} set of target entities to use for matching.
+         *
+         * @return A transform for creating interactive P&IDs.
+         */
+        public static Context.CreateInteractiveDiagram createInteractiveDiagram() {
+            return Context.CreateInteractiveDiagram.create();
+        }
+
     }
 }

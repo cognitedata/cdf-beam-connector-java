@@ -535,7 +535,7 @@ public abstract class Files {
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
-            PCollection<KV<Iterable<FileContainer>, Iterable<FileMetadata>>> outputCollectionFiles = input
+            PCollection<KV<FileContainer, FileMetadata>> upsertedFilesCollection = input
                     .apply("Check id", MapElements.into(TypeDescriptor.of(FileContainer.class))
                             .via((FileContainer inputItem) -> {
                                 if (inputItem.getFileMetadata().hasExternalId() || inputItem.getFileMetadata().hasId()) {
@@ -562,9 +562,26 @@ public abstract class Files {
                             new UpsertFileFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
-            PCollection<FileMetadata> outputCollection = outputCollectionFiles
-                    .apply("Wait on: Upsert files", Wait.on(outputCollectionFiles))
-                    .apply("Remove temp binary", ParDo.of(new RemoveTempFile(isDeleteTempFile())));
+            // The main output. Just filter out the file containers and keep the file metadata
+            PCollection<FileMetadata> outputCollection = upsertedFilesCollection
+                    .apply("Filter file metadata", Values.create());
+
+            // Remove the temporary files, if enabled.
+            // Must "wait on" the file upsert to finish because of possible bundle re-tries.
+            PCollection<String> tempFilesUriCollection = upsertedFilesCollection
+                    .apply("Filter file containers", Keys.create())
+                    .apply("Filter temp files", Filter.by(fileContainer ->
+                        isDeleteTempFile()
+                                && fileContainer.hasFileBinary()
+                                && fileContainer.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI
+                    ))
+                    .apply("Get temp file URI", MapElements.into(TypeDescriptors.strings())
+                            .via((FileContainer fileContainer) -> fileContainer.getFileBinary().getBinaryUri())
+                    );
+
+            tempFilesUriCollection
+                    .apply("Wait on: Upsert files", Wait.on(tempFilesUriCollection))
+                    .apply("Remove temp binary", ParDo.of(new RemoveTempFile()));
 
             return outputCollection;
         }

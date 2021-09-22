@@ -345,7 +345,7 @@ class ContextTest extends TestConfigProviderV1 {
 
     @Test
     @Tag("remoteCDP")
-    void createInteractivePnIDTest() {
+    void createInteractiveDiagramsTest() {
         final String sessionId = RandomStringUtils.randomAlphanumeric(10);
 
         final List<Struct> entities = ImmutableList.of(
@@ -442,14 +442,14 @@ class ContextTest extends TestConfigProviderV1 {
         PCollectionView<List<Struct>> targetView = pipeline.apply(Create.of(entities))
                 .apply("to view", View.asList());
 
-        PCollection<PnIDResponse> createPnID = readResults
+        PCollection<DiagramResponse> createPnID = readResults
                 .apply("Build Item", MapElements.into(TypeDescriptor.of(Item.class))
                         .via((FileContainer fileContainer) ->
                                 Item.newBuilder()
                                         .setId(fileContainer.getFileMetadata().getId())
                                         .build()
                         ))
-                .apply("Create pnId", CogniteIO.createInteractivePnID()
+                .apply("Create pnId", CogniteIO.Experimental.createInteractiveDiagram()
                         .withProjectConfig(projectConfigApiKey)
                         .withHints(Hints.create())
                         .withReaderConfig(ReaderConfig.create())
@@ -458,12 +458,14 @@ class ContextTest extends TestConfigProviderV1 {
 
 
         createPnID.apply("to string", MapElements.into(TypeDescriptors.strings())
-                .via((PnIDResponse pnid) -> pnid.toString()))
+                .via((DiagramResponse pnid) -> pnid.toString()))
                 .apply("Write P&ID Response output", TextIO.write().to("./UnitTest_createInteractivePnID_output")
                         .withSuffix(".txt")
                         .withNoSpilling());
 
         pipeline.run().waitUntilFinish();
+
+
         LOG.info("unit test - Finished creating interactive P&IDs in "
                 + (System.currentTimeMillis() - startTime) + "millies.");
     }

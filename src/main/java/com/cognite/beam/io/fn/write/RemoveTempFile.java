@@ -18,14 +18,11 @@ package com.cognite.beam.io.fn.write;
 
 import com.cognite.client.dto.FileBinary;
 import com.cognite.client.dto.FileContainer;
-import com.cognite.client.dto.FileMetadata;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import org.apache.beam.sdk.transforms.DoFn;
-import org.apache.beam.sdk.values.KV;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,49 +36,36 @@ import java.nio.file.Paths;
  * Deletes the temporary binary from blob / file store.
  *
  */
-public class RemoveTempFile extends DoFn<KV<Iterable<FileContainer>, Iterable<FileMetadata>>, FileMetadata> {
+public class RemoveTempFile extends DoFn<String, String> {
     private final static Logger LOG = LoggerFactory.getLogger(RemoveTempFile.class);
 
     private Storage cloudStorage = null;
-    final boolean deleteTempFile;
-
-    public RemoveTempFile(boolean deleteTempFile) {
-        this.deleteTempFile = deleteTempFile;
-    }
 
     /**
      * Deletes the temporary binary from blob / file store.
      *
-     * @param items
+     * @param fileContainer
      * @param outputReceiver
      * @throws Exception
      */
     @ProcessElement
-    public void processElement(@Element KV<Iterable<FileContainer>, Iterable<FileMetadata>> items,
-                               OutputReceiver<FileMetadata> outputReceiver) throws Exception {
-        final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
+    public void processElement(@Element String tempFileUri,
+                               OutputReceiver<String> outputReceiver) throws Exception {
+        final String batchLogPrefix = "Remove temp file - ";
 
-        if (deleteTempFile) {
-            for (FileContainer container : items.getKey()) {
-                if (container.hasFileBinary()
-                        && container.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI) {
-                    // We have a temp file binary, so let's remove it
-                    try {
-                        LOG.debug(batchLogPrefix + "Start delete the temp file binary {}",
-                                container.getFileBinary().getBinaryUri());
-                        deleteTempFile(new URI(container.getFileBinary().getBinaryUri()));
-                        LOG.debug(batchLogPrefix + "Successfully deleted the temp file binary {}",
-                                container.getFileBinary().getBinaryUri());
-                    } catch (Exception e) {
-                        LOG.error(batchLogPrefix + "Error when deleting temp file binary: {}",
-                                e.toString());
-                        throw new Exception(batchLogPrefix + "Error when deleting temp file binary.", e);
-                    }
-                }
-            }
+        try {
+            LOG.debug(batchLogPrefix + "Start delete the temp file binary {}",
+                    tempFileUri);
+            deleteTempFile(new URI(tempFileUri));
+            LOG.debug(batchLogPrefix + "Successfully deleted the temp file binary {}",
+                    tempFileUri);
+        } catch (Exception e) {
+            LOG.error(batchLogPrefix + "Error when deleting temp file binary: {}",
+                    e.toString());
+            throw new Exception(batchLogPrefix + "Error when deleting temp file binary.", e);
         }
 
-        items.getValue().forEach(item -> outputReceiver.output(item));
+       outputReceiver.output(tempFileUri);
     }
 
     private void deleteTempFile(@NotNull URI fileURI) throws Exception {

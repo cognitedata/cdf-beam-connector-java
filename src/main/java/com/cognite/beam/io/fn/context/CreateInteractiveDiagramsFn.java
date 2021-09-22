@@ -20,8 +20,8 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
+import com.cognite.client.dto.DiagramResponse;
 import com.cognite.client.dto.Item;
-import com.cognite.client.dto.PnIDResponse;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
 import org.apache.beam.sdk.values.PCollectionView;
@@ -35,11 +35,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Detects annotations and builds interactive P&ID (svg and png) from single-page PDF.
+ * Detects annotations and builds interactive engineering diagrams/P&ID (svg and png) from a PDF.
  *
- * The function detects entities (for example, assets) in the P&ID and highlights them in the (optional)
+ * The function detects entities (for example, assets) in the engineering diagrams and highlights them in the (optional)
  * SVG/PNG. The detected entities can be used to enrich the viewer experience in an application displaying
- * the P&ID.
+ * the engineering diagram/P&ID.
  *
  * Annotations are detected based on a side input of {@link List<Struct>}. {@code Struct.name} is used
  * for annotation matching.
@@ -47,9 +47,9 @@ import java.util.List;
  * The input specifies which file (id) to process.
  *
  */
-public class CreateInteractivePnIDFn extends IOBaseFn<Iterable<Item>, PnIDResponse> {
+public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, DiagramResponse> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(CreateInteractivePnIDFn.class);
+    private final static Logger LOG = LoggerFactory.getLogger(CreateInteractiveDiagramsFn.class);
     private final ReaderConfig readerConfig;
     private final PCollectionView<List<ProjectConfig>> projectConfigView;
     private final PCollectionView<List<Struct>> matchToView;
@@ -58,24 +58,24 @@ public class CreateInteractivePnIDFn extends IOBaseFn<Iterable<Item>, PnIDRespon
     private final boolean partialMatch;
     private final int minTokens;
 
-    public CreateInteractivePnIDFn(Hints hints,
-                                   ReaderConfig readerConfig,
-                                   PCollectionView<List<ProjectConfig>> projectConfigView,
-                                   PCollectionView<List<Struct>> matchToView,
-                                   String searchField,
-                                   boolean convertFile) {
+    public CreateInteractiveDiagramsFn(Hints hints,
+                                       ReaderConfig readerConfig,
+                                       PCollectionView<List<ProjectConfig>> projectConfigView,
+                                       PCollectionView<List<Struct>> matchToView,
+                                       String searchField,
+                                       boolean convertFile) {
         this(hints, readerConfig, projectConfigView, matchToView, searchField, convertFile,
                 false, 2);
     }
 
-    public CreateInteractivePnIDFn(Hints hints,
-                                   ReaderConfig readerConfig,
-                                   PCollectionView<List<ProjectConfig>> projectConfigView,
-                                   PCollectionView<List<Struct>> matchToView,
-                                   String searchField,
-                                   boolean convertFile,
-                                   boolean partialMatch,
-                                   int minTokens) {
+    public CreateInteractiveDiagramsFn(Hints hints,
+                                       ReaderConfig readerConfig,
+                                       PCollectionView<List<ProjectConfig>> projectConfigView,
+                                       PCollectionView<List<Struct>> matchToView,
+                                       String searchField,
+                                       boolean convertFile,
+                                       boolean partialMatch,
+                                       int minTokens) {
         super(hints);
         this.projectConfigView = projectConfigView;
         this.matchToView = matchToView;
@@ -88,7 +88,7 @@ public class CreateInteractivePnIDFn extends IOBaseFn<Iterable<Item>, PnIDRespon
 
     @ProcessElement
     public void processElement(@Element Iterable<Item> element,
-                               OutputReceiver<PnIDResponse> outputReceiver,
+                               OutputReceiver<DiagramResponse> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "CreateInteractivePnIDFn - batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         LOG.info(batchLogPrefix + "Received a batch of files to process.");
@@ -111,10 +111,10 @@ public class CreateInteractivePnIDFn extends IOBaseFn<Iterable<Item>, PnIDRespon
         element.forEach(item -> elementList.add(item));
         try {
             List<Struct> matchToList = context.sideInput(matchToView);
-            List<PnIDResponse> resultsItems = getClient(projectConfig, readerConfig)
+            List<DiagramResponse> resultsItems = getClient(projectConfig, readerConfig)
                     .experimental()
-                    .pnid()
-                    .detectAnnotationsPnID(elementList, matchToList, searchField, partialMatch, minTokens, convertFile);
+                    .engineeringDiagrams()
+                    .detectAnnotations(elementList, matchToList, searchField, partialMatch, minTokens, convertFile);
 
             if (readerConfig.isMetricsEnabled()) {
                 apiBatchSize.update(resultsItems.size());

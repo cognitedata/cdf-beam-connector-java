@@ -19,10 +19,10 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
+import com.cognite.client.dto.DiagramResponse;
 import com.cognite.client.dto.EntityMatch;
 import com.cognite.client.dto.Item;
-import com.cognite.client.dto.PnIDResponse;
-import com.cognite.beam.io.fn.context.CreateInteractivePnIDFn;
+import com.cognite.beam.io.fn.context.CreateInteractiveDiagramsFn;
 import com.cognite.beam.io.fn.context.MatchEntitiesFn;
 import com.cognite.beam.io.fn.context.MatchEntitiesWithContextFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
@@ -519,28 +519,27 @@ public abstract class Context {
     }
 
     /**
-     * Detects annotations and builds interactive P&ID (svg and png) from single-page PDF.
+     * Detects annotations and builds interactive engineering diagrams/P&IDs (svg and png) from PDF files.
      *
-     * The function detects entities (for example, assets) in the P&ID and highlights them in the (optional)
+     * The function detects entities (for example, assets) in the diagram and highlights them in the (optional)
      * SVG/PNG. The detected entities can be used to enrich the viewer experience in an application displaying
-     * the P&ID.
+     * the diagram/P&ID.
      *
      * Annotations are detected based on a side input of {@link List} of {@link Struct}. {@code Struct.name} is used
      * for annotation matching.
      *
      * The input specifies which file (id) to process.
-     *
      */
     @AutoValue
-    public abstract static class CreateInteractivePnID
-            extends ConnectorBase<PCollection<Item>, PCollection<PnIDResponse>> {
+    public abstract static class CreateInteractiveDiagram
+            extends ConnectorBase<PCollection<Item>, PCollection<DiagramResponse>> {
         private static final String DEFAULT_SEARCH_FIELD = "name";
         private static final boolean DEFAULT_PARTIAL_MATCH = false;
         private static final boolean DEFAULT_CONVERT_FILE = false;
         private static final int DEFAULT_MIN_TOKENS = 2;
 
         private static Builder builder() {
-            return new AutoValue_Context_CreateInteractivePnID.Builder()
+            return new AutoValue_Context_CreateInteractiveDiagram.Builder()
                     .setProjectConfig(ProjectConfig.create())
                     .setHints(CogniteIO.defaultHints)
                     .setReaderConfig(ReaderConfig.create())
@@ -552,8 +551,8 @@ public abstract class Context {
                     .setMinTokens(DEFAULT_MIN_TOKENS);
         }
 
-        public static CreateInteractivePnID create() {
-            return CreateInteractivePnID.builder()
+        public static CreateInteractiveDiagram create() {
+            return CreateInteractiveDiagram.builder()
                     .build();
         }
 
@@ -568,60 +567,58 @@ public abstract class Context {
         @Nullable
         public abstract PCollectionView<List<Struct>> getTargetView();
 
-        public CreateInteractivePnID withProjectConfig(ProjectConfig config) {
+        public CreateInteractiveDiagram withProjectConfig(ProjectConfig config) {
             return toBuilder().setProjectConfig(config).build();
         }
 
-        public CreateInteractivePnID withHints(Hints hints) {
+        public CreateInteractiveDiagram withHints(Hints hints) {
             return toBuilder().setHints(hints).build();
         }
 
-        public CreateInteractivePnID withProjectConfigFile(String file) {
+        public CreateInteractiveDiagram withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
-        public CreateInteractivePnID withProjectConfigFile(ValueProvider<String> file) {
+        public CreateInteractiveDiagram withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
-        public CreateInteractivePnID withReaderConfig(ReaderConfig config) {
+        public CreateInteractiveDiagram withReaderConfig(ReaderConfig config) {
             Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
-        public CreateInteractivePnID withSearchField(String searchField) {
+        public CreateInteractiveDiagram withSearchField(String searchField) {
             Preconditions.checkNotNull(searchField, "Search field cannot be null");
             Preconditions.checkArgument(!searchField.isEmpty(), "Search field cannot be an empty string.");
             return toBuilder().setSearchField(searchField).build();
         }
 
-        public CreateInteractivePnID enableConvertFile(boolean convertFile) {
+        public CreateInteractiveDiagram enableConvertFile(boolean convertFile) {
             return toBuilder().setConvertFile(convertFile).build();
         }
 
-        public CreateInteractivePnID enablePartialMatch(boolean partialMatch) {
+        public CreateInteractiveDiagram enablePartialMatch(boolean partialMatch) {
             return toBuilder().setPartialMatch(partialMatch).build();
         }
 
-        public CreateInteractivePnID withMinTokens(int minTokens) {
+        public CreateInteractiveDiagram withMinTokens(int minTokens) {
             return toBuilder().setMinTokens(minTokens).build();
         }
 
-        public CreateInteractivePnID withWorkerParallelization(int parallelization) {
+        public CreateInteractiveDiagram withWorkerParallelization(int parallelization) {
             return toBuilder().setWorkerParallelization(parallelization).build();
         }
 
-        public CreateInteractivePnID withTargetView(PCollectionView<List<Struct>> targetView) {
+        public CreateInteractiveDiagram withTargetView(PCollectionView<List<Struct>> targetView) {
             return toBuilder().setTargetView(targetView).build();
         }
 
         @Override
-        public PCollection<PnIDResponse> expand(PCollection<Item> input) {
-            LOG.info("Building create interactive P&ID composite transform.");
-
+        public PCollection<DiagramResponse> expand(PCollection<Item> input) {
             // validate required config parameters
             Preconditions.checkState(null != getTargetView(),
                     "No matchTo view. You must configure a matchTo view using [.withMatchToView(<view>)].");
@@ -637,7 +634,7 @@ public abstract class Context {
                             .withProjectConfigParameters(getProjectConfig()))
                     .apply("To list view", View.<ProjectConfig>asList());
 
-            PCollection<PnIDResponse> outputCollection = input
+            PCollection<DiagramResponse> outputCollection = input
                     .apply("Shard items", WithKeys.of((Item inputItem) ->
                             String.valueOf(ThreadLocalRandom.current().nextInt(getHints().getWriteShards()))
                     )).setCoder(keyValueCoder)
@@ -645,7 +642,7 @@ public abstract class Context {
                             .withMaxBatchSize(getWorkerParallelization())
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Item>>create())
-                    .apply("Create int. PnID", ParDo.of(new CreateInteractivePnIDFn(getHints(), getReaderConfig(),
+                    .apply("Create int. diagram", ParDo.of(new CreateInteractiveDiagramsFn(getHints(), getReaderConfig(),
                             projectConfigView, getTargetView(), getSearchField(), isConvertFile(),
                             isPartialMatch(), getMinTokens()))
                     .withSideInputs(projectConfigView, getTargetView()));
@@ -655,7 +652,7 @@ public abstract class Context {
 
         @AutoValue.Builder
         public abstract static class Builder
-                extends ConnectorBase.Builder<CreateInteractivePnID.Builder> {
+                extends ConnectorBase.Builder<CreateInteractiveDiagram.Builder> {
             abstract Builder setReaderConfig(ReaderConfig value);
             abstract Builder setSearchField(String value);
             abstract Builder setConvertFile(boolean value);
@@ -664,7 +661,7 @@ public abstract class Context {
             abstract Builder setMinTokens(int value);
             abstract Builder setTargetView(PCollectionView<List<Struct>> value);
 
-            abstract CreateInteractivePnID build();
+            abstract CreateInteractiveDiagram build();
         }
     }
 }
