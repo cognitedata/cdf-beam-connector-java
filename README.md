@@ -41,12 +41,12 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
 <dependency>    
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.24</version>
+    <version>0.9.25</version>
 </dependency>
 ````
 Requirements:
 - Java 11.
-- Apache Beam 2.31.0.
+- Apache Beam 2.32.0.
 
 #### I/O feature table
 
@@ -72,7 +72,7 @@ Requirements:
 | Resource | Feature support |
 | --- | --- |
 | Entity matcher | Predict |
-| Interactive P&ID | Detect annotations, convert |
+| Interactive Engineering diagrams / P&ID | Detect annotations, convert |
 
 ### Accessing the I/O connectors
 
