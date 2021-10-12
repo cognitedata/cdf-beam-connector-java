@@ -25,6 +25,13 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.26] 2021-10-12
+
+### Added
+
+- Support for Beam v2.33.0
+- Bumped the Java SDK to v1.3.0
+
 ## [0.9.25]
 
 ### Added
