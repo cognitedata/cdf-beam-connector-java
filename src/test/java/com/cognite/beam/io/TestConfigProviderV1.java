@@ -36,6 +36,7 @@ public class TestConfigProviderV1 {
         try {
             projectConfigClientCredentials = ProjectConfig.create()
                     .withHost(getHost())
+                    .withProject(getProject())
                     .withClientId(getClientId())
                     .withClientSecret(getClientSecret())
                     .withTokenUrl(TokenUrl.generateAzureAdURL(getTenantId()).toString());
