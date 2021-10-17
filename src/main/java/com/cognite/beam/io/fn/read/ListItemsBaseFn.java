@@ -36,6 +36,7 @@ import java.util.List;
  * custom parsing logic.
  */
 public abstract class ListItemsBaseFn<T> extends IOBaseFn<RequestParameters, T> {
+    long maxNumResults = Long.MAX_VALUE;
     final ReaderConfig readerConfig;
     final PCollectionView<List<ProjectConfig>> projectConfigView;
 
@@ -71,14 +72,22 @@ public abstract class ListItemsBaseFn<T> extends IOBaseFn<RequestParameters, T> 
             throw new Exception(message);
         }
 
+        // If firstN is enabled, then set a max num of results to fetch
+        LOG.debug(batchLogPrefix + "Checking config for firstN count: {}", readerConfig.getFirstNCount());
+        if (readerConfig.getFirstNCount() > 0) {
+            LOG.info(batchLogPrefix + "FirstN count specified at {}. Will limit the number of results objects.",
+                    readerConfig.getFirstNCount());
+            maxNumResults = readerConfig.getFirstNCount();
+        }
+
         // Read the items
         try {
             Iterator<List<T>> resultsIterator = listItems(getClient(projectConfig, readerConfig),
                     requestParameters,
                     requestParameters.getPartitions().toArray(new String[requestParameters.getPartitions().size()]));
             Instant pageStartInstant = Instant.now();
-            int totalNoItems = 0;
-            while (resultsIterator.hasNext()) {
+            long totalNoItems = 0;
+            while (resultsIterator.hasNext() && totalNoItems < maxNumResults) {
                 List<T> results = resultsIterator.next();
                 if (readerConfig.isMetricsEnabled()) {
                     apiBatchSize.update(results.size());
