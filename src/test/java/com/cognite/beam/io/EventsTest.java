@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
+
 
 class EventsTest extends TestConfigProviderV1 {
     final Logger LOG = LoggerFactory.getLogger(this.getClass());
@@ -279,6 +281,99 @@ class EventsTest extends TestConfigProviderV1 {
         for (MetricResult<DistributionResult> distribution : metrics.getDistributions()) {
             System.out.println(distribution.getName() + ":" + distribution.getAttempted().getMean());
         }
+        LOG.info(loggingPrefix + "Finished the events unit test");
+    }
+
+    /**
+     * Test sequences:
+     * - Add events.
+     * - Read firstN.
+     * - Remove events
+     */
+    @Test
+    @Tag("remoteCDP")
+    void writeReadFirstNAndDeleteEvents() {
+        final String sessionId = RandomStringUtils.randomAlphanumeric(5);
+        final String loggingPrefix = "Unit test - " + sessionId + " - ";
+        Instant startInstant = Instant.now();
+        LOG.info(loggingPrefix + "Starting events unit test: writeReadFirstNAndDeleteEvents()");
+
+        LOG.info("------------------- Start writing events -----------------------");
+        Pipeline writePipeline = Pipeline.create();
+
+        writePipeline.apply("Input data", Create.of(DataGenerator.generateEvents(12356)))
+                .apply("write events", CogniteIO.writeEvents()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withWriterConfig(WriterConfig.create()
+                                .withAppIdentifier("Beam SDK unit test")
+                                .withSessionIdentifier(sessionId)));
+        writePipeline.run().waitUntilFinish();
+        LOG.info("------------------- Finished writing events at duration {} -----------------------",
+                java.time.Duration.between(startInstant, Instant.now()));
+
+        try {
+            Thread.sleep(10000); // Wait for eventual consistency
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        LOG.info("------------------- Start reading firstN events -----------------------");
+        final Pipeline readPipeline = Pipeline.create();
+        PCollection<Event> readEvents = readPipeline
+                .apply("Read events", CogniteIO.readEvents()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withReaderConfig(ReaderConfig.create()
+                                .withReadFirstNResults(2000)
+                                .withAppIdentifier("Beam SDK unit test")
+                                .withSessionIdentifier(sessionId))
+                        .withRequestParameters(RequestParameters.create()
+                                .withFilterMetadataParameter(DataGenerator.sourceKey, DataGenerator.sourceValue)
+                        ));
+        readEvents
+                .apply("Count items", Count.globally())
+                .apply("Build text output", MapElements.into(TypeDescriptors.strings())
+                        .via(count -> "Number of firstN events: " + count))
+                .apply("Write read count output", TextIO.write().to("./UnitTest_eventsFirstN_items_output")
+                        .withSuffix(".txt")
+                        .withoutSharding());
+
+        readPipeline.run().waitUntilFinish();
+        LOG.info("------------------- Finished reading firstN events at duration {} -----------------------",
+                java.time.Duration.between(startInstant, Instant.now()));
+
+        LOG.info("------------------- Start deleting rows -----------------------");
+        final Pipeline deletePipeline = Pipeline.create();
+        PCollection<Item> deleteEvents = deletePipeline
+                .apply("Read events", CogniteIO.readEvents()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withReaderConfig(ReaderConfig.create()
+                                .withAppIdentifier("Beam SDK unit test")
+                                .withSessionIdentifier(sessionId))
+                        .withRequestParameters(RequestParameters.create()
+                                .withFilterMetadataParameter(DataGenerator.sourceKey, DataGenerator.sourceValue)))
+                .apply("Build delete events request", MapElements.into(TypeDescriptor.of(Item.class))
+                        .via(element -> Item.newBuilder()
+                                .setExternalId(element.getExternalId())
+                                .build()
+                        ))
+                .apply("Delete events", CogniteIO.deleteEvents()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withWriterConfig(WriterConfig.create()
+                                .withAppIdentifier("Beam SDK unit test")
+                                .withSessionIdentifier(sessionId)));
+        deleteEvents
+                .apply("Count deleted items", Count.globally())
+                .apply("Build text output", MapElements.into(TypeDescriptors.strings())
+                        .via(count -> "Number of deleted events: " + count))
+                .apply("Write delete item output", TextIO.write().to("./UnitTest_eventsFirstN_deletedItems_output")
+                        .withSuffix(".txt")
+                        .withoutSharding());
+
+        PipelineResult pipelineResult = deletePipeline.run();
+        pipelineResult.waitUntilFinish();
+        LOG.info("------------------- Finished deleting events at duration {} -----------------------",
+                java.time.Duration.between(startInstant, Instant.now()));
+
         LOG.info(loggingPrefix + "Finished the events unit test");
     }
 
