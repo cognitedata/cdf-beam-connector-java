@@ -10,6 +10,7 @@ import com.google.protobuf.Value;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.Create;
@@ -22,10 +23,15 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.nio.channels.Pipe;
 import java.time.Duration;
+import java.time.Instant;
 
 class RawTest extends TestConfigProviderV1 {
+    static Logger LOG = LoggerFactory.getLogger(RawTest.class);
 
     @BeforeAll
     static void tearup() {
@@ -38,7 +44,7 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
         pipeline.apply("Build input rows", Create.of(DataGenerator.generateRawRows(rawDbName, rawTableName, 9567)))
                 .apply("write rows", CogniteIO.writeRawRow()
-                        .withProjectConfig(projectConfigApiKey))
+                        .withProjectConfig(projectConfigClientCredentials))
                 .apply("Format results", MapElements
                         .into(TypeDescriptors.strings())
                         .via((RawRow element) -> element.toString()))
@@ -47,6 +53,60 @@ class RawTest extends TestConfigProviderV1 {
                         .withoutSharding());
 
         pipeline.run();
+    }
+
+    @Test
+    @Tag("remoteCDP")
+    void writeAndReadRowsFirstN() {
+        Instant startInstant = Instant.now();
+
+        // Write rows
+        LOG.info("------------------- Start writing rows -----------------------");
+        final Pipeline pipeline = Pipeline.create();
+        PCollection<RawRow> writeRows = pipeline
+                .apply("Build input rows", Create.of(DataGenerator.generateRawRows(rawDbName, rawTableName, 9567)))
+                .apply("write rows", CogniteIO.writeRawRow()
+                        .withProjectConfig(projectConfigClientCredentials))
+                ;
+
+        pipeline.run().waitUntilFinish();
+        LOG.info("------------------- Finished writing rows at duration {} -----------------------",
+                Duration.between(startInstant, Instant.now()));
+
+        // Read first 3000 rows
+        LOG.info("------------------- Start reading firstN rows -----------------------");
+        final Pipeline readPipeline = Pipeline.create();
+        PCollection<RawRow> readRows = readPipeline
+                .apply("Read firstN", CogniteIO.readRawRow()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withReaderConfig(ReaderConfig.create()
+                                .withReadFirstNResults(3000))
+                        .withDbName(rawDbName)
+                        .withTableName(rawTableName));
+
+        readRows.apply("count", Count.globally())
+                        .apply("Log", MapElements.into(TypeDescriptors.longs())
+                                .via(count -> {
+                                    LOG.info("--------------- Row count: {} ----------------------", count);
+                                    return count;
+                                }));
+        readPipeline.run().waitUntilFinish();
+        LOG.info("------------------- Finished reading firstN rows at duration {} -----------------------",
+                Duration.between(startInstant, Instant.now()));
+
+        // Delete rows
+        LOG.info("------------------- Start deleting rows -----------------------");
+        final Pipeline deletePipeline = Pipeline.create();
+        deletePipeline
+                .apply("Read rows", CogniteIO.readRawRow()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withDbName(rawDbName)
+                        .withTableName(rawTableName))
+                .apply("Delete rows", CogniteIO.deleteRawRow()
+                        .withProjectConfig(projectConfigClientCredentials));
+        deletePipeline.run().waitUntilFinish();
+        LOG.info("------------------- Finished deleting rows at duration {} -----------------------",
+                Duration.between(startInstant, Instant.now()));
     }
 
     @Test
@@ -261,7 +321,8 @@ class RawTest extends TestConfigProviderV1 {
         );
 
         // delete rows
-        rows.apply("Delete rows", CogniteIO.deleteRawRow().withProjectConfig(projectConfigApiKey))
+        rows.apply("Delete rows", CogniteIO.deleteRawRow()
+                        .withProjectConfig(projectConfigApiKey))
                 .apply("Format delete receipt", MapElements.into(TypeDescriptors.strings())
                         .via(row -> row.toString()))
                 .apply("Write delete receipt to file", TextIO.write().to("./UnitTest_raw_deleteRow_output")
