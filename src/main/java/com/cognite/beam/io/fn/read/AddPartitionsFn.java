@@ -83,6 +83,14 @@ public class AddPartitionsFn extends IOBaseFn<RequestParameters, RequestParamete
             throw new Exception(message);
         }
 
+        // if firstN is enabled, then skip adding partitions
+        LOG.debug(batchLogPrefix + "Checking config for firstN count: {}", readerConfig.getFirstNCount());
+        if (readerConfig.getFirstNCount() > 0) {
+            LOG.info(batchLogPrefix + "FirstN count specified at {}. Will skip partitions.", readerConfig.getFirstNCount());
+            outputReceiver.output(requestParameters);
+            return;
+        }
+
         // Build a "clean" request containing only the filters
         Request aggregateReguest = Request.create()
                 .withRequestParameters(ImmutableMap.<String, Object>of(
@@ -135,13 +143,13 @@ public class AddPartitionsFn extends IOBaseFn<RequestParameters, RequestParamete
                     hints.getReadShardsPerWorker(),
                     Duration.between(batchStartInstant, Instant.now()).toString());
 
-            List<String> partitions = new ArrayList<>(hints.getReadShardsPerWorker());
+            List<String> partitions = new ArrayList<>();
             for (int i = 1; i <= totalNoPartitions; i++) {
                 // Build the partitions list in the format "m/n" where m = partition no and n = total no partitions
                 partitions.add(String.format("%1$d/%2$d", i, totalNoPartitions));
                 if (partitions.size() >= hints.getReadShardsPerWorker()) {
                     outputReceiver.output(requestParameters.withPartitions(partitions));
-                    partitions = new ArrayList<>(hints.getReadShardsPerWorker());
+                    partitions = new ArrayList<>();
                 }
             }
             if (partitions.size() > 0) {

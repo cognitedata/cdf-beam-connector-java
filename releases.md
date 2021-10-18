@@ -25,6 +25,14 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.27-SNAPSHOT]
+
+### Added
+
+- Support for read `first N` for the readers working towards the `list` endpoints in the API (`assets`, `events`,
+ `TS headers`, `sequences headers`, `file headers`, `raw rows` and more). This allows you to quickly sample a 
+ limited sub-set from a large results set.
+
 ## [0.9.26] 2021-10-12
 
 ### Added

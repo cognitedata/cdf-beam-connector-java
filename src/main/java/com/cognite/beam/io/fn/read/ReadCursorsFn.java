@@ -42,7 +42,7 @@ import com.cognite.client.config.ResourceType;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Reads cursors for assets and events, and adds them to the request parameters.
+ * Reads cursors for Raw tables/rows, and adds them to the request parameters.
  */
 public class ReadCursorsFn extends IOBaseFn<RequestParameters, RequestParameters> {
     private final static Logger LOG = LoggerFactory.getLogger(ReadCursorsFn.class);
@@ -81,9 +81,16 @@ public class ReadCursorsFn extends IOBaseFn<RequestParameters, RequestParameters
 
         // if readShards = 1, then skip fetching cursors
         LOG.debug(batchLogPrefix + "Checking hints for readShards: {}", hints.getReadShards().get());
-
         if (hints.getReadShards().get() < 2) {
-            LOG.debug(batchLogPrefix + "readShards < 2, skipping cursors");
+            LOG.info(batchLogPrefix + "readShards < 2, skipping cursors");
+            outputReceiver.output(requestParameters);
+            return;
+        }
+
+        // if firstN is enabled, then skip fetching cursors
+        LOG.debug(batchLogPrefix + "Checking config for firstN count: {}", readerConfig.getFirstNCount());
+        if (readerConfig.getFirstNCount() > 0) {
+            LOG.info(batchLogPrefix + "FirstN count specified at {}. Will skip cursors.", readerConfig.getFirstNCount());
             outputReceiver.output(requestParameters);
             return;
         }

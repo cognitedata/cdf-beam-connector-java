@@ -38,6 +38,7 @@ public abstract class ReaderConfig extends ConfigBase {
     final static String DEFAULT_DELTA_IDENTITY = "delta-timestamp-identifier";
     final static Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(10);
     final static Duration DEFAULT_POLL_OFFSET = Duration.ofSeconds(30);
+    final static int DEFAULT_FIRST_N_COUNT = -1;    // -1 represents "no limit"
 
     private static ReaderConfig.Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_ReaderConfig.Builder()
@@ -51,7 +52,8 @@ public abstract class ReaderConfig extends ConfigBase {
                 .setDeltaOffset(ValueProvider.StaticValueProvider.of(Duration.ofMillis(1)))
                 .setStreamingEnabled(false)
                 .setPollInterval(ValueProvider.StaticValueProvider.of(DEFAULT_POLL_INTERVAL))
-                .setPollOffset(ValueProvider.StaticValueProvider.of(DEFAULT_POLL_OFFSET));
+                .setPollOffset(ValueProvider.StaticValueProvider.of(DEFAULT_POLL_OFFSET))
+                .setFirstNCount(DEFAULT_FIRST_N_COUNT);
     }
 
     public static ReaderConfig create() {
@@ -67,13 +69,14 @@ public abstract class ReaderConfig extends ConfigBase {
     public abstract boolean isStreamingEnabled();
     public abstract ValueProvider<Duration> getPollInterval();
     public abstract ValueProvider<Duration> getPollOffset();
+    public abstract int getFirstNCount();
 
     /**
      * Set the app identifier. The identifier is encoded in the api calls to the Cognite instance and can be
      * used for tracing and statistics.
      *
      * @param identifier the application identifier
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withAppIdentifier(String identifier) {
         Preconditions.checkNotNull(identifier, "Identifier cannot be null");
@@ -86,7 +89,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * used for tracing and statistics.
      *
      * @param identifier the session identifier
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withSessionIdentifier(String identifier) {
         Preconditions.checkNotNull(identifier, "Identifier cannot be null");
@@ -100,7 +103,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * Metrics are enabled by default.
      *
      * @param enableMetrics Flag for switching on/off metrics. Default is {@code true}.
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig enableMetrics(boolean enableMetrics) {
         return toBuilder().setMetricsEnabled(enableMetrics).build();
@@ -111,7 +114,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * timestamps into. The table name string must follow the format {@code <dbName.tableName>}.
      *
      * @param rawTable The table name, must follow the format {@code <dbName.tableName>}.
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig enableDeltaRead(String rawTable) {
         Preconditions.checkNotNull(rawTable, "Raw table name cannot be null.");
@@ -125,7 +128,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * timestamps into. The table name string must follow the format {@code <dbName.tableName>}.
      *
      * @param rawTable The table name, must follow the format {@code <dbName.tableName>}.
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig enableDeltaRead(ValueProvider<String> rawTable) {
         Preconditions.checkNotNull(rawTable, "Raw table name cannot be null.");
@@ -137,7 +140,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * the identifier is used to separate between them.
      *
      * @param identifier
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withDeltaIdentifier(String identifier) {
         Preconditions.checkNotNull(identifier, "Identifier cannot be null.");
@@ -151,7 +154,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * the identifier is used to separate between them.
      *
      * @param identifier
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withDeltaIdentifier(ValueProvider<String> identifier) {
         Preconditions.checkNotNull(identifier, "Identifier cannot be null.");
@@ -165,7 +168,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * scheduled intervals.
      *
      * @param override
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withFullReadOverride(boolean override) {
         return toBuilder().setFullReadOverride(ValueProvider.StaticValueProvider.of(override)).build();
@@ -178,7 +181,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * scheduled intervals.
      *
      * @param override
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withFullReadOverride(ValueProvider<Boolean> override) {
         Preconditions.checkNotNull(override, "Identifier cannot be null.");
@@ -198,7 +201,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * to an hour--depending on load).
      *
      * @param duration
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withDeltaOffset(ValueProvider<Duration> duration) {
         Preconditions.checkNotNull(duration, "Duration cannot be null");
@@ -218,7 +221,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * to an hour--depending on load).
      *
      * @param duration
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withDeltaOffset(Duration duration) {
         Preconditions.checkNotNull(duration, "Duration cannot be null");
@@ -232,7 +235,7 @@ public abstract class ReaderConfig extends ConfigBase {
      *
      * The polling interval and offset can be specified
      *
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig watchForNewItems() {
         return toBuilder().setStreamingEnabled(true).build();
@@ -244,7 +247,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * This value is only used when the reader is operating in streaming mode.
      *
      * @param duration
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withPollInterval(ValueProvider<Duration> duration) {
         Preconditions.checkNotNull(duration, "Duration cannot be null.");
@@ -257,7 +260,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * This value is only used when the reader is operating in streaming mode.
      *
      * @param duration
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withPollInterval(Duration duration) {
         Preconditions.checkNotNull(duration, "Duration cannot be null.");
@@ -278,7 +281,7 @@ public abstract class ReaderConfig extends ConfigBase {
      * consider.
      *
      * @param duration
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withPollOffset(ValueProvider<Duration> duration) {
         Preconditions.checkNotNull(duration, "Duration cannot be null.");
@@ -299,11 +302,31 @@ public abstract class ReaderConfig extends ConfigBase {
      * consider.
      *
      * @param duration
-     * @return
+     * @return A ReaderConfig with the configuration applied.
      */
     public ReaderConfig withPollOffset(Duration duration) {
         Preconditions.checkNotNull(duration, "Duration cannot be null.");
         return toBuilder().setPollOffset(ValueProvider.StaticValueProvider.of(duration)).build();
+    }
+
+    /**
+     * Read only the first N result objects.
+     *
+     * This can be useful in situation where you have a very large results set and want to read a limited sample
+     * in order to inspect/profile the data. When set to a positive integer, the reader will stop requesting more
+     * results from Cognite Data Fusion after it has reached the specified count.
+     *
+     * Please note that the reader may return a slightly higher number of results than the specified count. That is
+     * because it will finish processing the results set batch at which the count was reached and return all the
+     * results in the batch.
+     *
+     * A count of zero (0) or negative means all results will be read. The default setting is to read all results (-1).
+     *
+     * @param count The results count at when the reader will stop requesting more results.
+     * @return A ReaderConfig with the configuration applied.
+     */
+    public ReaderConfig withReadFirstNResults(int count) {
+        return toBuilder().setFirstNCount(count).build();
     }
 
     /**
@@ -341,6 +364,7 @@ public abstract class ReaderConfig extends ConfigBase {
         abstract Builder setStreamingEnabled(boolean value);
         abstract Builder setPollInterval(ValueProvider<Duration> value);
         abstract Builder setPollOffset(ValueProvider<Duration> value);
+        abstract Builder setFirstNCount(int value);
 
         abstract ReaderConfig build();
     }
