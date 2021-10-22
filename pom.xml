@@ -6,7 +6,7 @@
 
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.27-SNAPSHOT</version>
+    <version>0.9.27</version>
     <licenses>
         <license>
             <name>Apache 2</name>
@@ -47,6 +47,7 @@
         <auto-service.version>1.0</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
         <junit.version>5.7.2</junit.version>
+        <jackson-yaml.version>2.12.3</jackson-yaml.version>
 
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
@@ -130,7 +131,7 @@
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>2.12.3</version>
+            <version>${jackson-yaml.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -155,9 +156,7 @@
                 <version>${os-maven-plugin.version}</version>
             </extension>
         </extensions>
-
         <plugins>
-
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
