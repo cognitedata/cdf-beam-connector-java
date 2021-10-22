@@ -37,13 +37,13 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
     
 #### Installing the sdk
 
-````xml
+```xml
 <dependency>    
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.26</version>
+    <version>0.9.27</version>
 </dependency>
-````
+```
 Requirements:
 - Java 11.
 - Apache Beam 2.33.0.
@@ -76,7 +76,7 @@ Requirements:
 
 ### Accessing the I/O connectors
 
-All connectors are accessed via static methods in ``com.cognite.beam.io.CogniteIO``. The connectors are prefixed with
+All connectors are accessed via static methods in `com.cognite.beam.io.CogniteIO`. The connectors are prefixed with
  _read_, _readAll_, _write_ or _delete_:
 
 - _read_: Issue a single query to CDF and return the results.
@@ -84,16 +84,16 @@ All connectors are accessed via static methods in ``com.cognite.beam.io.CogniteI
 - _write_: Write items to CDF. The write operation will behave as an upsert.
 - _delete_: Delete the specified items from CDF.
 
-For example, ``CogniteIO.readAssets()`` will return a reader for the asset resource type.
+For example, `CogniteIO.readAssets()` will return a reader for the asset resource type.
 
 #### Using readers
 
-The readers issue one or more queries to Cognite Fusion and returns the result as a ``PCollection<T>`` of typed results items. The result item type depends on the CDF resource type (``readAssets()`` returns ``Asset``, ``readEvents()`` returns ``Event``, etc.).
+The readers issue one or more queries to Cognite Fusion and returns the result as a `PCollection<T>` of typed results items. The result item type depends on the CDF resource type (`readAssets()` returns `Asset`, `readEvents()` returns `Event`, etc.).
 
 Readers have a set of common configuration options:
 
-- ``ProjectConfig``, mandatory. You must configure the reader with a Cognite tenant/project and api key. Optionally, you can also specify the host (for special cases when using a non-standard host).
-- ``RequestParameters``, optional. ``RequestParameters`` host any query/request specification for the reader. For example, if you want to apply filters (e.g. list _events_ where _type=MyEventType_). If you do not supply any request parameters the reader will return all objects of the given resource type.
-- ``Hints``, optional. ``Hints`` 
+- `ProjectConfig`, mandatory. You must configure the reader with a Cognite tenant/project and api key. Optionally, you can also specify the host (for special cases when using a non-standard host).
+- `RequestParameters`, optional. `RequestParameters` host any query/request specification for the reader. For example, if you want to apply filters (e.g. list _events_ where _type=MyEventType_). If you do not supply any request parameters the reader will return all objects of the given resource type.
+- `Hints`, optional. `Hints` 
 
 [![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/cognitedata/cdp-beam-connector-java.git)
