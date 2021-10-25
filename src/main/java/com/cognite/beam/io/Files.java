@@ -43,6 +43,7 @@ import org.apache.beam.sdk.values.*;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -258,13 +259,38 @@ public abstract class Files {
                         @ProcessElement
                         public void processElement(@Element KV<Long, CoGbkResult> element,
                                                    OutputReceiver<FileContainer> out) {
-                            FileMetadata fileMetadata = element.getValue().getOnly(fileMetadataTupleTag);
-                            FileBinary fileBinary = element.getValue().getOnly(fileBinaryTupleTag);
+                            List<FileMetadata> fileMetadataList = new ArrayList<>();
+                            List<FileBinary> fileBinaryList = new ArrayList<>();
 
-                            out.output(FileContainer.newBuilder()
-                                    .setFileMetadata(fileMetadata)
-                                    .setFileBinary(fileBinary)
-                                    .build());
+                            for (FileMetadata metadata : element.getValue().getAll(fileMetadataTupleTag)) {
+                                fileMetadataList.add(metadata);
+                            }
+                            for (FileBinary binary : element.getValue().getAll(fileBinaryTupleTag)) {
+                                fileBinaryList.add(binary);
+                            }
+
+                            if (fileMetadataList.size() != 1 || fileBinaryList.size() > 1) {
+                                // Invalid metadata count--will just skip this record!
+                                LOG.warn("Invalid file metadata count or binary count for id: {}. Metadata count: {}. File binary count: {}",
+                                        element.getKey(),
+                                        fileMetadataList.size(),
+                                        fileBinaryList.size());
+                                return;
+                            }
+
+                            if (fileBinaryList.isEmpty()) {
+                                // No binary component. Just output the metadata
+                                LOG.warn("No file binary for the file id: {}. Will just output the file metadata.",
+                                        element.getKey());
+                                out.output(FileContainer.newBuilder()
+                                        .setFileMetadata(fileMetadataList.get(0))
+                                        .build());
+                            } else {
+                                out.output(FileContainer.newBuilder()
+                                        .setFileMetadata(fileMetadataList.get(0))
+                                        .setFileBinary(fileBinaryList.get(0))
+                                        .build());
+                            }
                         }
                     }));
 

@@ -25,7 +25,13 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
-## [0.9.27]
+## [0.9.28-SNAPSHOT]
+
+### Fixed
+
+- `Files.readAll()` would fail if a file object only consists of a header (and not a binary). 
+
+## [0.9.27] 2021-10-22
 
 ### Added
 
