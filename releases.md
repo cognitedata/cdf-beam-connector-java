@@ -27,6 +27,13 @@ Changes are grouped as follows:
 
 ## [0.9.28-SNAPSHOT]
 
+### Added
+
+- Java SDK v 1.4.0. Brings lots of useful features, like:
+  - Improved performance reading `relationships` and `sequences`.
+  - Improved stability when working with large-volume file binaries.
+  - Added support for including source and target objects when reading `sequences`.
+
 ### Fixed
 
 - `Files.readAll()` would fail if a file object only consists of a header (and not a binary). 
