@@ -55,6 +55,7 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
     private final PCollectionView<List<Struct>> matchToView;
     private final String searchField;
     private final boolean convertFile;
+    private final boolean grayscale;
     private final boolean partialMatch;
     private final int minTokens;
 
@@ -76,6 +77,19 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
                                        boolean convertFile,
                                        boolean partialMatch,
                                        int minTokens) {
+        this(hints, readerConfig, projectConfigView, matchToView, searchField, convertFile,
+                partialMatch, minTokens, false);
+    }
+
+    public CreateInteractiveDiagramsFn(Hints hints,
+                                       ReaderConfig readerConfig,
+                                       PCollectionView<List<ProjectConfig>> projectConfigView,
+                                       PCollectionView<List<Struct>> matchToView,
+                                       String searchField,
+                                       boolean convertFile,
+                                       boolean partialMatch,
+                                       int minTokens,
+                                       boolean grayscale) {
         super(hints);
         this.projectConfigView = projectConfigView;
         this.matchToView = matchToView;
@@ -84,6 +98,7 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
         this.partialMatch = partialMatch;
         this.minTokens = minTokens;
         this.readerConfig = readerConfig;
+        this.grayscale = grayscale;
     }
 
     @ProcessElement

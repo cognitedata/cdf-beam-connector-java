@@ -563,6 +563,7 @@ public abstract class Context {
         public abstract int getWorkerParallelization();
         public abstract boolean isPartialMatch();
         public abstract int getMinTokens();
+        public abstract boolean isGrayscale();
 
         @Nullable
         public abstract PCollectionView<List<Struct>> getTargetView();
@@ -599,6 +600,10 @@ public abstract class Context {
 
         public CreateInteractiveDiagram enableConvertFile(boolean convertFile) {
             return toBuilder().setConvertFile(convertFile).build();
+        }
+
+        public CreateInteractiveDiagram enableGrayscale(boolean grayscale) {
+            return toBuilder().setGrayscale(grayscale).build();
         }
 
         public CreateInteractiveDiagram enablePartialMatch(boolean partialMatch) {
@@ -644,7 +649,7 @@ public abstract class Context {
                     .apply("Remove key", Values.<Iterable<Item>>create())
                     .apply("Create int. diagram", ParDo.of(new CreateInteractiveDiagramsFn(getHints(), getReaderConfig(),
                             projectConfigView, getTargetView(), getSearchField(), isConvertFile(),
-                            isPartialMatch(), getMinTokens()))
+                            isPartialMatch(), getMinTokens(), isGrayscale()))
                     .withSideInputs(projectConfigView, getTargetView()));
 
             return outputCollection;
@@ -656,6 +661,7 @@ public abstract class Context {
             abstract Builder setReaderConfig(ReaderConfig value);
             abstract Builder setSearchField(String value);
             abstract Builder setConvertFile(boolean value);
+            abstract Builder setGrayscale(boolean value);
             abstract Builder setWorkerParallelization(int value);
             abstract Builder setPartialMatch(boolean value);
             abstract Builder setMinTokens(int value);
