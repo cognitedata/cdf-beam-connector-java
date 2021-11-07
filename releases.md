@@ -33,6 +33,12 @@ Changes are grouped as follows:
   - Improved performance reading `relationships` and `sequences`.
   - Improved stability when working with large-volume file binaries.
   - Added support for including source and target objects when reading `sequences`.
+- Added support for grayscale image in engineering diagram SVGs.
+
+### Changed
+
+- `CreateInteractiveDiagram.withTargetView()` has been renamed to `CreateInteractiveDiagram.withEntitiesView()` to 
+align with API naming.
 
 ### Fixed
 

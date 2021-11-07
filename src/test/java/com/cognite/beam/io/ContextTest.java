@@ -416,7 +416,7 @@ class ContextTest extends TestConfigProviderV1 {
                                 .setFileBinary(fileBinaryC)
                                 .build()))
                 .apply("write files", CogniteIO.writeFiles()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -432,7 +432,7 @@ class ContextTest extends TestConfigProviderV1 {
 
         PCollection<FileContainer> readResults = pipeline
                 .apply("Read files", CogniteIO.readFiles()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -450,11 +450,12 @@ class ContextTest extends TestConfigProviderV1 {
                                         .build()
                         ))
                 .apply("Create pnId", CogniteIO.Experimental.createInteractiveDiagram()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withHints(Hints.create())
                         .withReaderConfig(ReaderConfig.create())
-                        .withTargetView(targetView)
-                        .enableConvertFile(true));
+                        .withEntitiesView(targetView)
+                        .enableConvertFile(true)
+                        .enableGrayscale(true));
 
 
         createPnID.apply("to string", MapElements.into(TypeDescriptors.strings())

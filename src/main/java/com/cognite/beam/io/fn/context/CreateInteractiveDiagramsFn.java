@@ -52,7 +52,7 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
     private final static Logger LOG = LoggerFactory.getLogger(CreateInteractiveDiagramsFn.class);
     private final ReaderConfig readerConfig;
     private final PCollectionView<List<ProjectConfig>> projectConfigView;
-    private final PCollectionView<List<Struct>> matchToView;
+    private final PCollectionView<List<Struct>> entitiesView;
     private final String searchField;
     private final boolean convertFile;
     private final boolean grayscale;
@@ -62,29 +62,29 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
     public CreateInteractiveDiagramsFn(Hints hints,
                                        ReaderConfig readerConfig,
                                        PCollectionView<List<ProjectConfig>> projectConfigView,
-                                       PCollectionView<List<Struct>> matchToView,
+                                       PCollectionView<List<Struct>> entitiesView,
                                        String searchField,
                                        boolean convertFile) {
-        this(hints, readerConfig, projectConfigView, matchToView, searchField, convertFile,
+        this(hints, readerConfig, projectConfigView, entitiesView, searchField, convertFile,
                 false, 2);
     }
 
     public CreateInteractiveDiagramsFn(Hints hints,
                                        ReaderConfig readerConfig,
                                        PCollectionView<List<ProjectConfig>> projectConfigView,
-                                       PCollectionView<List<Struct>> matchToView,
+                                       PCollectionView<List<Struct>> entitiesView,
                                        String searchField,
                                        boolean convertFile,
                                        boolean partialMatch,
                                        int minTokens) {
-        this(hints, readerConfig, projectConfigView, matchToView, searchField, convertFile,
+        this(hints, readerConfig, projectConfigView, entitiesView, searchField, convertFile,
                 partialMatch, minTokens, false);
     }
 
     public CreateInteractiveDiagramsFn(Hints hints,
                                        ReaderConfig readerConfig,
                                        PCollectionView<List<ProjectConfig>> projectConfigView,
-                                       PCollectionView<List<Struct>> matchToView,
+                                       PCollectionView<List<Struct>> entitiesView,
                                        String searchField,
                                        boolean convertFile,
                                        boolean partialMatch,
@@ -92,7 +92,7 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
                                        boolean grayscale) {
         super(hints);
         this.projectConfigView = projectConfigView;
-        this.matchToView = matchToView;
+        this.entitiesView = entitiesView;
         this.searchField = searchField;
         this.convertFile = convertFile;
         this.partialMatch = partialMatch;
@@ -125,11 +125,18 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
         List<Item> elementList = new ArrayList<>();
         element.forEach(item -> elementList.add(item));
         try {
-            List<Struct> matchToList = context.sideInput(matchToView);
+            List<Struct> matchToList = context.sideInput(entitiesView);
             List<DiagramResponse> resultsItems = getClient(projectConfig, readerConfig)
                     .experimental()
                     .engineeringDiagrams()
-                    .detectAnnotations(elementList, matchToList, searchField, partialMatch, minTokens, convertFile);
+                    .detectAnnotations(elementList, matchToList, searchField, partialMatch, minTokens, false);
+
+            if (convertFile) {
+                resultsItems = getClient(projectConfig, readerConfig)
+                        .experimental()
+                        .engineeringDiagrams()
+                        .convert(resultsItems, grayscale);
+            }
 
             if (readerConfig.isMetricsEnabled()) {
                 apiBatchSize.update(resultsItems.size());

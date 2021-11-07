@@ -537,6 +537,7 @@ public abstract class Context {
         private static final boolean DEFAULT_PARTIAL_MATCH = false;
         private static final boolean DEFAULT_CONVERT_FILE = false;
         private static final int DEFAULT_MIN_TOKENS = 2;
+        private static final boolean DEFAULT_ENABLE_GRAYSCALE = false;
 
         private static Builder builder() {
             return new AutoValue_Context_CreateInteractiveDiagram.Builder()
@@ -548,7 +549,8 @@ public abstract class Context {
                     .setConvertFile(DEFAULT_CONVERT_FILE)
                     .setWorkerParallelization(DEFAULT_WORKER_PARALLELIZATION)
                     .setPartialMatch(DEFAULT_PARTIAL_MATCH)
-                    .setMinTokens(DEFAULT_MIN_TOKENS);
+                    .setMinTokens(DEFAULT_MIN_TOKENS)
+                    .setGrayscale(DEFAULT_ENABLE_GRAYSCALE);
         }
 
         public static CreateInteractiveDiagram create() {
@@ -566,7 +568,7 @@ public abstract class Context {
         public abstract boolean isGrayscale();
 
         @Nullable
-        public abstract PCollectionView<List<Struct>> getTargetView();
+        public abstract PCollectionView<List<Struct>> getEntitiesView();
 
         public CreateInteractiveDiagram withProjectConfig(ProjectConfig config) {
             return toBuilder().setProjectConfig(config).build();
@@ -592,41 +594,98 @@ public abstract class Context {
             return toBuilder().setReaderConfig(config).build();
         }
 
+        /**
+         * This field determines the string to search for and to identify object entities.
+         *
+         * The default is {@code "name"}.
+         *
+         * @param searchField The name of the search field.
+         * @return transform with the configuration applied.
+         */
         public CreateInteractiveDiagram withSearchField(String searchField) {
             Preconditions.checkNotNull(searchField, "Search field cannot be null");
             Preconditions.checkArgument(!searchField.isEmpty(), "Search field cannot be an empty string.");
             return toBuilder().setSearchField(searchField).build();
         }
 
+        /**
+         * Set to {@code true} to include an interactive SVG (and PNG) version of the diagram in the result.
+         *
+         * The default is {@code false}.
+         *
+         * @param convertFile Set to true to include SVG version.
+         * @return transform with the configuration applied.
+         */
         public CreateInteractiveDiagram enableConvertFile(boolean convertFile) {
             return toBuilder().setConvertFile(convertFile).build();
         }
 
+        /**
+         * Set to {@code true} to reduce the size of the SVG (and PNG) by only using grayscale image.
+         *
+         * The default is {@code false}.
+         *
+         * @param grayscale Set to true to enable grayscale.
+         * @return transform with the configuration applied.
+         */
         public CreateInteractiveDiagram enableGrayscale(boolean grayscale) {
             return toBuilder().setGrayscale(grayscale).build();
         }
 
+        /**
+         * Allow partial (fuzzy) matching of entities in the engineering diagrams.
+         * Creates a match only when it is possible to do so unambiguously.
+         *
+         * The default is {@code false}.
+         *
+         * @param partialMatch Set to true to enable partial matching.
+         * @return transform with the configuration applied.
+         */
         public CreateInteractiveDiagram enablePartialMatch(boolean partialMatch) {
             return toBuilder().setPartialMatch(partialMatch).build();
         }
 
+        /**
+         * Each detected item must match the detected entity on at least this number of tokens.
+         * A token is a substring of consecutive letters or digits.
+         *
+         * The default is {@code 2}.
+         *
+         * @param minTokens The minimum number of tokens.
+         * @return transform with the configuration applied.
+         */
         public CreateInteractiveDiagram withMinTokens(int minTokens) {
             return toBuilder().setMinTokens(minTokens).build();
         }
 
+        /**
+         * Set the maximum number of parallel requests per worker.
+         *
+         * The default is {@code 10}.
+         *
+         * @param parallelization Max number of parallel requests per worker.
+         * @return transform with the configuration applied.
+         */
         public CreateInteractiveDiagram withWorkerParallelization(int parallelization) {
             return toBuilder().setWorkerParallelization(parallelization).build();
         }
 
-        public CreateInteractiveDiagram withTargetView(PCollectionView<List<Struct>> targetView) {
-            return toBuilder().setTargetView(targetView).build();
+        /**
+         * A list of entities to look for. For example, all the assets under a root node.
+         * The {@code searchField} determines the strings that identify the entities.
+         *
+         * @param entities The list of entities.
+         * @return transform with the configuration applied.
+         */
+        public CreateInteractiveDiagram withEntitiesView(PCollectionView<List<Struct>> entities) {
+            return toBuilder().setEntitiesView(entities).build();
         }
 
         @Override
         public PCollection<DiagramResponse> expand(PCollection<Item> input) {
             // validate required config parameters
-            Preconditions.checkState(null != getTargetView(),
-                    "No matchTo view. You must configure a matchTo view using [.withMatchToView(<view>)].");
+            Preconditions.checkState(null != getEntitiesView(),
+                    "No entities view. You must configure a entities view using [.withEntitiesView(<view>)].");
 
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<Item> itemCoder = ProtoCoder.of(Item.class);
@@ -648,9 +707,9 @@ public abstract class Context {
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Item>>create())
                     .apply("Create int. diagram", ParDo.of(new CreateInteractiveDiagramsFn(getHints(), getReaderConfig(),
-                            projectConfigView, getTargetView(), getSearchField(), isConvertFile(),
+                            projectConfigView, getEntitiesView(), getSearchField(), isConvertFile(),
                             isPartialMatch(), getMinTokens(), isGrayscale()))
-                    .withSideInputs(projectConfigView, getTargetView()));
+                    .withSideInputs(projectConfigView, getEntitiesView()));
 
             return outputCollection;
         }
@@ -665,7 +724,7 @@ public abstract class Context {
             abstract Builder setWorkerParallelization(int value);
             abstract Builder setPartialMatch(boolean value);
             abstract Builder setMinTokens(int value);
-            abstract Builder setTargetView(PCollectionView<List<Struct>> value);
+            abstract Builder setEntitiesView(PCollectionView<List<Struct>> value);
 
             abstract CreateInteractiveDiagram build();
         }
