@@ -35,9 +35,9 @@ import static com.google.common.base.Preconditions.checkState;
 
 @AutoValue
 public abstract class ItemsShardAndBatch extends PTransform<PCollection<Item>, PCollection<Iterable<Item>>> {
-    private static final int DEFAULT_MAX_BATCH_SIZE = 1000;
+    private static final int DEFAULT_MAX_BATCH_SIZE = 4000;
     private static final int MIN_MAX_BATCH_SIZE = 1;
-    private static final int MAX_MAX_BATCH_SIZE = 1000;
+    private static final int MAX_MAX_BATCH_SIZE = 10000;
 
     private static final int DEFAULT_WRITE_SHARDS = 10;
     private static final int MIN_WRITE_SHARDS = 1;
