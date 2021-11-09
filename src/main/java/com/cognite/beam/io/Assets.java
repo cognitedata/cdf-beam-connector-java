@@ -21,6 +21,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
+import com.cognite.beam.io.fn.write.SynchronizeAssetHierarchyFn;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.Aggregate;
 import com.cognite.client.dto.Item;
@@ -629,8 +630,6 @@ public abstract class Assets {
 
         @Override
         public PCollection<Asset> expand(PCollection<KV<String, Asset>> input) {
-            LOG.info("Starting Cognite asset hierarchy writer.");
-            LOG.debug("Building write multiple hierarchies composite transform.");
 
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
@@ -666,7 +665,7 @@ public abstract class Assets {
      */
     @AutoValue
     public abstract static class SynchronizeHierarchies
-            extends ConnectorBase<PCollection<KV<String, Asset>>, PCollectionTuple> {
+            extends ConnectorBase<PCollection<KV<String, Asset>>, PCollection<Asset>> {
         private final TupleTag<Item> deletedItemsTag = new TupleTag<Item>() {};
         private final TupleTag<Asset> upsertedAssetsTag = new TupleTag<Asset>() {};
 
@@ -724,9 +723,27 @@ public abstract class Assets {
         }
 
         @Override
-        public PCollectionTuple expand(PCollection<KV<String, Asset>> input) {
-            LOG.info("Starting Cognite asset synchronizer.");
-            LOG.debug("Building synchronize hierarchies composite transform.");
+        public PCollection<Asset> expand(PCollection<KV<String, Asset>> input) {
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
+
+            // main pipeline
+            PCollection<Asset> outputCollection = input
+                    .apply("Group by hierarchy", GroupByKey.create())
+                    .apply("Remove key", Values.create())
+                    .apply("Synchronize hierarchies", ParDo.of(new SynchronizeAssetHierarchyFn(
+                            getHints(), getWriterConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView)
+                    );
+
+            return outputCollection;
+
+            /*
             final String delimiter = "__§delimiter§__";
             final TupleTag<Asset> cdfAssetTag = new TupleTag<Asset>(){}; // input assets with composite key
             final TupleTag<Asset> inputAssetTag = new TupleTag<Asset>(){}; // cdf assets with composite key
@@ -791,6 +808,7 @@ public abstract class Assets {
                             assigned. Otherwise we have have to match the asset data set id to the list of
                             target data set ids.
                              */
+            /*
                             if ((dataSetIds.contains(0L) && !asset.hasDataSetId())
                                     || (asset.hasDataSetId() && dataSetIds.contains(asset.getDataSetId()))) {
                                 outputReceiver.output(asset);
@@ -870,6 +888,9 @@ public abstract class Assets {
                     .and(getDeletedItemsTag(), deletedAssets);
 
             return outputCollectionTuple;
+
+             */
+
         }
 
         @AutoValue.Builder public abstract static class Builder extends ConnectorBase.Builder<Builder> {

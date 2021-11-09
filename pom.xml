@@ -46,8 +46,8 @@
         <auto.version>1.8.2</auto.version>
         <auto-service.version>1.0</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
-        <junit.version>5.7.2</junit.version>
-        <jackson-yaml.version>2.12.3</jackson-yaml.version>
+        <junit.version>5.8.1</junit.version>
+        <jackson-yaml.version>2.13.0</jackson-yaml.version>
 
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
@@ -142,7 +142,7 @@
        <dependency>
            <groupId>ch.qos.logback</groupId>
            <artifactId>logback-classic</artifactId>
-           <version>1.2.5</version>
+           <version>1.2.6</version>
            <scope>test</scope>
        </dependency>
    </dependencies>

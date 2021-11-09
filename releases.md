@@ -25,6 +25,12 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.29-SNAPSHOT]
+
+### Changed
+
+- Refactored the asset synchronization to use the Java SDK implementation. 
+
 ## [0.9.28] 2021-11-08
 
 ### Added
