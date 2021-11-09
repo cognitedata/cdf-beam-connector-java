@@ -16,12 +16,8 @@
 
 package com.cognite.beam.io.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.auto.value.AutoValue;
-import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.JsonClass;
-import com.squareup.moshi.Moshi;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -29,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.io.Serializable;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -191,28 +186,6 @@ public abstract class ProjectConfig implements Serializable {
     public ProjectConfig withTokenUrl(String value) {
         return toBuilder().setTokenUrl(ValueProvider.StaticValueProvider.of(value)).setConfigured(true).build();
     }
-
-    /**
-     * Returns a new {@code ProjectConfig} with the specified properties from YAML document.
-     *
-     * @param yaml The YAML document with {@code ProjectConfig} properties.
-     */
-    public ProjectConfig withYaml(String yaml) {
-        try {
-            ObjectMapper yamlReader = new ObjectMapper(new YAMLFactory());
-            Object obj = yamlReader.readValue(yaml, Object.class);
-            ObjectMapper jsonWriter = new ObjectMapper();
-            String json = jsonWriter.writeValueAsString(obj); //YAML => JSON
-            Moshi moshi = new Moshi.Builder().add(new ValueProviderAdapter()).build();
-            JsonAdapter<ProjectConfig> adapter = moshi.adapter(ProjectConfig.class); //AutoValue extension to parse JSON
-            return adapter.fromJson(json);
-        }
-        catch (IOException ex) {
-            LOG.error("Unable to parse YAML document", ex);
-        }
-        return this;
-    }
-
 
     public void validate() {
         checkState(isConfigured(), "ProjectConfig parameters have not been configured.");
