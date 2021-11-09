@@ -45,7 +45,7 @@ class TimestampTest extends TestConfigProviderV1 {
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write timestamps", WriteTimestamp.to(rawTable)
                         .withIdentifier(identifier)
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -67,7 +67,7 @@ class TimestampTest extends TestConfigProviderV1 {
         PCollection<Long> readResults = p2
                 .apply("Read timestamp", ReadTimestamp.from(rawTable)
                         .withIdentifier(identifier)
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -95,7 +95,7 @@ class TimestampTest extends TestConfigProviderV1 {
         PCollection<Long> readResults = p2
                 .apply("Read timestamp", ReadTimestamp.from(rawTable)
                         .withIdentifier(identifier + "_no")
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));
@@ -130,7 +130,7 @@ class TimestampTest extends TestConfigProviderV1 {
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write timestamps", WriteTimestamp.to(rawTable)
                         .withIdentifier(identifier)
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -152,7 +152,7 @@ class TimestampTest extends TestConfigProviderV1 {
         PCollection<Long> readResults = p2
                 .apply("Read timestamp", ReadTimestamp.from(rawTable)
                         .withIdentifier(identifier)
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId)));

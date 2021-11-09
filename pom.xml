@@ -6,7 +6,7 @@
 
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.29-SNAPSHOT</version>
+    <version>0.9.29</version>
     <licenses>
         <license>
             <name>Apache 2</name>
@@ -47,7 +47,6 @@
         <auto-service.version>1.0</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
         <junit.version>5.8.1</junit.version>
-        <jackson-yaml.version>2.13.0</jackson-yaml.version>
 
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
@@ -127,11 +126,6 @@
             <groupId>com.ryanharter.auto.value</groupId>
             <artifactId>auto-value-moshi-runtime</artifactId>
             <version>${moshi-plugin.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
-            <version>${jackson-yaml.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>

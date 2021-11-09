@@ -146,7 +146,7 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline p1 = Pipeline.create();
         p1.apply("Build input rows", Create.of(row1))
                 .apply("write rows", CogniteIO.writeRawRow()
-                        .withProjectConfig(projectConfigApiKey));
+                        .withProjectConfig(projectConfigClientCredentials));
         p1.run().waitUntilFinish();
 
         // write second row
@@ -154,14 +154,14 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline p3 = Pipeline.create();
         p3.apply("Build input rows2", Create.of(row2))
                 .apply("write rows2", CogniteIO.writeRawRow()
-                        .withProjectConfig(projectConfigApiKey));
+                        .withProjectConfig(projectConfigClientCredentials));
         p3.run().waitUntilFinish();
 
         // Read first round
         System.out.println("Reading first round" + System.lineSeparator());
         final Pipeline p2 = Pipeline.create();
         p2.apply("Read rows", CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withDbName(rawDbName)
                 .withTableName(rawTableName)
                 .withReaderConfig(ReaderConfig.create()
@@ -180,14 +180,14 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline p7 = Pipeline.create();
         p7.apply("Build input rows2", Create.of(row3))
                 .apply("write rows2", CogniteIO.writeRawRow()
-                        .withProjectConfig(projectConfigApiKey));
+                        .withProjectConfig(projectConfigClientCredentials));
         p7.run().waitUntilFinish();
 
         // Read second round. Should output the second and third row
         System.out.println("Reading second round" + System.lineSeparator());
         final Pipeline p4 = Pipeline.create();
         p4.apply("Read 2nd rows", CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withDbName(rawDbName)
                 .withTableName(rawTableName)
                 .withReaderConfig(ReaderConfig.create()
@@ -207,7 +207,7 @@ class RawTest extends TestConfigProviderV1 {
         System.out.println("Reading third round" + System.lineSeparator());
         final Pipeline p5 = Pipeline.create();
         p5.apply("Read both rows", CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withDbName(rawDbName)
                 .withTableName(rawTableName)
                 .withReaderConfig(ReaderConfig.create()
@@ -226,7 +226,7 @@ class RawTest extends TestConfigProviderV1 {
         System.out.println("Reading fourth round" + System.lineSeparator());
         final Pipeline p6 = Pipeline.create();
         p6.apply("Read all rows", CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withDbName(rawDbName)
                 .withTableName(rawTableName)
                 .withReaderConfig(ReaderConfig.create()))
@@ -245,7 +245,7 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<RawRow> rows = pipeline.apply(CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withHints(Hints.create()
                         .withReadShards(4))
                 .withRequestParameters(RequestParameters.create()
@@ -283,7 +283,7 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<RawRow> rows = pipeline.apply(CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withHints(Hints.create()
                         .withReadShards(2))
                 .withRequestParameters(RequestParameters.create()
@@ -311,7 +311,7 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<RawRow> rows = pipeline.apply(CogniteIO.readRawRow()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withHints(Hints.create()
                         .withReadShards(2))
                 .withRequestParameters(RequestParameters.create()
@@ -322,7 +322,7 @@ class RawTest extends TestConfigProviderV1 {
 
         // delete rows
         rows.apply("Delete rows", CogniteIO.deleteRawRow()
-                        .withProjectConfig(projectConfigApiKey))
+                        .withProjectConfig(projectConfigClientCredentials))
                 .apply("Format delete receipt", MapElements.into(TypeDescriptors.strings())
                         .via(row -> row.toString()))
                 .apply("Write delete receipt to file", TextIO.write().to("./UnitTest_raw_deleteRow_output")
@@ -347,7 +347,7 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<String> dbs = pipeline.apply(CogniteIO.readRawDatabase()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
         );
 
         dbs.apply("Write output", TextIO.write().to("./UnitTest_raw_db_output")
@@ -363,9 +363,9 @@ class RawTest extends TestConfigProviderV1 {
         final Pipeline pipeline = Pipeline.create();
 
         final PCollection<RawTable> tables = pipeline.apply("Read DBs", CogniteIO.readRawDatabase()
-                .withProjectConfig(projectConfigApiKey))
+                .withProjectConfig(projectConfigClientCredentials))
                 .apply("Read tables", CogniteIO.readAllRawTable()
-                        .withProjectConfig(projectConfigApiKey));
+                        .withProjectConfig(projectConfigClientCredentials));
 
         tables.apply("Format output", MapElements
                 .into(TypeDescriptors.strings())
@@ -385,7 +385,7 @@ class RawTest extends TestConfigProviderV1 {
 
         PCollection<RawRow> readResults = pipeline
                 .apply("Read rows", CogniteIO.readRawRow()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId)

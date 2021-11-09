@@ -35,7 +35,7 @@ class AssetsTest extends TestConfigProviderV1 {
         PCollection<Asset> results = p
                 .apply("Create asset collection", Create.of(AssetsTest.generateAssetHierarchies()))
                 .apply("Write as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")));
 
@@ -67,7 +67,7 @@ class AssetsTest extends TestConfigProviderV1 {
         PCollection<Asset> results = p
                 .apply("Create asset collection", Create.of(assets))
                 .apply("Write as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")));
 
@@ -99,7 +99,7 @@ class AssetsTest extends TestConfigProviderV1 {
         PCollection<Asset> results = p
                 .apply("Create asset collection", Create.of(assets))
                 .apply("Write as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")));
 
@@ -131,7 +131,7 @@ class AssetsTest extends TestConfigProviderV1 {
         PCollection<Asset> results = p
                 .apply("Create asset collection", Create.of(assets))
                 .apply("Write as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")));
 
@@ -170,7 +170,7 @@ class AssetsTest extends TestConfigProviderV1 {
         PCollection<Asset> results = p
                 .apply("Create asset collection", Create.of(assets))
                 .apply("Write as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")));
 
@@ -192,7 +192,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> readResults = p
                 .apply("Read assets", CogniteIO.readAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test"))
                         .withRequestParameters(RequestParameters.create()
@@ -216,7 +216,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> writeResults = editedAssets
                 .apply("Write assets as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withUpsertMode(UpsertMode.UPDATE)));
@@ -239,7 +239,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> readResults = p
                 .apply("Read assets", CogniteIO.readAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test"))
                         .withRequestParameters(RequestParameters.create()
@@ -262,7 +262,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> writeResults = editedAssets
                 .apply("Write assets as single batch", CogniteIO.writeAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withUpsertMode(UpsertMode.REPLACE)));
@@ -306,28 +306,19 @@ class AssetsTest extends TestConfigProviderV1 {
 
         Pipeline p = Pipeline.create();
         Assets.SynchronizeHierarchies synchronizeHierarchies = CogniteIO.synchronizeHierarchies()
-                .withProjectConfig(projectConfigApiKey)
+                .withProjectConfig(projectConfigClientCredentials)
                 .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test"));
 
-        PCollectionTuple results = p
+        PCollection<Asset> results = p
                 .apply("Create asset collection", Create.of(inputAssetCollection))
                 .apply("Synchronize hierarchies", synchronizeHierarchies);
 
         // Upsert results pipe
-        results.get(synchronizeHierarchies.getUpsertedAssetsTag()).apply("Upsert asset to string", MapElements
+        results.apply("Upsert asset to string", MapElements
                 .into(TypeDescriptors.strings())
                 .via(Asset::toString))
                 .apply("Write upsert output", TextIO.write().to("./UnitTest_asset_synchBatchUpsert_output")
-                        .withSuffix(".txt")
-                        .withoutSharding()
-                        .withWindowedWrites());
-
-        // delete results pipe
-        results.get(synchronizeHierarchies.getDeletedItemsTag()).apply("Delete asset to string", MapElements
-                .into(TypeDescriptors.strings())
-                .via(inputAsset -> inputAsset.toString()))
-                .apply("Write delete output", TextIO.write().to("./UnitTest_asset_synchBatchDelete_output")
                         .withSuffix(".txt")
                         .withoutSharding()
                         .withWindowedWrites());
@@ -354,7 +345,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> readResults = p
                 .apply("Read assets", CogniteIO.readAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test"))
                         .withRequestParameters(RequestParameters.create()
@@ -380,7 +371,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> readResults = p
                 .apply("Read assets", CogniteIO.readAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test"))
                         .withRequestParameters(RequestParameters.create()
@@ -395,7 +386,7 @@ class AssetsTest extends TestConfigProviderV1 {
                                         .build()
                         ))
                         .apply("Delete items", CogniteIO.deleteAssets()
-                                .withProjectConfig(projectConfigApiKey)
+                                .withProjectConfig(projectConfigClientCredentials)
                                 .withWriterConfig(WriterConfig.create()
                                         .withAppIdentifier("Beam SDK unit test"))
                         );
@@ -479,7 +470,7 @@ class AssetsTest extends TestConfigProviderV1 {
 
         PCollection<Asset> readResults = pipeline
                 .apply("Read assets", CogniteIO.readAssets()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier(appIdentifier)
                                 .withSessionIdentifier(sessionId)
