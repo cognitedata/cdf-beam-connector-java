@@ -54,7 +54,7 @@ class LabelsTest extends TestConfigProviderV1 {
         PCollection<Label> results = p.apply(labels)
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write events", CogniteIO.writeLabels()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -94,7 +94,7 @@ class LabelsTest extends TestConfigProviderV1 {
 
         PCollection<Label> readResults = p2
                 .apply("Read labels", CogniteIO.readLabels()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -109,7 +109,7 @@ class LabelsTest extends TestConfigProviderV1 {
                                 .build()
                 ))
                 .apply("Delete items", CogniteIO.deleteLabels()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))

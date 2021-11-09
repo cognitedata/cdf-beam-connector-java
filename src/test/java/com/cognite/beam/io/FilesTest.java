@@ -88,7 +88,7 @@ class FilesTest extends TestConfigProviderV1 {
         PCollection<FileMetadata> results = p.apply(fileContainers)
                 .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
                 .apply("write files", CogniteIO.writeFiles()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -125,7 +125,7 @@ class FilesTest extends TestConfigProviderV1 {
 
         PCollection<FileContainer> readResults = p2
                 .apply("Read files", CogniteIO.readFiles()
-                        .withProjectConfig(projectConfigApiKey)
+                        .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
@@ -156,7 +156,7 @@ class FilesTest extends TestConfigProviderV1 {
                                         .build()
                         ))
                         .apply("Delete files", CogniteIO.deleteFiles()
-                                .withProjectConfig(projectConfigApiKey)
+                                .withProjectConfig(projectConfigClientCredentials)
                                 .withWriterConfig(WriterConfig.create()
                                         .withAppIdentifier("Beam SDK unit test")
                                         .withSessionIdentifier(sessionId))
