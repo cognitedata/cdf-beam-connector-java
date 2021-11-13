@@ -456,6 +456,14 @@ public class CogniteIO {
     }
 
     /**
+     * Creates an uninitialized Cognite.Raw.ReadAllRowDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    public static Raw.ReadAllRowDirect readAllRawRowDirect() {
+        return Raw.ReadAllRowDirect.builder().build();
+    }
+
+    /**
      * Creates an uninitialized Cognite.Raw.WriteRow. Before use, the reader must be initialized with a configuration
      * object, and optionally query getQueryParameters.
      */

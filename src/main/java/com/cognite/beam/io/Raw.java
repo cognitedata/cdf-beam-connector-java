@@ -20,14 +20,11 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.read.*;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.dto.RawTable;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteRawRowFn;
-import com.cognite.beam.io.fn.read.ReadCursorsFn;
-import com.cognite.beam.io.fn.read.ReadRawDatabase;
-import com.cognite.beam.io.fn.read.ReadRawRow;
-import com.cognite.beam.io.fn.read.ReadRawTable;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertRawRowFn;
 import com.cognite.beam.io.transform.internal.*;
@@ -45,7 +42,6 @@ import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
-import org.apache.beam.sdk.values.TypeDescriptors;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -216,6 +212,85 @@ public class Raw {
 
         @Override
         public PCollection<RawRow> expand(PCollection<RequestParameters> input) {
+
+            // Read from Raw
+            PCollection<RawRow> outputCollection = input
+                    .apply("Read rows direct", CogniteIO.readAllRawRowDirect()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withReaderConfig(getReaderConfig())
+                            .withHints(getHints()))
+                    .apply("Unwrap rows", ParDo.of(new DoFn<Iterable<RawRow>, RawRow>() {
+                        @ProcessElement
+                        public void processElement(@Element Iterable<RawRow> element,
+                                                   OutputReceiver<RawRow> out) {
+                            if (getReaderConfig().isStreamingEnabled()) {
+                                // output with timestamp
+                                element.forEach(row -> out.outputWithTimestamp(row,
+                                        org.joda.time.Instant.ofEpochMilli(row.getLastUpdatedTime())));
+                            } else {
+                                // output without timestamp
+                                element.forEach(row -> out.output(row));
+                            }
+                        }
+                    }))
+                    ;
+
+
+
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<Builder> {
+            public abstract ReadAllRow.Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAllRow build();
+        }
+    }
+
+    @Experimental(Experimental.Kind.SOURCE_SINK)
+    @AutoValue
+    public abstract static class ReadAllRowDirect
+            extends ConnectorBase<PCollection<RequestParameters>, PCollection<Iterable<RawRow>>> {
+
+        public static ReadAllRowDirect.Builder builder() {
+            return new com.cognite.beam.io.AutoValue_Raw_ReadAllRowDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setReaderConfig(ReaderConfig.create())
+                    .setProjectConfigFile(invalidProjectConfigFile);
+        }
+        public abstract ReaderConfig getReaderConfig();
+        public abstract ReadAllRowDirect.Builder toBuilder();
+
+        public ReadAllRowDirect withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public ReadAllRowDirect withReaderConfig(ReaderConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setReaderConfig(config).build();
+        }
+
+        public ReadAllRowDirect withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public ReadAllRowDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public ReadAllRowDirect withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        @Override
+        public PCollection<Iterable<RawRow>> expand(PCollection<RequestParameters> input) {
             LOG.debug("Building read all rows composite transform.");
 
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
@@ -254,21 +329,32 @@ public class Raw {
                                 .withProjectConfigFile(getProjectConfigFile())
                                 .withReaderConfig(getReaderConfig()))
                         .apply("Read cursors", ParDo.of(new ReadCursorsFn(getHints(),
-                                getReaderConfig().enableMetrics(false), projectConfigView))
+                                        getReaderConfig().enableMetrics(false), projectConfigView))
                                 .withSideInputs(projectConfigView))
                         .apply("Break fusion", BreakFusion.<RequestParameters>create());
             }
 
             // Read from Raw
-            PCollection<RawRow> outputCollection = finalizedConfig
+            PCollection<Iterable<RawRow>> outputCollection = finalizedConfig
                     .apply("Read results", ParDo.of(
-                            new ReadRawRow(getHints(), getReaderConfig(), projectConfigView))
+                                    new ReadRawRowBatch(getHints(), getReaderConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
-                    .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((RawRow row) -> row.getLastUpdatedTime()))
+                    .apply("Extract last change timestamp", ParDo.of(new DoFn<Iterable<RawRow>, Long>() {
+                        @ProcessElement
+                        public void processElement(@Element Iterable<RawRow> batch,
+                                                   OutputReceiver<Long> out) {
+                            long maxTimestampMs = 1L;
+                            for (RawRow row : batch) {
+                                if (row.getLastUpdatedTime() > maxTimestampMs) {
+                                    maxTimestampMs = row.getLastUpdatedTime();
+                                }
+                            }
+                            out.output(maxTimestampMs);
+                        }
+                            }))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -279,8 +365,8 @@ public class Raw {
 
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
-            public abstract ReadAllRow.Builder setReaderConfig(ReaderConfig value);
-            public abstract ReadAllRow build();
+            public abstract ReadAllRowDirect.Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAllRowDirect build();
         }
     }
 
