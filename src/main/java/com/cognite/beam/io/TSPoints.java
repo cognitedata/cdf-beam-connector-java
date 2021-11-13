@@ -204,7 +204,7 @@ public abstract class TSPoints {
 
     @AutoValue
     public abstract static class ReadAllDirect
-            extends ConnectorBase<PCollection<RequestParameters>, PCollection<Iterable<TimeseriesPoint>>> {
+            extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<TimeseriesPoint>>> {
 
         public static ReadAllDirect.Builder builder() {
             return new com.cognite.beam.io.AutoValue_TSPoints_ReadAllDirect.Builder()
@@ -248,7 +248,7 @@ public abstract class TSPoints {
         }
 
         @Override
-        public PCollection<Iterable<TimeseriesPoint>> expand(PCollection<RequestParameters> input) {
+        public PCollection<List<TimeseriesPoint>> expand(PCollection<RequestParameters> input) {
             LOG.info("Starting Cognite datapoints reader.");
 
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
@@ -282,7 +282,7 @@ public abstract class TSPoints {
                             .withProjectConfigParameters(getProjectConfig())
                             .withReaderConfig(getReaderConfig()));
 
-            PCollection<Iterable<TimeseriesPoint>> outputCollection;
+            PCollection<List<TimeseriesPoint>> outputCollection;
 
             if (isNewCodePath()) {
                 LOG.info("Using new codepath with sdf reader");

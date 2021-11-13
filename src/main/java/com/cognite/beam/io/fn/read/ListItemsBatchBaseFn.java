@@ -37,7 +37,7 @@ import java.util.List;
  * Specific resource types (Event, Asset, etc.) extend this class with
  * custom parsing logic.
  */
-public abstract class ListItemsBatchBaseFn<T> extends IOBaseFn<RequestParameters, Iterable<T>> {
+public abstract class ListItemsBatchBaseFn<T> extends IOBaseFn<RequestParameters, List<T>> {
     long maxNumResults = Long.MAX_VALUE;
     final ReaderConfig readerConfig;
     final PCollectionView<List<ProjectConfig>> projectConfigView;
@@ -59,7 +59,7 @@ public abstract class ListItemsBatchBaseFn<T> extends IOBaseFn<RequestParameters
 
     @ProcessElement
     public void processElement(@Element RequestParameters requestParameters,
-                               OutputReceiver<Iterable<T>> outputReceiver,
+                               OutputReceiver<List<T>> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         final Instant batchStartInstant = Instant.now();

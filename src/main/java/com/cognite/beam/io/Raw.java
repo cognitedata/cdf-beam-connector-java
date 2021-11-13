@@ -251,7 +251,7 @@ public class Raw {
     @Experimental(Experimental.Kind.SOURCE_SINK)
     @AutoValue
     public abstract static class ReadAllRowDirect
-            extends ConnectorBase<PCollection<RequestParameters>, PCollection<Iterable<RawRow>>> {
+            extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<RawRow>>> {
 
         public static ReadAllRowDirect.Builder builder() {
             return new com.cognite.beam.io.AutoValue_Raw_ReadAllRowDirect.Builder()
@@ -290,7 +290,7 @@ public class Raw {
         }
 
         @Override
-        public PCollection<Iterable<RawRow>> expand(PCollection<RequestParameters> input) {
+        public PCollection<List<RawRow>> expand(PCollection<RequestParameters> input) {
             LOG.debug("Building read all rows composite transform.");
 
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
@@ -335,25 +335,24 @@ public class Raw {
             }
 
             // Read from Raw
-            PCollection<Iterable<RawRow>> outputCollection = finalizedConfig
+            PCollection<List<RawRow>> outputCollection = finalizedConfig
                     .apply("Read results", ParDo.of(
                                     new ReadRawRowBatch(getHints(), getReaderConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
             // Record delta timestamp
             outputCollection
-                    .apply("Extract last change timestamp", ParDo.of(new DoFn<Iterable<RawRow>, Long>() {
-                        @ProcessElement
-                        public void processElement(@Element Iterable<RawRow> batch,
-                                                   OutputReceiver<Long> out) {
-                            long maxTimestampMs = 1L;
-                            for (RawRow row : batch) {
-                                if (row.getLastUpdatedTime() > maxTimestampMs) {
-                                    maxTimestampMs = row.getLastUpdatedTime();
+                    .apply("Extract last change timestamp", ParDo.of(new DoFn<List<RawRow>, Long>() {
+                                @ProcessElement
+                                public void processElement(@Element List<RawRow> batch,
+                                                           OutputReceiver<Long> out) {
+                                    long maxTimestampMs = batch.stream()
+                                            .mapToLong(item -> item.getLastUpdatedTime())
+                                            .min()
+                                            .orElse(1L);
+
+                                    out.output(maxTimestampMs);
                                 }
-                            }
-                            out.output(maxTimestampMs);
-                        }
                             }))
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())

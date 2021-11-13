@@ -38,7 +38,7 @@ import java.util.List;
  * This function reads time series data points based on the input RequestParameters.
  *
  */
-public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<TimeseriesPoint>> {
+public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<TimeseriesPoint>> {
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
     final ReaderConfig readerConfig;
     final PCollectionView<List<ProjectConfig>> projectConfigView;
@@ -56,7 +56,7 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, Iterable<Times
 
     @ProcessElement
     public void processElement(@Element RequestParameters requestParameters,
-                               OutputReceiver<Iterable<TimeseriesPoint>> outputReceiver,
+                               OutputReceiver<List<TimeseriesPoint>> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         final Instant batchStartInstant = Instant.now();
