@@ -25,6 +25,16 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.30-SNAPSHOT]
+
+### Added
+
+- `Read direct` mode for `RawRow` and `Event`. This read mode will output batches of rows (`List<RawRow/Event>`) instead of single 
+rows. This can be useful in very high data volume scenarios. 
+- `Write direct` mode for `RawRow` and `Event`. This allows for bypassing the shuffle and batch stage of the writer 
+when you have pre-batched objects. This can offer improved performance when writing very large volumes of data.
+
+
 ## [0.9.29] 2021-11-09
 
 ### Changed

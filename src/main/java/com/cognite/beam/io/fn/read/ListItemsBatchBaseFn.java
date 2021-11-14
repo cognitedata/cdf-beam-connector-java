@@ -16,36 +16,35 @@
 
 package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
-import com.cognite.client.dto.TimeseriesPoint;
-import com.cognite.beam.io.RequestParameters;
+import com.cognite.client.CogniteClient;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.List;
 
-
 /**
- * This function reads time series data points based on the input RequestParameters.
+ * Base class for listing items from CDF and outputting them as batches.
  *
+ * Specific resource types (Event, Asset, etc.) extend this class with
+ * custom parsing logic.
  */
-public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<TimeseriesPoint>> {
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
+public abstract class ListItemsBatchBaseFn<T> extends IOBaseFn<RequestParameters, List<T>> {
+    long maxNumResults = Long.MAX_VALUE;
     final ReaderConfig readerConfig;
     final PCollectionView<List<ProjectConfig>> projectConfigView;
 
-    public ReadTsPointProto(Hints hints,
-                            ReaderConfig readerConfig,
-                            PCollectionView<List<ProjectConfig>> projectConfigView) {
+    public ListItemsBatchBaseFn(Hints hints,
+                                ReaderConfig readerConfig,
+                                PCollectionView<List<ProjectConfig>> projectConfigView) {
         super(hints);
         Preconditions.checkNotNull(readerConfig, "Reader config cannot be null.");
         Preconditions.checkNotNull(projectConfigView, "Project config view cannot be null");
@@ -54,9 +53,13 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<Timeserie
         this.readerConfig = readerConfig;
     }
 
+    @Setup
+    public void setup() {
+    }
+
     @ProcessElement
     public void processElement(@Element RequestParameters requestParameters,
-                               OutputReceiver<List<TimeseriesPoint>> outputReceiver,
+                               OutputReceiver<List<T>> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
         final Instant batchStartInstant = Instant.now();
@@ -71,16 +74,23 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<Timeserie
             throw new Exception(message);
         }
 
+        // If firstN is enabled, then set a max num of results to fetch
+        LOG.debug(batchLogPrefix + "Checking config for firstN count: {}", readerConfig.getFirstNCount());
+        if (readerConfig.getFirstNCount() > 0) {
+            LOG.info(batchLogPrefix + "FirstN count specified at {}. Will limit the number of results objects.",
+                    readerConfig.getFirstNCount());
+            maxNumResults = readerConfig.getFirstNCount();
+        }
+
         // Read the items
         try {
-            Iterator<List<TimeseriesPoint>> resultsIterator = getClient(projectConfig, readerConfig)
-                    .timeseries()
-                    .dataPoints()
-                    .retrieve(requestParameters.getRequest());
+            Iterator<List<T>> resultsIterator = listItems(getClient(projectConfig, readerConfig),
+                    requestParameters,
+                    requestParameters.getPartitions().toArray(new String[requestParameters.getPartitions().size()]));
             Instant pageStartInstant = Instant.now();
-            int totalNoItems = 0;
-            while (resultsIterator.hasNext()) {
-                List<TimeseriesPoint> results = resultsIterator.next();
+            long totalNoItems = 0;
+            while (resultsIterator.hasNext() && totalNoItems < maxNumResults) {
+                List<T> results = resultsIterator.next();
                 if (readerConfig.isMetricsEnabled()) {
                     apiBatchSize.update(results.size());
                     apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
@@ -88,11 +98,11 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<Timeserie
                 if (readerConfig.isStreamingEnabled()) {
                     // output with timestamps in streaming mode--need that for windowing
                     long minTimestampMs = results.stream()
-                            .mapToLong(point -> point.getTimestamp())
+                            .mapToLong(item -> getTimestamp(item))
                             .min()
                             .orElse(1L);
 
-                    outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                     outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
                 } else {
                     // no timestamping in batch mode--just leads to lots of complications
                     outputReceiver.output(results);
@@ -112,14 +122,25 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<Timeserie
         }
     }
 
-    /*
-    protected Iterator<List<TimeseriesPoint>> listItems(CogniteClient client,
-                                                     RequestParameters requestParameters,
-                                                     String... partitions) throws Exception {
-        Preconditions.checkArgument(partitions.length == 0,
-                "Partitions is not supported for data points");
-        return client.timeseries().dataPoints().retrieve(requestParameters.getRequest());
-    }
-
+    /**
+     * Reads / lists items from Cognite Data Fusion.
+     *
+     * @param client The {@link CogniteClient} to use for writing the items.
+     * @param requestParameters The request with optional filter parameters.
+     * @param partitions The partitions to read.
+     * @return An {@link Iterator} for paging through the results.
+     * @throws Exception
      */
+    protected abstract Iterator<List<T>> listItems(CogniteClient client,
+                                                   RequestParameters requestParameters,
+                                                   String... partitions) throws Exception;
+
+    /**
+     * Gets the timestamp associated with a data item. This timestamp will be used in streaming mode as the
+     * basis for time windows. It would normally be the object's create or updated timestamp.
+     *
+     * @param item The item to get the timestamp for.
+     * @return The timestamp.
+     */
+    protected abstract long getTimestamp(T item);
 }

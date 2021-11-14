@@ -29,6 +29,7 @@ import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertEventFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
+import com.cognite.client.dto.RawRow;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.coders.Coder;
@@ -179,9 +180,88 @@ public abstract class Events {
 
         @Override
         public PCollection<Event> expand(PCollection<RequestParameters> input) {
-            LOG.info("Starting Cognite reader.");
-            LOG.debug("Building read all events composite transform.");
+            PCollection<Event> outputCollection = input
+                    .apply("Read direct", CogniteIO.readAllDirectEvents()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withReaderConfig(getReaderConfig())
+                            .withHints(getHints()))
+                    .apply("Unwrap events", ParDo.of(new DoFn<List<Event>, Event>() {
+                        @ProcessElement
+                        public void processElement(@Element List<Event> element,
+                                                   OutputReceiver<Event> out) {
+                            if (getReaderConfig().isStreamingEnabled()) {
+                                // output with timestamp
+                                element.forEach(row -> out.outputWithTimestamp(row,
+                                        org.joda.time.Instant.ofEpochMilli(row.getLastUpdatedTime())));
+                            } else {
+                                // output without timestamp
+                                element.forEach(row -> out.output(row));
+                            }
+                        }
+                    }))
+                    ;
 
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<Builder> {
+            public abstract Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAll build();
+        }
+    }
+
+    /**
+     * Transform that will read a collection of {@link Event} objects from Cognite Data Fusion. The
+     * {@link Event} result objects are returned in batches ({@code List<Event>}) of size <10k.
+     *
+     * You specify which {@link Event} objects to read via a set of filters enclosed in
+     * a {@link RequestParameters} object. This transform takes a collection of {@link RequestParameters}
+     * as input and returns all {@link Event} objects matching them.
+     */
+    @AutoValue
+    public abstract static class ReadAllDirect
+            extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<Event>>> {
+
+        public static ReadAllDirect.Builder builder() {
+            return new com.cognite.beam.io.AutoValue_Events_ReadAllDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setReaderConfig(ReaderConfig.create())
+                    .setProjectConfigFile(invalidProjectConfigFile);
+        }
+        public abstract ReaderConfig getReaderConfig();
+        public abstract ReadAllDirect.Builder toBuilder();
+
+        public ReadAllDirect withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public ReadAllDirect withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public ReadAllDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public ReadAllDirect withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        public ReadAllDirect withReaderConfig(ReaderConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setReaderConfig(config).build();
+        }
+
+        @Override
+        public PCollection<List<Event>> expand(PCollection<RequestParameters> input) {
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
 
@@ -207,7 +287,7 @@ public abstract class Events {
                 requestParametersPCollection = input;
             }
 
-            PCollection<Event> outputCollection = requestParametersPCollection
+            PCollection<List<Event>> outputCollection = requestParametersPCollection
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
                             .withProjectConfigParameters(getProjectConfig())
@@ -217,8 +297,8 @@ public abstract class Events {
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
                     .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
-                            getReaderConfig().enableMetrics(false), ResourceType.EVENT,
-                            projectConfigView))
+                                    getReaderConfig().enableMetrics(false), ResourceType.EVENT,
+                                    projectConfigView))
                             .withSideInputs(projectConfigView))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(new ListEventsFn(getHints(), getReaderConfig(),projectConfigView))
@@ -227,7 +307,11 @@ public abstract class Events {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((Event event) -> event.getLastUpdatedTime()))
+                            .via((List<Event> batch) -> batch.stream()
+                                    .mapToLong(Event::getLastUpdatedTime)
+                                    .max()
+                                    .orElse(1L))
+                    )
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -239,7 +323,7 @@ public abstract class Events {
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract ReadAll build();
+            public abstract ReadAllDirect build();
         }
     }
 
@@ -502,12 +586,10 @@ public abstract class Events {
         public abstract Write.Builder toBuilder();
 
         public Write withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public Write withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
@@ -518,30 +600,18 @@ public abstract class Events {
         }
 
         public Write withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public Write withWriterConfig(WriterConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setWriterConfig(config).build();
         }
 
         @Override
         public PCollection<Event> expand(PCollection<Event> input) {
-            LOG.info("Starting Cognite writer.");
-
-            LOG.debug("Building upsert events composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<Event> eventCoder = ProtoCoder.of(Event.class);
             KvCoder<String, Event> keyValueCoder = KvCoder.of(utf8Coder, eventCoder);
-
-            // project config side input
-            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
-                    .apply("Build project config", BuildProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig()))
-                    .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
             PCollection<Event> outputCollection = input
@@ -563,9 +633,11 @@ public abstract class Events {
                             .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<Event>>create())
-                    .apply("Upsert items", ParDo.of(
-                            new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView));
+                    .apply("Write events", CogniteIO.writeDirectEvents()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withWriterConfig(getWriterConfig())
+                            .withHints(getHints()));
 
             return outputCollection;
         }
@@ -575,6 +647,81 @@ public abstract class Events {
             public abstract Builder setWriterConfig(WriterConfig value);
 
             public abstract Write build();
+        }
+    }
+
+    /**
+     * Writes Raw Rows directly to the Cognite API, bypassing the regular validation and optimization steps. This
+     * writer is designed for advanced use with very large data volumes (100+ million items). Most use cases should
+     * use the regular {@link Events.Write} writer which will perform shuffling and batching to optimize
+     * the write performance.
+     *
+     * This writer will push each input {@link Iterable<Event>} as a single batch. If the input
+     * violates any constraints, the write will fail. Also, the performance of the writer depends heavily on the
+     * input being batched as optimally as possible.
+     *
+     * If your source system offers data pre-batched, you may get additional performance from this writer as
+     * it bypasses the regular shuffle and batch steps.
+     */
+    @AutoValue
+    public abstract static class WriteDirect
+            extends ConnectorBase<PCollection<Iterable<Event>>, PCollection<Event>> {
+
+        public static WriteDirect.Builder builder() {
+            return new com.cognite.beam.io.AutoValue_Events_WriteDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setWriterConfig(WriterConfig.create())
+                    .setProjectConfigFile(invalidProjectConfigFile);
+        }
+        public abstract WriterConfig getWriterConfig();
+        public abstract WriteDirect.Builder toBuilder();
+
+        public WriteDirect withProjectConfig(ProjectConfig config) {
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public WriteDirect withHints(Hints hints) {
+            return toBuilder().setHints(hints).build();
+        }
+
+        public WriteDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public WriteDirect withProjectConfigFile(ValueProvider<String> file) {
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        public WriteDirect withWriterConfig(WriterConfig config) {
+            return toBuilder().setWriterConfig(config).build();
+        }
+
+        @Override
+        public PCollection<Event> expand(PCollection<Iterable<Event>> input) {
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
+            // main input
+            PCollection<Event> outputCollection = input
+                    .apply("Upsert items", ParDo.of(
+                                    new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
+
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<Builder> {
+            public abstract Builder setWriterConfig(WriterConfig value);
+
+            public abstract WriteDirect build();
         }
     }
 

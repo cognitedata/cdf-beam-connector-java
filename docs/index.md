@@ -1,5 +1,9 @@
 ## Apache Beam connector (SDK) for Cognite Data Fusion
 
+Apache Beam is a programming model for streaming and batch data jobs/data pipelines. The jobs can be executed on multiple 
+runners like Apache Flink, Apache Spark, Google Dataflow and more. Please refer to 
+[the Apache Beam website for more information](https://beam.apache.org/)
+
 The Beam connector provides convenient access to Cognite Data Fusion's capabilities. It covers a large part of CDF's
 capability surface, including experimental features. The connector tries to follow the Apache Beam idioms for a good 
 developer experience.

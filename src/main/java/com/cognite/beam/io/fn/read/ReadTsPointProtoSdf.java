@@ -52,7 +52,7 @@ import java.util.concurrent.CompletableFuture;
  *
  */
 @DoFn.BoundedPerElement
-public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, Iterable<TimeseriesPoint>> {
+public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, List<TimeseriesPoint>> {
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
     private final String randomIdString = RandomStringUtils.randomAlphanumeric(5);
     private final String loggingPrefix = "Read TS points sdf [" + randomIdString + "] -";
@@ -80,7 +80,7 @@ public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, Iterable<Ti
     @ProcessElement
     public void processElement(@Element RequestParameters query,
                                RestrictionTracker<OffsetRange, Long> tracker,
-                               OutputReceiver<Iterable<TimeseriesPoint>> outputReceiver,
+                               OutputReceiver<List<TimeseriesPoint>> outputReceiver,
                                ManualWatermarkEstimator watermarkEstimator,
                                ProcessContext context) throws Exception {
         final String batchIdentifierPrefix = "Request batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";

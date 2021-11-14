@@ -31,7 +31,7 @@ import java.util.List;
  * Lists / reads events from Cognite Data Fusion
  *
  */
-public class ListEventsFn extends ListItemsBaseFn<Event> {
+public class ListEventsFn extends ListItemsBatchBaseFn<Event> {
     public ListEventsFn(Hints hints,
                         ReaderConfig readerConfig,
                         PCollectionView<List<ProjectConfig>> projectConfigView) {

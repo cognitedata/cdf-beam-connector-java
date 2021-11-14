@@ -128,6 +128,14 @@ public class CogniteIO {
     }
 
     /**
+     * Creates an uninitialized Cognite.Events.ReadAllDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    public static Events.ReadAllDirect readAllDirectEvents() {
+        return Events.ReadAllDirect.builder().build();
+    }
+
+    /**
      * Creates an uninitialized Cognite.Events.ReadAllById. Before use, the reader must be initialized with a configuration
      * object.
      */
@@ -157,6 +165,14 @@ public class CogniteIO {
      */
     public static Events.Write writeEvents() {
         return Events.Write.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized Cognite.Events.Write. Before use, the writer must be initialized with a configuration
+     * object.
+     */
+    public static Events.WriteDirect writeDirectEvents() {
+        return Events.WriteDirect.builder().build();
     }
 
     /**
@@ -456,6 +472,14 @@ public class CogniteIO {
     }
 
     /**
+     * Creates an uninitialized Cognite.Raw.ReadAllRowDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    public static Raw.ReadAllRowDirect readAllDirectRawRow() {
+        return Raw.ReadAllRowDirect.builder().build();
+    }
+
+    /**
      * Creates an uninitialized Cognite.Raw.WriteRow. Before use, the reader must be initialized with a configuration
      * object, and optionally query getQueryParameters.
      */
@@ -467,7 +491,7 @@ public class CogniteIO {
      * Creates an uninitialized Cognite.Raw.WriteRowDirect. Before use, the reader must be initialized with a configuration
      * object, and optionally query getQueryParameters.
      */
-    public static Raw.WriteRowDirect writeRawRowDirect() {
+    public static Raw.WriteRowDirect writeDirectRawRow() {
         return Raw.WriteRowDirect.builder().build();
     }
 

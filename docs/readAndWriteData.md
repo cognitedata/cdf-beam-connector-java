@@ -9,6 +9,21 @@ Most operations will consume and/or return some data objects. The Connector uses
 ([https://developers.google.com/protocol-buffers](https://developers.google.com/protocol-buffers)). The structure 
 of the data transfer objects follow the structure of the Cognite API objects. 
 
+### Common data read/write operations
+
+Most resource types support a core set of read/write operations:
+- _Read_. Returns all objects from CDF that match a filter--or all objects if no filter is specified.
+- _ReadAll_. Same as `read`, but it can take multiple, dynamically created `RequestParameters` (or filters) as 
+input as opposed to a single, hard-coded `RequestParameters`.
+- _ReadAllDirect_. Same as `readAll`, but returns the results objects in batches (`List<>`) as opposed to discrete objects.
+- _ReadAllById_. Returns objects from CDF based on specified `externalId` or `id`.
+- _ReadAggregate_. Performes an aggregate operation (typically `count`) on data in CDF.
+- _ReadAllAggregate_. Same as `readAggregate`, but it can take multiple, dynamically created `RequestParameters` (or filters) as 
+input as opposed to a single, hard-coded `RequestParameters`.
+- _Write_. Creates or updates objects in CDF. Batching is performed automatically.
+- _WriteDirect_. Same as `write`, but it expects the input to be pre-batched.
+- _Delete_. Removes objects from CDF based on specified `externalId` or `id`.
+
 ### Data transfer objects (resource types)
 
 The Beam Connector uses typed data transfer objects to represent the various resource types (`Asset`, `Event`, `File`, etc.). 
