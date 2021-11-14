@@ -12,7 +12,7 @@ The connector implements a sub-connector per resource type (Asset, Event, etc.) 
 by passing it a config object and optionally a query object.
 
 Please refer to [the documentation](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md) for more
-information ([https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md)).
+information: [https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md).
 
 ## Breaking change in v0.9.24
 
@@ -41,12 +41,12 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
 <dependency>    
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.29</version>
+    <version>0.9.30</version>
 </dependency>
 ```
 Requirements:
 - Java 11.
-- Apache Beam 2.33.0.
+- Apache Beam 2.34.0.
 
 #### I/O feature table
 

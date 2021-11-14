@@ -25,7 +25,7 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
-## [0.9.30-SNAPSHOT]
+## [0.9.30] 2021-11-14
 
 ### Added
 
@@ -33,6 +33,12 @@ Changes are grouped as follows:
 rows. This can be useful in very high data volume scenarios. 
 - `Write direct` mode for `RawRow` and `Event`. This allows for bypassing the shuffle and batch stage of the writer 
 when you have pre-batched objects. This can offer improved performance when writing very large volumes of data.
+- Support for `dataSetId` in the `Labels` resource type (Java SDK v1.5.0).
+
+### Fixed
+
+- File binary upload robustness (Java SDK v1.5.0).
+- `Labels` using api v1 endpoint (Java SDK v1.5.0).
 
 
 ## [0.9.29] 2021-11-09
