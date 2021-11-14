@@ -42,6 +42,7 @@ import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
+import org.apache.beam.sdk.values.TypeDescriptors;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -215,14 +216,14 @@ public class Raw {
 
             // Read from Raw
             PCollection<RawRow> outputCollection = input
-                    .apply("Read rows direct", CogniteIO.readAllRawRowDirect()
+                    .apply("Read rows direct", CogniteIO.readAllDirectRawRow()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig())
                             .withHints(getHints()))
-                    .apply("Unwrap rows", ParDo.of(new DoFn<Iterable<RawRow>, RawRow>() {
+                    .apply("Unwrap rows", ParDo.of(new DoFn<List<RawRow>, RawRow>() {
                         @ProcessElement
-                        public void processElement(@Element Iterable<RawRow> element,
+                        public void processElement(@Element List<RawRow> element,
                                                    OutputReceiver<RawRow> out) {
                             if (getReaderConfig().isStreamingEnabled()) {
                                 // output with timestamp
@@ -342,18 +343,12 @@ public class Raw {
 
             // Record delta timestamp
             outputCollection
-                    .apply("Extract last change timestamp", ParDo.of(new DoFn<List<RawRow>, Long>() {
-                                @ProcessElement
-                                public void processElement(@Element List<RawRow> batch,
-                                                           OutputReceiver<Long> out) {
-                                    long maxTimestampMs = batch.stream()
-                                            .mapToLong(item -> item.getLastUpdatedTime())
-                                            .max()
-                                            .orElse(1L);
-
-                                    out.output(maxTimestampMs);
-                                }
-                            }))
+                    .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
+                            .via((List<RawRow> batch) -> batch.stream()
+                                    .mapToLong(RawRow::getLastUpdatedTime)
+                                    .max()
+                                    .orElse(1L))
+                    )
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -426,7 +421,7 @@ public class Raw {
                             .withMaxBatchSize(4000)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<RawRow>>create())
-                    .apply("Write rows", CogniteIO.writeRawRowDirect()
+                    .apply("Write rows", CogniteIO.writeDirectRawRow()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withWriterConfig(getWriterConfig())
