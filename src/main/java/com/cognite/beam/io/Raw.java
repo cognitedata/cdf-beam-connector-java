@@ -348,7 +348,7 @@ public class Raw {
                                                            OutputReceiver<Long> out) {
                                     long maxTimestampMs = batch.stream()
                                             .mapToLong(item -> item.getLastUpdatedTime())
-                                            .min()
+                                            .max()
                                             .orElse(1L);
 
                                     out.output(maxTimestampMs);
