@@ -25,6 +25,12 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.31-SNAPSHOT]
+
+### Fixed
+
+- `Read direct` could emit empty batches in certain circumstances. 
+
 ## [0.9.30] 2021-11-14
 
 ### Added
@@ -39,7 +45,6 @@ when you have pre-batched objects. This can offer improved performance when writ
 
 - File binary upload robustness (Java SDK v1.5.0).
 - `Labels` using api v1 endpoint (Java SDK v1.5.0).
-
 
 ## [0.9.29] 2021-11-09
 
