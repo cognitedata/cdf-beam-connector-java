@@ -95,17 +95,19 @@ public abstract class ListItemsBatchBaseFn<T> extends IOBaseFn<RequestParameters
                     apiBatchSize.update(results.size());
                     apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
                 }
-                if (readerConfig.isStreamingEnabled()) {
-                    // output with timestamps in streaming mode--need that for windowing
-                    long minTimestampMs = results.stream()
-                            .mapToLong(item -> getTimestamp(item))
-                            .min()
-                            .orElse(1L);
+                if (results.size() > 0) {
+                    if (readerConfig.isStreamingEnabled()) {
+                        // output with timestamps in streaming mode--need that for windowing
+                        long minTimestampMs = results.stream()
+                                .mapToLong(item -> getTimestamp(item))
+                                .min()
+                                .orElse(1L);
 
-                     outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
-                } else {
-                    // no timestamping in batch mode--just leads to lots of complications
-                    outputReceiver.output(results);
+                        outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                    } else {
+                        // no timestamping in batch mode--just leads to lots of complications
+                        outputReceiver.output(results);
+                    }
                 }
 
                 totalNoItems += results.size();
