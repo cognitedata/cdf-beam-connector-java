@@ -25,11 +25,12 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
-## [0.9.31-SNAPSHOT]
+## [0.9.31] 2021-11-17
 
 ### Fixed
 
 - `Read direct` could emit empty batches in certain circumstances. 
+- Timeouts when using Google Cloud Storage as temp storage for file binaries.
 
 ## [0.9.30] 2021-11-14
 
