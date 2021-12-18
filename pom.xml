@@ -42,11 +42,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <beam.version>2.34.0</beam.version>
-        <cdf-java-sdk.version>1.6.0</cdf-java-sdk.version>
-        <auto.version>1.8.2</auto.version>
-        <auto-service.version>1.0</auto-service.version>
+        <cdf-java-sdk.version>1.8.0</cdf-java-sdk.version>
+        <auto.version>1.9</auto.version>
+        <auto-service.version>1.0.1</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
-        <junit.version>5.8.1</junit.version>
+        <junit.version>5.8.2</junit.version>
+        <logback-classic.version>1.2.8</logback-classic.version>
 
         <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
@@ -136,7 +137,7 @@
        <dependency>
            <groupId>ch.qos.logback</groupId>
            <artifactId>logback-classic</artifactId>
-           <version>1.2.6</version>
+           <version>${logback-classic.version}</version>
            <scope>test</scope>
        </dependency>
    </dependencies>

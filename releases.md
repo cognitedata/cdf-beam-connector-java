@@ -25,6 +25,15 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.32-SNAPSHOT]
+
+### Added
+
+- Java SDK v1.8.0:
+  - File binary upload use PUT instead of POST
+  - Further improvements in the file binary upload robustness.
+  - Fix. `SequenceMetadata` upsert now respects the max cell count batch limit.
+
 ## [0.9.31] 2021-11-17
 
 ### Fixed
