@@ -29,6 +29,7 @@ Changes are grouped as follows:
 
 ### Added
 
+- Beam SDK 2.35.0
 - Java SDK v1.8.0:
   - File binary upload use PUT instead of POST
   - Further improvements in the file binary upload robustness.
