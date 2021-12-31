@@ -292,8 +292,6 @@ public class Raw {
 
         @Override
         public PCollection<List<RawRow>> expand(PCollection<RequestParameters> input) {
-            LOG.debug("Building read all rows composite transform.");
-
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
 
@@ -452,7 +450,7 @@ public class Raw {
      */
     @AutoValue
     public abstract static class WriteRowDirect
-            extends ConnectorBase<PCollection<Iterable<RawRow>>, PCollection<RawRow>> {
+            extends ConnectorBase<PCollection<? extends Iterable<RawRow>>, PCollection<RawRow>> {
 
         public static WriteRowDirect.Builder builder() {
             return new com.cognite.beam.io.AutoValue_Raw_WriteRowDirect.Builder()
@@ -491,10 +489,7 @@ public class Raw {
         }
 
         @Override
-        public PCollection<RawRow> expand(PCollection<Iterable<RawRow>> input) {
-            LOG.info("Starting Cognite raw writer direct.");
-            LOG.debug("Building write raw row direct composite transform.");
-
+        public PCollection<RawRow> expand(PCollection<? extends Iterable<RawRow>> input) {
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
