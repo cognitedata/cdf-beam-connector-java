@@ -40,6 +40,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.StreamSupport;
 
 import static com.cognite.beam.io.CogniteIO.*;
 
@@ -388,11 +389,9 @@ public abstract class TSPoints {
                     .apply("Check batch size", Partition.of(2, new Partition.PartitionFn<KV<String, Iterable<TimeseriesPointPost>>>() {
                         @Override
                         public int partitionFor(KV<String, Iterable<TimeseriesPointPost>> elem, int numPartitions) {
-                            int counter = 0;
-                            for (TimeseriesPointPost point : elem.getValue()) {
-                                counter++;
-                            }
-                            if (counter >= 50000) {
+                            long count = StreamSupport.stream(elem.getValue().spliterator(), false)
+                                    .count();
+                            if (count >= 50000) {
                                 return 0; // no additional batching
                             } else {
                                 return 1; // run through additional batching
@@ -453,7 +452,7 @@ public abstract class TSPoints {
      */
     @AutoValue
     public abstract static class WriteDirect
-            extends ConnectorBase<PCollection<Iterable<TimeseriesPointPost>>, PCollection<TimeseriesPointPost>> {
+            extends ConnectorBase<PCollection<? extends Iterable<TimeseriesPointPost>>, PCollection<TimeseriesPointPost>> {
 
         public static TSPoints.WriteDirect.Builder builder() {
             return new com.cognite.beam.io.AutoValue_TSPoints_WriteDirect.Builder()
@@ -492,9 +491,7 @@ public abstract class TSPoints {
         }
 
         @Override
-        public PCollection<TimeseriesPointPost> expand(PCollection<Iterable<TimeseriesPointPost>> input) {
-            LOG.info("Starting Cognite writer.");
-
+        public PCollection<TimeseriesPointPost> expand(PCollection<? extends Iterable<TimeseriesPointPost>> input) {
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
