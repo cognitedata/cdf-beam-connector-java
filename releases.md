@@ -25,7 +25,14 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
-## [0.9.33-SNAPSHOT]
+## [0.9.33] 2022-01-04
+
+### Added
+
+- Java SDK v1.9.0
+  - Added `3D Models`
+  - Increased read and write timeouts to match sever-side values.
+  - Upsert of `sequenceMetadata` not identifying duplicate entries correctly.
 
 ### Fixed
 
