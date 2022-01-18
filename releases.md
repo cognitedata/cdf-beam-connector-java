@@ -25,6 +25,12 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [o.9.34] 2022-01-18
+
+### Added
+
+- Improve logging of failed API requests.
+
 ## [0.9.33] 2022-01-04
 
 ### Added
