@@ -25,7 +25,8 @@ import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.values.PCollectionView;
 
-import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Writes time series data points to CDF.Clean.
@@ -52,17 +53,26 @@ public class UpsertTsPointsProtoFn extends UpsertItemBaseFn<TimeseriesPointPost>
     @Override
     protected List<TimeseriesPointPost> upsertItems(CogniteClient client,
                                                     List<TimeseriesPointPost> inputItems) throws Exception {
-        List<TimeseriesPointPost> results = client.timeseries().dataPoints().upsert(inputItems);
+        try {
+            List<TimeseriesPointPost> results = client.timeseries().dataPoints().upsert(inputItems);
+            if (writerConfig.isMetricsEnabled()) {
+                long countTs = results.stream()
+                        .map(TimeseriesPointPost::getExternalId)
+                        .distinct()
+                        .count();
 
-        if (writerConfig.isMetricsEnabled()) {
-            long countTs = results.stream()
-                    .map(point -> point.getExternalId())
+                tsBatch.update(countTs);
+            }
+
+            return results;
+
+        } catch (Exception e) {
+            // Log failed external IDs here and re-raise
+            LOG.warn("Failed to update points for {}", inputItems.stream()
+                    .map(TimeseriesPointPost::getExternalId)
                     .distinct()
-                    .count();
-
-            tsBatch.update(countTs);
+                    .collect(Collectors.joining(",")));
+            throw e;
         }
-
-        return results;
     }
 }
