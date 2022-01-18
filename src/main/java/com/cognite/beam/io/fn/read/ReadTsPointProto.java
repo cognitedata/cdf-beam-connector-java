@@ -16,12 +16,12 @@
 
 package com.cognite.beam.io.fn.read;
 
+import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.fn.IOBaseFn;
 import com.cognite.client.dto.TimeseriesPoint;
-import com.cognite.beam.io.RequestParameters;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -106,8 +106,8 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<Timeserie
                     totalNoItems,
                     Duration.between(batchStartInstant, Instant.now()).toString());
         } catch (Exception e) {
-            LOG.error(batchLogPrefix + "Error when reading from Cognite Data Fusion: {}",
-                    e.toString());
+            LOG.error(batchLogPrefix + "Error when reading from Cognite Data Fusion", e);
+            LOG.warn(batchLogPrefix + "Failed request: {}", requestParameters.getRequestParametersAsJson());
             throw new Exception(batchLogPrefix + "Error when reading from Cognite Data Fusion.", e);
         }
     }

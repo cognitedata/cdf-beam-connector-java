@@ -92,8 +92,7 @@ public abstract class UpsertItemBaseFn<T> extends IOBaseFn<Iterable<T>, T> {
 
             results.forEach(item -> outputReceiver.output(item));
         } catch (Exception e) {
-            LOG.error(batchLogPrefix + "Error when writing to Cognite Data Fusion: {}",
-                    e.toString());
+            LOG.error(batchLogPrefix + "Error when writing to Cognite Data Fusion", e);
             throw new Exception(batchLogPrefix + "Error when writing to Cognite Data Fusion.", e);
         }
     }

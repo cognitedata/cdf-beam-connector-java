@@ -152,6 +152,7 @@ public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, List<Timese
                     Duration.between(batchStartInstant, Instant.now()).toString());
         } catch (Exception e) {
             LOG.error(localLoggingPrefix + "Error reading results from the Cognite connector.", e);
+            LOG.warn(localLoggingPrefix + "Failed request: {}", query.getRequestParametersAsJson());
             throw e;
         }
     }

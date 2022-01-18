@@ -24,6 +24,7 @@ import com.cognite.client.dto.RawRow;
 import org.apache.beam.sdk.values.PCollectionView;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Writes raw rows to CDF.Raw.
@@ -44,6 +45,15 @@ public class UpsertRawRowFn extends UpsertItemBaseFn<RawRow> {
 
     @Override
     protected List<RawRow> upsertItems(CogniteClient client, List<RawRow> inputItems) throws Exception {
-        return client.raw().rows().upsert(inputItems, true);
+        try {
+            return client.raw().rows().upsert(inputItems, true);
+        } catch (Exception e) {
+            LOG.warn("Failed to write RAW rows {}", inputItems.stream()
+                    .map(row -> row.getDbName() + "|" + row.getTableName())
+                    .distinct()
+                    .collect(Collectors.joining(","))
+            );
+            throw e;
+        }
     }
 }
