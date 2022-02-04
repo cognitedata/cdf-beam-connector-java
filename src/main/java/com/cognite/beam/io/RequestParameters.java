@@ -271,6 +271,7 @@ public abstract class RequestParameters implements Serializable {
      * @param externalId
      * @return The request parameters with the configuration applied.
      */
+    @Deprecated
     public RequestParameters withItemExternalId(String externalId) {
         return toBuilder()
                 .setRequest(getRequest().withItemExternalId(externalId))
@@ -286,9 +287,38 @@ public abstract class RequestParameters implements Serializable {
      * @param internalId
      * @return The request parameters with the configuration applied.
      */
+    @Deprecated
     public RequestParameters withItemInternalId(long internalId) {
         return toBuilder()
                 .setRequest(getRequest().withItemInternalId(internalId))
+                .build();
+    }
+
+    /**
+     * Convenience method for setting the external id for requesting multiple items.
+     *
+     * You can use this method when requesting a data item by id, for example when requesting a set of events.
+     *
+     * @param externalId
+     * @return The request object with the parameter applied.
+     */
+    public RequestParameters withItemExternalIds(String... externalId) {
+        return toBuilder()
+                .setRequest(getRequest().withItemExternalIds(externalId))
+                .build();
+    }
+
+    /**
+     * Convenience method for setting the external id for requesting multiple items.
+     *
+     * You can use this method when requesting a data item by id, for example when requesting a set of events.
+     *
+     * @param internalId
+     * @return The request object with the parameter applied.
+     */
+    public RequestParameters withItemInternalIds(long... internalId) {
+        return toBuilder()
+                .setRequest(getRequest().withItemInternalIds(internalId))
                 .build();
     }
 

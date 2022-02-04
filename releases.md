@@ -25,7 +25,26 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
-## [o.9.34] 2022-01-18
+## [0.9.35-SNAPSHOT]
+
+### Added
+
+- Added convenience methods to the `RequestParameters` object for easier handling of items (by `externalId` or `id`). You can use
+  `RequestParameters.withItemExternalIds(String... externalId)` and `RequestParameters.withItemInternalIds(Long... externalId)` to add multiple
+  items to the request.
+- Java SDK v1.10.0
+  - Added `3D Models Revisions`
+  - Added `3D File Download`
+  - Added `3D Asset Mapping`
+  - `EngineeringDiagrams` promoted from experimental to stable. It has the same signature and behavior as before and is
+    located under the `contextualization` family: `CogniteClient.contextualization().engineeringDiagrams()`.
+
+### Deprecated
+
+- The single item methods `RequestParameters.withItemExternalId(String externalId)` and `RequestParameters.withItemInternalId(Long externalId)`
+  have been deprecated in favour of the new multi-item versions.
+
+## [0.9.34] 2022-01-18
 
 ### Added
 
