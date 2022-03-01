@@ -32,12 +32,15 @@ Changes are grouped as follows:
 - Added convenience methods to the `RequestParameters` object for easier handling of items (by `externalId` or `id`). You can use
   `RequestParameters.withItemExternalIds(String... externalId)` and `RequestParameters.withItemInternalIds(Long... externalId)` to add multiple
   items to the request.
-- Java SDK v1.10.0
+- Java SDK v1.11.0
   - Added `3D Models Revisions`
   - Added `3D File Download`
   - Added `3D Asset Mapping`
   - `EngineeringDiagrams` promoted from experimental to stable. It has the same signature and behavior as before and is
     located under the `contextualization` family: `CogniteClient.contextualization().engineeringDiagrams()`.
+  - Add utility class `com.cognite.client.util.RawRows` for working with `RawRow` object. Please refer to
+    [the documentation](https://github.com/cognitedata/cdf-sdk-java/blob/main/docs/raw.md) for more information.
+- Beam SDK 2.36.0
 
 ### Deprecated
 
