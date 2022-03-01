@@ -14,15 +14,6 @@ by passing it a config object and optionally a query object.
 Please refer to [the documentation](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md) for more
 information: [https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/index.md).
 
-## Breaking change in v0.9.24
-
-Connector v0.9.24 will introduce a breaking change in the definition of the data transfer objects
-(`Asset`, `Event`, `File`, etc.). This is the carefully considered change, and the last big item before locking down
-the SDK for v1 release.
-
-Please check [the documentation](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/readAndWriteData.md#migrating-from-sdk-0924) for more information.
-
-
 ```java
 PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
                    .withConfig(ProjectConfig.create()
@@ -41,12 +32,12 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
 <dependency>    
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.34</version>
+    <version>0.9.35</version>
 </dependency>
 ```
 Requirements:
 - Java 11.
-- Apache Beam 2.35.0.
+- Apache Beam 2.36.0.
 
 #### I/O feature table
 
@@ -94,6 +85,14 @@ Readers have a set of common configuration options:
 
 - `ProjectConfig`, mandatory. You must configure the reader with a Cognite tenant/project and api key. Optionally, you can also specify the host (for special cases when using a non-standard host).
 - `RequestParameters`, optional. `RequestParameters` host any query/request specification for the reader. For example, if you want to apply filters (e.g. list _events_ where _type=MyEventType_). If you do not supply any request parameters the reader will return all objects of the given resource type.
-- `Hints`, optional. `Hints` 
+- `Hints`, optional. `Hints`
 
 [![Open in Cloud Shell](http://gstatic.com/cloudssh/images/open-btn.svg)](https://console.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https://github.com/cognitedata/cdp-beam-connector-java.git)
+
+## Breaking change in v0.9.24
+
+Connector v0.9.24 will introduce a breaking change in the definition of the data transfer objects
+(`Asset`, `Event`, `File`, etc.). This is the carefully considered change, and the last big item before locking down
+the SDK for v1 release.
+
+Please check [the documentation](https://github.com/cognitedata/cdf-beam-connector-java/blob/main/docs/readAndWriteData.md#migrating-from-sdk-0924) for more information.
