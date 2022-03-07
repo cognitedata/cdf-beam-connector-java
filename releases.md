@@ -25,6 +25,15 @@ Changes are grouped as follows:
 - OOTB incremental read support for time series.
 - Geo-location attribute and resource type.
 
+## [0.9.36-SNAPSHOT]
+
+### Added
+
+- `Read direct` mode for `FilesMetadata` and `Files`. This read mode will output batches of objects (`List<FileMetadata/FileContainer>`) instead of single
+    rows. This can be useful in very high data volume scenarios.
+- `Write direct` mode for `FilesMetadata` and `Files`. This allows for bypassing the shuffle and batch stage of the writer
+  when you have pre-batched objects. This can offer improved performance when writing very large volumes of data.
+
 ## [0.9.35] 2022-03-01
 
 ### Added
