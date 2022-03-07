@@ -200,6 +200,17 @@ public class CogniteIO {
     }
 
     /**
+     * Creates an uninitialized Cognite.Files.ReadAllDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    /*
+    public static Files.ReadAllDirect readAllDirectFiles() {
+        return Files.ReadAllDirect.builder().build();
+    }
+
+     */
+
+    /**
      * Creates an uninitialized Cognite.Files.ReadAggregate. Before use, the reader must be initialized with a configuration
      * object, and optionally query getQueryParameters.
      */
@@ -248,7 +259,15 @@ public class CogniteIO {
     }
 
     /**
-     * Creates an uninitialized Cognite.Assets.ReadAllById. Before use, the reader must be initialized with a configuration
+     * Creates an uninitialized Cognite.FilesMetadata.ReadAllDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    public static FilesMetadata.ReadAllDirect readAllDirectFilesMetadata() {
+        return FilesMetadata.ReadAllDirect.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized Cognite.FilesMetadata.ReadAllById. Before use, the reader must be initialized with a configuration
      * object.
      */
     public static FilesMetadata.ReadAllById readAllFilesMetadataByIds() {

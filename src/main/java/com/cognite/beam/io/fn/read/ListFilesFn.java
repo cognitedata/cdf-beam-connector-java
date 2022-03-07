@@ -31,7 +31,7 @@ import java.util.List;
  * Lists / reads file (headers) from Cognite Data Fusion
  *
  */
-public class ListFilesFn extends ListItemsBaseFn<FileMetadata> {
+public class ListFilesFn extends ListItemsBatchBaseFn<FileMetadata> {
     public ListFilesFn(Hints hints,
                        ReaderConfig readerConfig,
                        PCollectionView<List<ProjectConfig>> projectConfigView) {

@@ -651,7 +651,7 @@ public abstract class Events {
     }
 
     /**
-     * Writes Raw Rows directly to the Cognite API, bypassing the regular validation and optimization steps. This
+     * Writes {@code events} directly to the Cognite API, bypassing the regular validation and optimization steps. This
      * writer is designed for advanced use with very large data volumes (100+ million items). Most use cases should
      * use the regular {@link Events.Write} writer which will perform shuffling and batching to optimize
      * the write performance.

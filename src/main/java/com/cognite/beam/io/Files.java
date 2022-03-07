@@ -122,8 +122,6 @@ public abstract class Files {
 
         @Override
         public PCollection<FileContainer> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
-            LOG.debug("Building read files composite transform.");
 
             PCollection<FileContainer> outputCollection = input.getPipeline()
                     .apply("Generate Query", Create.of(getRequestParameters()))
@@ -211,7 +209,6 @@ public abstract class Files {
 
         @Override
         public PCollection<FileContainer> expand(PCollection<RequestParameters> input) {
-            LOG.debug("Building read all files composite transform.");
             Coder<Long> varLongCoder = VarLongCoder.of();
             Coder<FileMetadata> metadataCoder = ProtoCoder.of(FileMetadata.class);
             Coder<FileBinary> binaryCoder = ProtoCoder.of(FileBinary.class);
