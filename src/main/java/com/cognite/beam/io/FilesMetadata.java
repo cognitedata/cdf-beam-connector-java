@@ -513,7 +513,6 @@ public abstract class FilesMetadata {
     @AutoValue
     public abstract static class WriteDirect
             extends ConnectorBase<PCollection<Iterable<FileMetadata>>, PCollection<FileMetadata>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 400;
 
         public static WriteDirect.Builder builder() {
             return new com.cognite.beam.io.AutoValue_FilesMetadata_WriteDirect.Builder()
