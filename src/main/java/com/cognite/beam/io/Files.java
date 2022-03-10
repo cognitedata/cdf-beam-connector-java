@@ -252,6 +252,8 @@ public abstract class Files {
     @AutoValue
     public abstract static class ReadAllDirect
             extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<FileContainer>>> {
+        // the max parallelization potential of the job
+        private static final int NO_SHARDS = 10;
 
         public static Files.ReadAllDirect.Builder builder() {
             return new AutoValue_Files_ReadAllDirect.Builder()
@@ -326,7 +328,7 @@ public abstract class Files {
                     .apply("Shard and batch items", ItemsShardAndBatch.builder()
                             .setMaxBatchSize(getHints().getReadFileBinaryBatchSize())
                             .setMaxLatency(getHints().getWriteMaxBatchLatency())
-                            .setWriteShards(getHints().getWriteShards())
+                            .setWriteShards(NO_SHARDS)
                             .build())
                     .apply("Retrieve files", ParDo.of(new RetrieveFileContainersFn(getHints(),
                                     getReaderConfig(), getTempStorageURI(), isForceTempStorage(), projectConfigView))
