@@ -20,7 +20,6 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.client.CogniteClient;
-import com.cognite.client.dto.FileBinary;
 import com.cognite.client.dto.FileContainer;
 import com.cognite.client.dto.Item;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -34,7 +33,7 @@ import java.util.List;
  * Retrieves file containers (metadata/header + binary) from Cognite Data Fusion
  *
  */
-public class RetrieveFileContainersFn extends RetrieveItemsBaseFn<FileContainer> {
+public class RetrieveFileContainersFn extends RetrieveItemsBatchBaseFn<FileContainer> {
     private final ValueProvider<String> tempStorageURI;
     private final boolean forceTempStorage;
 

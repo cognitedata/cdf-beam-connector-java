@@ -20,6 +20,8 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.beam.io.fn.read.RetrieveFileBinariesFn;
+import com.cognite.beam.io.fn.read.RetrieveFileContainersFn;
 import com.cognite.beam.io.fn.write.RemoveTempFile;
 import com.cognite.client.dto.*;
 import com.cognite.client.config.ResourceType;
@@ -209,97 +211,24 @@ public abstract class Files {
 
         @Override
         public PCollection<FileContainer> expand(PCollection<RequestParameters> input) {
-            Coder<Long> varLongCoder = VarLongCoder.of();
-            Coder<FileMetadata> metadataCoder = ProtoCoder.of(FileMetadata.class);
-            Coder<FileBinary> binaryCoder = ProtoCoder.of(FileBinary.class);
-
-            // Identify the files matching the request and read the file metadata
-            PCollection<KV<Long, FileMetadata>> fileMetadataPCollection = input
-                    .apply("Read file metadata", CogniteIO.readAllFilesMetadata()
-                            .withHints(getHints())
-                            .withProjectConfig(getProjectConfig())
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withReaderConfig(getReaderConfig()))
-                    .apply("Add key", WithKeys.of((FileMetadata metadata) ->
-                            metadata.getId()))
-                    .setCoder(KvCoder.of(varLongCoder, metadataCoder))
-                    .apply("Max by key", Max.perKey((Comparator<FileMetadata> & Serializable)
-                            (FileMetadata left, FileMetadata right) ->
-                            Long.compare(left.getLastUpdatedTime(), right.getLastUpdatedTime())));
 
             // Download the file binaries matching the file metadata
-            PCollection<KV<Long, FileBinary>> fileBinaryPCollection = fileMetadataPCollection
-                    .apply("Convert to items", MapElements.into(TypeDescriptor.of(Item.class))
-                            .via(fileMetadata ->
-                                    Item.newBuilder()
-                                            .setId(fileMetadata.getValue().getId())
-                                            .build()))
-                    .apply("Read file binary", CogniteIO.readAllFilesBinariesByIds()
+            PCollection<FileContainer> outputCollection = input
+                    .apply("Read files direct", CogniteIO.readAllDirectFiles()
                             .withHints(getHints())
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig())
                             .withTempStorageURI(getTempStorageURI())
                             .enableForceTempStorage(isForceTempStorage()))
-                    .apply("Add key2", WithKeys.of(FileBinary::getId))
-                    .setCoder(KvCoder.of(varLongCoder, binaryCoder));
-
-            // Join file metadata and binaries
-            final TupleTag<FileMetadata> fileMetadataTupleTag = new TupleTag<>();
-            final TupleTag<FileBinary> fileBinaryTupleTag = new TupleTag<>();
-            PCollection<KV<Long, CoGbkResult>> joinResult = KeyedPCollectionTuple.of(fileMetadataTupleTag, fileMetadataPCollection)
-                    .and(fileBinaryTupleTag, fileBinaryPCollection)
-                    .apply("Join meta and binary", CoGroupByKey.create());
-
-            PCollection<FileContainer> outputCollection = joinResult
-                    .apply("Build FileContainer", ParDo.of(new DoFn<KV<Long, CoGbkResult>, FileContainer>() {
+                    .apply("Unwrap batch", ParDo.of(new DoFn<List<FileContainer>, FileContainer>() {
                         @ProcessElement
-                        public void processElement(@Element KV<Long, CoGbkResult> element,
+                        public void processElement(@Element List<FileContainer> element,
                                                    OutputReceiver<FileContainer> out) {
-                            List<FileMetadata> fileMetadataList = new ArrayList<>();
-                            List<FileBinary> fileBinaryList = new ArrayList<>();
-
-                            for (FileMetadata metadata : element.getValue().getAll(fileMetadataTupleTag)) {
-                                fileMetadataList.add(metadata);
-                            }
-                            for (FileBinary binary : element.getValue().getAll(fileBinaryTupleTag)) {
-                                fileBinaryList.add(binary);
-                            }
-
-                            if (fileMetadataList.size() != 1 || fileBinaryList.size() > 1) {
-                                // Invalid metadata count--will just skip this record!
-                                LOG.warn("Invalid file metadata count or binary count for id: {}. Metadata count: {}. File binary count: {}",
-                                        element.getKey(),
-                                        fileMetadataList.size(),
-                                        fileBinaryList.size());
-                                return;
-                            }
-
-                            if (fileBinaryList.isEmpty()) {
-                                // No binary component. Just output the metadata
-                                LOG.warn("No file binary for the file id: {}. Will just output the file metadata.",
-                                        element.getKey());
-                                out.output(FileContainer.newBuilder()
-                                        .setFileMetadata(fileMetadataList.get(0))
-                                        .build());
-                            } else {
-                                out.output(FileContainer.newBuilder()
-                                        .setFileMetadata(fileMetadataList.get(0))
-                                        .setFileBinary(fileBinaryList.get(0))
-                                        .build());
-                            }
+                            // output without timestamp
+                            element.forEach(row -> out.output(row));
                         }
                     }));
-
-            // Record delta timestamp
-            outputCollection
-                    .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((FileContainer fileContainer) ->
-                                    fileContainer.getFileMetadata().getLastUpdatedTime()))
-                    .apply("Record delta timestamp", RecordDeltaTimestamp.create()
-                            .withProjectConfig(getProjectConfig())
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withReaderConfig(getReaderConfig()));
 
             return outputCollection;
         }
@@ -310,6 +239,120 @@ public abstract class Files {
             public abstract ReadAll.Builder setTempStorageURI(ValueProvider<String> tempStorageURI);
             public abstract ReadAll.Builder setForceTempStorage(boolean value);
             public abstract ReadAll build();
+        }
+    }
+
+    /**
+     * Transform that will read a collection of {@code file} objects from Cognite Data Fusion.
+     *
+     * You specify which {@code file} objects to read via a set of filters enclosed in
+     * a {@link RequestParameters} object. This transform takes a collection of {@link RequestParameters}
+     * as input and returns all {@code file} objects matching them.
+     */
+    @AutoValue
+    public abstract static class ReadAllDirect
+            extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<FileContainer>>> {
+
+        public static Files.ReadAllDirect.Builder builder() {
+            return new AutoValue_Files_ReadAllDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setReaderConfig(ReaderConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setProjectConfigFile(invalidProjectConfigFile)
+                    .setForceTempStorage(false);
+        }
+        public abstract ReaderConfig getReaderConfig();
+        public abstract Files.ReadAllDirect.Builder toBuilder();
+
+        @Nullable
+        public abstract ValueProvider<String> getTempStorageURI();
+        public abstract boolean isForceTempStorage();
+
+        public Files.ReadAllDirect withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public ReadAllDirect withReaderConfig(ReaderConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setReaderConfig(config).build();
+        }
+
+        public Files.ReadAllDirect withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public Files.ReadAllDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public Files.ReadAllDirect withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        public Files.ReadAllDirect withTempStorageURI(ValueProvider<String> tempStorageURI) {
+            return toBuilder().setTempStorageURI(tempStorageURI).build();
+        }
+
+        public Files.ReadAllDirect enableForceTempStorage(boolean forceTempStorage) {
+            return toBuilder().setForceTempStorage(forceTempStorage).build();
+        }
+
+        @Override
+        public PCollection<List<FileContainer>> expand(PCollection<RequestParameters> input) {
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
+            // Identify the files matching the request and read the file metadata
+            PCollection<List<FileContainer>> outputCollection = input
+                    .apply("List file metadata", CogniteIO.readAllFilesMetadata()
+                            .withHints(getHints())
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withReaderConfig(getReaderConfig()))
+                    .apply("Convert to items", MapElements.into(TypeDescriptor.of(Item.class))
+                            .via(fileMetadata ->
+                                    Item.newBuilder()
+                                            .setId(fileMetadata.getId())
+                                            .build()))
+                    .apply("Shard and batch items", ItemsShardAndBatch.builder()
+                            .setMaxBatchSize(getHints().getReadFileBinaryBatchSize())
+                            .setMaxLatency(getHints().getWriteMaxBatchLatency())
+                            .setWriteShards(getHints().getWriteShards())
+                            .build())
+                    .apply("Retrieve files", ParDo.of(new RetrieveFileContainersFn(getHints(),
+                                    getReaderConfig(), getTempStorageURI(), isForceTempStorage(), projectConfigView))
+                            .withSideInputs(projectConfigView));
+
+            // Record delta timestamp
+            outputCollection
+                    .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
+                            .via((List<FileContainer> batch) -> batch.stream()
+                                    .mapToLong(fileContainer -> fileContainer.getFileMetadata().getLastUpdatedTime())
+                                    .max()
+                                    .orElse(1L)))
+                    .apply("Record delta timestamp", RecordDeltaTimestamp.create()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withReaderConfig(getReaderConfig()));
+
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<Files.ReadAllDirect.Builder> {
+            public abstract ReadAllDirect.Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAllDirect.Builder setTempStorageURI(ValueProvider<String> tempStorageURI);
+            public abstract ReadAllDirect.Builder setForceTempStorage(boolean value);
+            public abstract ReadAllDirect build();
         }
     }
 

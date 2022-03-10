@@ -203,12 +203,9 @@ public class CogniteIO {
      * Creates an uninitialized Cognite.Files.ReadAllDirect. Before use, the reader must be initialized with a configuration
      * object, and optionally query getQueryParameters.
      */
-    /*
     public static Files.ReadAllDirect readAllDirectFiles() {
         return Files.ReadAllDirect.builder().build();
     }
-
-     */
 
     /**
      * Creates an uninitialized Cognite.Files.ReadAggregate. Before use, the reader must be initialized with a configuration
