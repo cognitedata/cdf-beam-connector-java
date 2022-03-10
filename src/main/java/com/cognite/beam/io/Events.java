@@ -710,7 +710,7 @@ public abstract class Events {
 
             // main input
             PCollection<Event> outputCollection = input
-                    .apply("Upsert items", ParDo.of(
+                    .apply("Upsert events", ParDo.of(
                                     new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
@@ -773,9 +773,6 @@ public abstract class Events {
 
         @Override
         public PCollection<Item> expand(PCollection<Item> input) {
-            LOG.info("Starting Cognite writer.");
-            LOG.debug("Building delete events composite transform.");
-
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()

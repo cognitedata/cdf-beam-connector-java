@@ -168,7 +168,7 @@ public class CogniteIO {
     }
 
     /**
-     * Creates an uninitialized Cognite.Events.Write. Before use, the writer must be initialized with a configuration
+     * Creates an uninitialized Cognite.Events.WriteDirect. Before use, the writer must be initialized with a configuration
      * object.
      */
     public static Events.WriteDirect writeDirectEvents() {
@@ -232,6 +232,14 @@ public class CogniteIO {
     }
 
     /**
+     * Creates an uninitialized Cognite.Files.WriteDirect. Before use, the reader must be initialized with a configuration
+     * object.
+     */
+    public static Files.WriteDirect writeDirectFiles() {
+        return Files.WriteDirect.builder().build();
+    }
+
+    /**
      * Creates an uninitialized Cognite.FilesMetadata.Delete. Before use, the writer must be initialized with a configuration
      * object.
      */
@@ -277,6 +285,14 @@ public class CogniteIO {
      */
     public static FilesMetadata.Write writeFilesMetadata() {
         return FilesMetadata.Write.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized Cognite.FilesMetadata.WriteDirect. Before use, the writer must be initialized with a configuration
+     * object.
+     */
+    public static FilesMetadata.WriteDirect writeDirectFilesMetadata() {
+        return FilesMetadata.WriteDirect.builder().build();
     }
 
     /**

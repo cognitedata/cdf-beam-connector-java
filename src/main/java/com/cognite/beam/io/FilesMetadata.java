@@ -449,19 +449,9 @@ public abstract class FilesMetadata {
 
         @Override
         public PCollection<FileMetadata> expand(PCollection<FileMetadata> input) {
-            LOG.info("Starting Cognite writer.");
-
-            LOG.debug("Building upsert file metadata composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<FileMetadata> eventCoder = ProtoCoder.of(FileMetadata.class);
             KvCoder<String, FileMetadata> keyValueCoder = KvCoder.of(utf8Coder, eventCoder);
-
-            // project config side input
-            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
-                    .apply("Build project config", BuildProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig()))
-                    .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
             PCollection<FileMetadata> outputCollection = input
@@ -482,9 +472,11 @@ public abstract class FilesMetadata {
                             .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<FileMetadata>>create())
-                    .apply("Upsert items", ParDo.of(
-                            new UpsertFileHeaderFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView));
+                    .apply("Write file metadata", CogniteIO.writeDirectFilesMetadata()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withWriterConfig(getWriterConfig())
+                            .withHints(getHints()));
 
             return outputCollection;
         }
@@ -499,7 +491,7 @@ public abstract class FilesMetadata {
 
     /**
      * Writes {@code file metadata/headers} directly to the Cognite API, bypassing the regular validation and optimization steps. This
-     * writer is designed for advanced use with very large data volumes (100+ million items). Most use cases should
+     * writer is designed for advanced use with very large data volumes. Most use cases should
      * use the regular {@link FilesMetadata.Write} writer which will perform shuffling and batching to optimize
      * the write performance.
      *

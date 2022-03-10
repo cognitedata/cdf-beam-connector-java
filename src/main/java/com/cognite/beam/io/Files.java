@@ -528,7 +528,6 @@ public abstract class Files {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<FileContainer>, PCollection<FileMetadata>> {
-        private static final int WRITE_BATCH_SIZE = 10;
         private static final String loggingPrefix = "File.Write - ";
 
         public static Write.Builder builder() {
@@ -590,20 +589,12 @@ public abstract class Files {
 
         @Override
         public PCollection<FileMetadata> expand(PCollection<FileContainer> input) {
-            LOG.debug("Building upsert file composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<FileContainer> containerCoder = ProtoCoder.of(FileContainer.class);
             KvCoder<String, FileContainer> keyValueCoder = KvCoder.of(utf8Coder, containerCoder);
 
-            // project config side input
-            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
-                    .apply("Build project config", BuildProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig()))
-                    .apply("To list view", View.<ProjectConfig>asList());
-
             // main input
-            PCollection<KV<FileContainer, FileMetadata>> upsertedFilesCollection = input
+            PCollection<FileMetadata> upsertedFilesCollection = input
                     .apply("Check id", MapElements.into(TypeDescriptor.of(FileContainer.class))
                             .via((FileContainer inputItem) -> {
                                 if (inputItem.getFileMetadata().hasExternalId() || inputItem.getFileMetadata().hasId()) {
@@ -626,8 +617,112 @@ public abstract class Files {
                             .withMaxBatchSize(getHints().getWriteFileBatchSize())
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<FileContainer>>create())
+                    .apply("Write files", CogniteIO.writeDirectFiles()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withWriterConfig(getWriterConfig())
+                            .withHints(getHints())
+                            .enableDeleteTempFile(isDeleteTempFile()));
+
+            return upsertedFilesCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<Builder> {
+            abstract Builder setWriterConfig(WriterConfig value);
+            abstract Builder setDeleteTempFile(boolean value);
+
+            public abstract Write build();
+        }
+    }
+
+    /**
+     * Writes {@code FileContainer} directly to the Cognite API, bypassing the regular validation and optimization steps. This
+     * writer is designed for advanced use cases where you have pre-batched the data. Most use cases should
+     * use the regular {@link Files.Write} writer which will perform shuffling and batching to optimize
+     * the write performance.
+     *
+     * This writer will push each input {@link Iterable<FileContainer>} as a single batch. If the input
+     * violates any constraints, the write will fail.
+     *
+     * If your source system offers data pre-batched, you may get additional performance from this writer as
+     * it bypasses the regular shuffle and batch steps.
+     */
+    @AutoValue
+    public abstract static class WriteDirect
+            extends ConnectorBase<PCollection<Iterable<FileContainer>>, PCollection<FileMetadata>> {
+        private static final String loggingPrefix = "File.WriteDirect - ";
+
+        public static WriteDirect.Builder builder() {
+            return new AutoValue_Files_WriteDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setWriterConfig(WriterConfig.create())
+                    .setProjectConfigFile(invalidProjectConfigFile)
+                    .setDeleteTempFile(true);
+        }
+
+        public abstract WriterConfig getWriterConfig();
+        public abstract boolean isDeleteTempFile();
+        public abstract WriteDirect.Builder toBuilder();
+
+        public WriteDirect withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public WriteDirect withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public WriteDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public WriteDirect withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        public WriteDirect withWriterConfig(WriterConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setWriterConfig(config).build();
+        }
+
+        /**
+         * Configure how to treat a temp blob after an upload. This setting only affects behavior when uploading
+         * file binaries to the Cognite API--it has no effect on downloading file binaries.
+         *
+         * When set to {@code true}, the temp file (if present) will be removed after a successful upload. If the file
+         * binary is memory-based (which is the default for small and medium sized files), this setting has no effect.
+         *
+         * When set to {@code false}, the temp file (if present) will not be deleted.
+         *
+         * The default setting is {@code true}.
+         *
+         * @param enable
+         * @return
+         */
+        public WriteDirect enableDeleteTempFile(boolean enable) {
+            return toBuilder().setDeleteTempFile(enable).build();
+        }
+
+        @Override
+        public PCollection<FileMetadata> expand(PCollection<Iterable<FileContainer>> input) {
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
+            // main input. Upsert the file containers
+            PCollection<KV<FileContainer, FileMetadata>> upsertedFilesCollection = input
                     .apply("Upsert files", ParDo.of(
-                            new UpsertFileFn(getHints(), getWriterConfig(), projectConfigView))
+                                    new UpsertFileFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
             // The main output. Just filter out the file containers and keep the file metadata
@@ -639,9 +734,9 @@ public abstract class Files {
             PCollection<String> tempFilesUriCollection = upsertedFilesCollection
                     .apply("Filter file containers", Keys.create())
                     .apply("Filter temp files", Filter.by(fileContainer ->
-                        isDeleteTempFile()
-                                && fileContainer.hasFileBinary()
-                                && fileContainer.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI
+                            isDeleteTempFile()
+                                    && fileContainer.hasFileBinary()
+                                    && fileContainer.getFileBinary().getBinaryTypeCase() == FileBinary.BinaryTypeCase.BINARY_URI
                     ))
                     .apply("Get temp file URI", MapElements.into(TypeDescriptors.strings())
                             .via((FileContainer fileContainer) -> fileContainer.getFileBinary().getBinaryUri())
@@ -659,7 +754,7 @@ public abstract class Files {
             abstract Builder setWriterConfig(WriterConfig value);
             abstract Builder setDeleteTempFile(boolean value);
 
-            public abstract Write build();
+            public abstract WriteDirect build();
         }
     }
 
