@@ -33,6 +33,9 @@ Changes are grouped as follows:
     rows. This can be useful in very high data volume scenarios.
 - `Write direct` mode for `FilesMetadata` and `Files`. This allows for bypassing the shuffle and batch stage of the writer
   when you have pre-batched objects. This can offer improved performance when writing very large volumes of data.
+- Java SDK v1.12.0
+  - fixed file binary download expired URL
+- Beam 2.37.0
 
 ## [0.9.35] 2022-03-01
 

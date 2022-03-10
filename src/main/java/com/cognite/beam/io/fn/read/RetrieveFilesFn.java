@@ -27,7 +27,7 @@ import org.apache.beam.sdk.values.PCollectionView;
 import java.util.List;
 
 /**
- * Lists / reads file headers / metadata from Cognite Data Fusion
+ * Retrieves file headers / metadata from Cognite Data Fusion
  *
  */
 public class RetrieveFilesFn extends RetrieveItemsBaseFn<FileMetadata> {
