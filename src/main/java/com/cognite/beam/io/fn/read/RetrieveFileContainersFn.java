@@ -62,6 +62,6 @@ public class RetrieveFileContainersFn extends RetrieveItemsBatchBaseFn<FileConta
             tempStorage = new URI(tempStorageURI.get());
         }
 
-        return client.files().download(items, tempStorage, forceTempStorage);
+        return client.files().download(items, tempStorage, !forceTempStorage);
     }
 }

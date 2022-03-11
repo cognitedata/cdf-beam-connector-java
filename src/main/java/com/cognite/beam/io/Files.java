@@ -488,8 +488,6 @@ public abstract class Files {
 
         @Override
         public PCollection<Aggregate> expand(PCollection<RequestParameters> input) {
-            LOG.debug("Building read all files aggregates composite transform.");
-
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
