@@ -86,7 +86,8 @@ class FilesTest extends TestConfigProviderV1 {
                 .advanceWatermarkToInfinity();
 
         PCollection<FileMetadata> results = p.apply(fileContainers)
-                .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
+                .apply("Add windowing", Window.<FileContainer>into(FixedWindows.of(Duration.standardSeconds(10)))
+                        .withAllowedLateness(Duration.ZERO))
                 .apply("write files", CogniteIO.writeFiles()
                         .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()

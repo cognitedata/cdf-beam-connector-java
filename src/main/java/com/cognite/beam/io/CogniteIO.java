@@ -168,7 +168,7 @@ public class CogniteIO {
     }
 
     /**
-     * Creates an uninitialized Cognite.Events.Write. Before use, the writer must be initialized with a configuration
+     * Creates an uninitialized Cognite.Events.WriteDirect. Before use, the writer must be initialized with a configuration
      * object.
      */
     public static Events.WriteDirect writeDirectEvents() {
@@ -200,6 +200,14 @@ public class CogniteIO {
     }
 
     /**
+     * Creates an uninitialized Cognite.Files.ReadAllDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    public static Files.ReadAllDirect readAllDirectFiles() {
+        return Files.ReadAllDirect.builder().build();
+    }
+
+    /**
      * Creates an uninitialized Cognite.Files.ReadAggregate. Before use, the reader must be initialized with a configuration
      * object, and optionally query getQueryParameters.
      */
@@ -221,6 +229,14 @@ public class CogniteIO {
      */
     public static Files.Write writeFiles() {
         return Files.Write.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized Cognite.Files.WriteDirect. Before use, the reader must be initialized with a configuration
+     * object.
+     */
+    public static Files.WriteDirect writeDirectFiles() {
+        return Files.WriteDirect.builder().build();
     }
 
     /**
@@ -248,7 +264,15 @@ public class CogniteIO {
     }
 
     /**
-     * Creates an uninitialized Cognite.Assets.ReadAllById. Before use, the reader must be initialized with a configuration
+     * Creates an uninitialized Cognite.FilesMetadata.ReadAllDirect. Before use, the reader must be initialized with a configuration
+     * object, and optionally query getQueryParameters.
+     */
+    public static FilesMetadata.ReadAllDirect readAllDirectFilesMetadata() {
+        return FilesMetadata.ReadAllDirect.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized Cognite.FilesMetadata.ReadAllById. Before use, the reader must be initialized with a configuration
      * object.
      */
     public static FilesMetadata.ReadAllById readAllFilesMetadataByIds() {
@@ -261,6 +285,14 @@ public class CogniteIO {
      */
     public static FilesMetadata.Write writeFilesMetadata() {
         return FilesMetadata.Write.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized Cognite.FilesMetadata.WriteDirect. Before use, the writer must be initialized with a configuration
+     * object.
+     */
+    public static FilesMetadata.WriteDirect writeDirectFilesMetadata() {
+        return FilesMetadata.WriteDirect.builder().build();
     }
 
     /**

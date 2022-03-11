@@ -64,7 +64,6 @@ public abstract class ItemsShardAndBatch extends PTransform<PCollection<Item>, P
 
     @Override
     public PCollection<Iterable<Item>> expand(PCollection<Item> input) {
-        LOG.info("Starting Item shard and batch transform.");
         KvCoder<String, Item> keyValueCoder = KvCoder.of(StringUtf8Coder.of(), ProtoCoder.of(Item.class));
 
         PCollection<Iterable<Item>> outputCollection = input
@@ -75,7 +74,6 @@ public abstract class ItemsShardAndBatch extends PTransform<PCollection<Item>, P
                         .withMaxBatchSize(getMaxBatchSize())
                         .withMaxLatency(getMaxLatency()))
                 .apply("Remove key", Values.<Iterable<Item>>create());
-
 
         return outputCollection;
     }

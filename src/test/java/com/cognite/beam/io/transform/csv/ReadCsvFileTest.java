@@ -26,6 +26,7 @@ class ReadCsvFileTest extends TestConfigProviderV1 {
         PCollection<Struct> structPCollection = pipeline
                 .apply("Read csv", ReadCsvFile.from("./src/test/resources/csv-data.txt"));
 
+        /*
         structPCollection.apply("Struct to string", MapElements
                 .into(TypeDescriptors.strings())
                 .via(Struct::toString))
@@ -33,6 +34,8 @@ class ReadCsvFileTest extends TestConfigProviderV1 {
                         .withSuffix(".txt")
                         .withoutSharding()
                         .withWindowedWrites());
+
+         */
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
         pipeline.run().waitUntilFinish();
@@ -46,6 +49,7 @@ class ReadCsvFileTest extends TestConfigProviderV1 {
         PCollection<Struct> structPCollection = pipeline
                 .apply("Read csv", ReadCsvFile.from("./src/test/resources/csv-data-bom.txt"));
 
+        /*
         structPCollection.apply("Struct to string", MapElements
                 .into(TypeDescriptors.strings())
                 .via(Struct::toString))
@@ -53,6 +57,8 @@ class ReadCsvFileTest extends TestConfigProviderV1 {
                         .withSuffix(".txt")
                         .withoutSharding()
                         .withWindowedWrites());
+
+         */
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
         pipeline.run().waitUntilFinish();
@@ -68,6 +74,7 @@ class ReadCsvFileTest extends TestConfigProviderV1 {
                         .withDelimiter(";")
                         .withHeader("Custom_a;;Custom_c"));
 
+        /*
         structPCollection.apply("Struct to string", MapElements
                 .into(TypeDescriptors.strings())
                 .via(Struct::toString))
@@ -75,6 +82,8 @@ class ReadCsvFileTest extends TestConfigProviderV1 {
                         .withSuffix(".txt")
                         .withoutSharding()
                         .withWindowedWrites());
+
+         */
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
         pipeline.run().waitUntilFinish();

@@ -33,7 +33,6 @@ import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertFileHeaderFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
-import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
@@ -176,8 +175,87 @@ public abstract class FilesMetadata {
         }
         @Override
         public PCollection<FileMetadata> expand(PCollection<RequestParameters> input) {
-            LOG.debug("Building read all files metadata composite transform.");
 
+            PCollection<FileMetadata> outputCollection = input
+                    .apply("Read direct", CogniteIO.readAllDirectFilesMetadata()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withReaderConfig(getReaderConfig())
+                            .withHints(getHints()))
+                    .apply("Unwrap files metadata", ParDo.of(new DoFn<List<FileMetadata>, FileMetadata>() {
+                        @ProcessElement
+                        public void processElement(@Element List<FileMetadata> element,
+                                                   OutputReceiver<FileMetadata> out) {
+                            if (getReaderConfig().isStreamingEnabled()) {
+                                // output with timestamp
+                                element.forEach(row -> out.outputWithTimestamp(row,
+                                        org.joda.time.Instant.ofEpochMilli(row.getLastUpdatedTime())));
+                            } else {
+                                // output without timestamp
+                                element.forEach(row -> out.output(row));
+                            }
+                        }
+                    }));
+
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<FilesMetadata.ReadAll.Builder> {
+            public abstract ReadAll.Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAll build();
+        }
+    }
+
+    /**
+     * Transform that will read a collection of {@link FileMetadata} objects from Cognite Data Fusion. The
+     * {@link FileMetadata} result objects are returned in batches ({@code List<FileMetadata>}) of size <10k.
+     *
+     * You specify which {@link FileMetadata} objects to read via a set of filters enclosed in
+     * a {@link RequestParameters} object. This transform takes a collection of {@link RequestParameters}
+     * as input and returns all {@link FileMetadata} objects matching them.
+     */
+    @AutoValue
+    public abstract static class ReadAllDirect
+            extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<FileMetadata>>> {
+
+        public static FilesMetadata.ReadAllDirect.Builder builder() {
+            return new com.cognite.beam.io.AutoValue_FilesMetadata_ReadAllDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setReaderConfig(ReaderConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setProjectConfigFile(invalidProjectConfigFile);
+        }
+        public abstract ReaderConfig getReaderConfig();
+        public abstract ReadAllDirect.Builder toBuilder();
+
+        public ReadAllDirect withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public ReadAllDirect withReaderConfig(ReaderConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setReaderConfig(config).build();
+        }
+
+        public ReadAllDirect withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public ReadAllDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public ReadAllDirect withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+        @Override
+        public PCollection<List<FileMetadata>> expand(PCollection<RequestParameters> input) {
             Preconditions.checkState(!(getReaderConfig().isStreamingEnabled() && getReaderConfig().isDeltaEnabled()),
                     "Using delta read in combination with streaming is not supported.");
 
@@ -203,7 +281,7 @@ public abstract class FilesMetadata {
                 requestParametersPCollection = input;
             }
 
-            PCollection<FileMetadata> outputCollection = requestParametersPCollection
+            PCollection<List<FileMetadata>> outputCollection = requestParametersPCollection
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
                             .withProjectConfigParameters(getProjectConfig())
@@ -213,8 +291,8 @@ public abstract class FilesMetadata {
                             .withProjectConfigFile(getProjectConfigFile())
                             .withReaderConfig(getReaderConfig()))
                     .apply("Add partitions", ParDo.of(new AddPartitionsFn(getHints(),
-                            getReaderConfig().enableMetrics(false), ResourceType.FILE_HEADER,
-                            projectConfigView))
+                                    getReaderConfig().enableMetrics(false), ResourceType.FILE_HEADER,
+                                    projectConfigView))
                             .withSideInputs(projectConfigView))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply(ParDo.of(new ListFilesFn(getHints(), getReaderConfig(),projectConfigView))
@@ -223,7 +301,11 @@ public abstract class FilesMetadata {
             // Record delta timestamp
             outputCollection
                     .apply("Extract last change timestamp", MapElements.into(TypeDescriptors.longs())
-                            .via((FileMetadata fileHeader) -> fileHeader.getLastUpdatedTime()))
+                            .via((List<FileMetadata> batch) -> batch.stream()
+                                    .mapToLong(FileMetadata::getLastUpdatedTime)
+                                    .max()
+                                    .orElse(1L))
+                    )
                     .apply("Record delta timestamp", RecordDeltaTimestamp.create()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -233,9 +315,9 @@ public abstract class FilesMetadata {
         }
 
         @AutoValue.Builder
-        public abstract static class Builder extends ConnectorBase.Builder<FilesMetadata.ReadAll.Builder> {
-            public abstract ReadAll.Builder setReaderConfig(ReaderConfig value);
-            public abstract ReadAll build();
+        public abstract static class Builder extends ConnectorBase.Builder<FilesMetadata.ReadAllDirect.Builder> {
+            public abstract ReadAllDirect.Builder setReaderConfig(ReaderConfig value);
+            public abstract ReadAllDirect build();
         }
     }
 
@@ -365,19 +447,9 @@ public abstract class FilesMetadata {
 
         @Override
         public PCollection<FileMetadata> expand(PCollection<FileMetadata> input) {
-            LOG.info("Starting Cognite writer.");
-
-            LOG.debug("Building upsert file metadata composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<FileMetadata> eventCoder = ProtoCoder.of(FileMetadata.class);
             KvCoder<String, FileMetadata> keyValueCoder = KvCoder.of(utf8Coder, eventCoder);
-
-            // project config side input
-            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
-                    .apply("Build project config", BuildProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig()))
-                    .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
             PCollection<FileMetadata> outputCollection = input
@@ -398,9 +470,11 @@ public abstract class FilesMetadata {
                             .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
                     .apply("Remove key", Values.<Iterable<FileMetadata>>create())
-                    .apply("Upsert items", ParDo.of(
-                            new UpsertFileHeaderFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView));
+                    .apply("Write file metadata", CogniteIO.writeDirectFilesMetadata()
+                            .withProjectConfig(getProjectConfig())
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withWriterConfig(getWriterConfig())
+                            .withHints(getHints()));
 
             return outputCollection;
         }
@@ -410,6 +484,85 @@ public abstract class FilesMetadata {
             public abstract Builder setWriterConfig(WriterConfig value);
 
             public abstract Write build();
+        }
+    }
+
+    /**
+     * Writes {@code file metadata/headers} directly to the Cognite API, bypassing the regular validation and optimization steps. This
+     * writer is designed for advanced use with very large data volumes. Most use cases should
+     * use the regular {@link FilesMetadata.Write} writer which will perform shuffling and batching to optimize
+     * the write performance.
+     *
+     * This writer will push each input {@link Iterable<FileMetadata>} as a single batch. If the input
+     * violates any constraints, the write will fail. Also, the performance of the writer depends heavily on the
+     * input being batched as optimally as possible.
+     *
+     * If your source system offers data pre-batched, you may get additional performance from this writer as
+     * it bypasses the regular shuffle and batch steps.
+     */
+    @AutoValue
+    public abstract static class WriteDirect
+            extends ConnectorBase<PCollection<Iterable<FileMetadata>>, PCollection<FileMetadata>> {
+
+        public static WriteDirect.Builder builder() {
+            return new com.cognite.beam.io.AutoValue_FilesMetadata_WriteDirect.Builder()
+                    .setProjectConfig(ProjectConfig.create())
+                    .setHints(CogniteIO.defaultHints)
+                    .setWriterConfig(WriterConfig.create())
+                    .setProjectConfigFile(invalidProjectConfigFile);
+        }
+        public abstract WriterConfig getWriterConfig();
+        public abstract WriteDirect.Builder toBuilder();
+
+        public WriteDirect withProjectConfig(ProjectConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setProjectConfig(config).build();
+        }
+
+        public WriteDirect withHints(Hints hints) {
+            Preconditions.checkNotNull(hints, "Hints cannot be null");
+            return toBuilder().setHints(hints).build();
+        }
+
+        public WriteDirect withProjectConfigFile(String file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
+            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
+        }
+
+        public WriteDirect withProjectConfigFile(ValueProvider<String> file) {
+            Preconditions.checkNotNull(file, "File cannot be null");
+            return toBuilder().setProjectConfigFile(file).build();
+        }
+
+        public WriteDirect withWriterConfig(WriterConfig config) {
+            Preconditions.checkNotNull(config, "Config cannot be null");
+            return toBuilder().setWriterConfig(config).build();
+        }
+
+        @Override
+        public PCollection<FileMetadata> expand(PCollection<Iterable<FileMetadata>> input) {
+            // project config side input
+            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
+                    .apply("Build project config", BuildProjectConfig.create()
+                            .withProjectConfigFile(getProjectConfigFile())
+                            .withProjectConfigParameters(getProjectConfig()))
+                    .apply("To list view", View.<ProjectConfig>asList());
+
+            // main input
+            PCollection<FileMetadata> outputCollection = input
+                    .apply("Upsert items", ParDo.of(
+                                    new UpsertFileHeaderFn(getHints(), getWriterConfig(), projectConfigView))
+                            .withSideInputs(projectConfigView));
+
+            return outputCollection;
+        }
+
+        @AutoValue.Builder
+        public abstract static class Builder extends ConnectorBase.Builder<Builder> {
+            public abstract Builder setWriterConfig(WriterConfig value);
+
+            public abstract WriteDirect build();
         }
     }
 }

@@ -651,7 +651,7 @@ public abstract class Events {
     }
 
     /**
-     * Writes Raw Rows directly to the Cognite API, bypassing the regular validation and optimization steps. This
+     * Writes {@code events} directly to the Cognite API, bypassing the regular validation and optimization steps. This
      * writer is designed for advanced use with very large data volumes (100+ million items). Most use cases should
      * use the regular {@link Events.Write} writer which will perform shuffling and batching to optimize
      * the write performance.
@@ -710,7 +710,7 @@ public abstract class Events {
 
             // main input
             PCollection<Event> outputCollection = input
-                    .apply("Upsert items", ParDo.of(
+                    .apply("Upsert events", ParDo.of(
                                     new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
@@ -773,9 +773,6 @@ public abstract class Events {
 
         @Override
         public PCollection<Item> expand(PCollection<Item> input) {
-            LOG.info("Starting Cognite writer.");
-            LOG.debug("Building delete events composite transform.");
-
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
