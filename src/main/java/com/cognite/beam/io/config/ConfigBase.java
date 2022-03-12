@@ -26,7 +26,7 @@ import java.io.Serializable;
 public abstract class ConfigBase implements Serializable {
     final static String DEFAULT_APP_IDENTIFIER = "cognite-beam-sdk";
     final static String DEFAULT_SESSION_IDENTIFIER = "cognite-beam-sdk";
-    final static boolean DEFAULT_ENABLE_METRICS = true;
+    final static boolean DEFAULT_ENABLE_METRICS = false;
 
     public abstract String getAppIdentifier();
     public abstract String getSessionIdentifier();

@@ -18,7 +18,6 @@ Changes are grouped as follows:
 ### Medium term
 
 - Publish job metrics to CDF time series.
-- Support 3d nodes.
 
 ### Short term
 
@@ -33,10 +32,14 @@ Changes are grouped as follows:
     rows. This can be useful in very high data volume scenarios.
 - `Write direct` mode for `FilesMetadata` and `Files`. This allows for bypassing the shuffle and batch stage of the writer
   when you have pre-batched objects. This can offer improved performance when writing very large volumes of data.
+- Support custom auth scopes when using Open ID Connect authentication.
 - Java SDK v1.13.0
   - fixed file binary download expired URL
   - Added support for S3 as temp storage for file binary
 - Beam 2.37.0
+
+### Changed
+- API metrics are disabled by default. They can be enabled via `ReaderConfig.enableMetrics(true)` / `WriterConfig.enableMetrics(true)`.
 
 ## [0.9.35] 2022-03-01
 

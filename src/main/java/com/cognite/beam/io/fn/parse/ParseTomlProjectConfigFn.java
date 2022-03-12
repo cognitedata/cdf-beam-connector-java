@@ -86,6 +86,7 @@ public class ParseTomlProjectConfigFn extends DoFn<String, ProjectConfig> {
                     .withClientSecret(configTable.getString(CLIENT_SECRET_KEY))
                     .withTokenUrl(configTable.getString(TOKEN_URL_KEY))
                     .withProject(configTable.getString(CDF_PROJECT_KEY));
+            // auth scopes are optional
             if (keys.contains(AUTH_SCOPES_KEY)) {
                 TomlArray scopesArray = configTable.getArray(AUTH_SCOPES_KEY);
                 List<String> scopes = new ArrayList<>();

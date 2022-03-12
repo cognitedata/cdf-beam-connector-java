@@ -175,8 +175,7 @@ public abstract class Labels {
             PCollection<Label> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(new ListLabelsFn(getHints(), getReaderConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));

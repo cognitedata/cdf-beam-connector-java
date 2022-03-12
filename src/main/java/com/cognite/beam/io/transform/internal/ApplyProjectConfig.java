@@ -33,6 +33,9 @@ import java.util.List;
 
 /**
  * Utility transform for adding project config to request parameters
+ *
+ * If the input {@link RequestParameters} already has the {@link ProjectConfig} set, then no processing is applied. On the other hand,
+ * if the input does not carry a {@link ProjectConfig} this transform will build it and add it to the {@link RequestParameters}.
  */
 @AutoValue
 public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestParameters>, PCollection<RequestParameters>> {
@@ -42,7 +45,7 @@ public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestP
         return new AutoValue_ApplyProjectConfig.Builder()
                 .setProjectConfigFile(ValueProvider.StaticValueProvider.of("."))
                 .setProjectConfigParameters(ProjectConfig.create())
-                .setReaderConfig(ReaderConfig.create());
+                ;
     }
 
     public static ApplyProjectConfig create() {
@@ -52,7 +55,6 @@ public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestP
 
     abstract ValueProvider<String> getProjectConfigFile();
     abstract ProjectConfig getProjectConfigParameters();
-    abstract ReaderConfig getReaderConfig();
 
     public ApplyProjectConfig withProjectConfigFile(ValueProvider<String> filePath) {
         Preconditions.checkNotNull(filePath, "File path cannot be null");
@@ -64,15 +66,8 @@ public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestP
         return toBuilder().setProjectConfigParameters(config).build();
     }
 
-    public ApplyProjectConfig withReaderConfig(ReaderConfig config) {
-        Preconditions.checkNotNull(config, "Project config cannot be null.");
-        return toBuilder().setReaderConfig(config).build();
-    }
-
     @Override
     public PCollection<RequestParameters> expand(PCollection<RequestParameters> input) {
-        LOG.info("Starting apply project config transform.");
-
         // project config side input
         PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                 .apply("Build project config", BuildProjectConfig.create()
@@ -122,7 +117,6 @@ public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestP
     public static abstract class Builder {
         public abstract Builder setProjectConfigFile(ValueProvider<String> value);
         public abstract Builder setProjectConfigParameters(ProjectConfig value);
-        public abstract Builder setReaderConfig(ReaderConfig value);
 
         public abstract ApplyProjectConfig build();
     }

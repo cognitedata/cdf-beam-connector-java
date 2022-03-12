@@ -214,8 +214,7 @@ public abstract class Assets {
             PCollection<Asset> outputCollection = requestParametersPCollection
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Apply delta timestamp", ApplyDeltaTimestamp.to(ResourceType.ASSET)
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
@@ -466,8 +465,7 @@ public abstract class Assets {
             PCollection<Aggregate> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Break fusion", BreakFusion.<RequestParameters>create())
                     .apply("Read results", ParDo.of(
                             new ReadAggregatesFn(getHints(), getReaderConfig(),

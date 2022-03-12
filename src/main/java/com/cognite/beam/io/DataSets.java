@@ -173,8 +173,7 @@ public abstract class DataSets {
             PCollection<DataSet> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Read results", ParDo.of(new ListDataSetsFn(getHints(), getReaderConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 

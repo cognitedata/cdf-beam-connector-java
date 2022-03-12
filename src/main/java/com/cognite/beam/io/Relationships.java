@@ -186,8 +186,7 @@ public abstract class Relationships {
             PCollection<Relationship> outputCollection = input
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Apply delta timestamp", ApplyDeltaTimestamp.to(ResourceType.RELATIONSHIP)
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())

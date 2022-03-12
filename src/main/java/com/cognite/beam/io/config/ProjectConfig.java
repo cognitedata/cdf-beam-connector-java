@@ -24,6 +24,7 @@ import org.apache.beam.sdk.options.ValueProvider;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -193,6 +194,15 @@ public abstract class ProjectConfig implements Serializable {
      */
     public ProjectConfig withAuthScopes(Collection<String> scopes) {
         return toBuilder().setAuthScopes(ValueProvider.StaticValueProvider.of(scopes)).setConfigured(true).build();
+    }
+
+    /**
+     * Returns a new {@code ProjectConfig} with the specified auth scopes.
+     *
+     * @param scopes The auth scopes.
+     */
+    public ProjectConfig withAuthScopes(String... scopes) {
+        return withAuthScopes(Arrays.asList(scopes));
     }
 
     /**

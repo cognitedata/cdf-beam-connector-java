@@ -65,13 +65,10 @@ public abstract class ReadTomlFile extends PTransform<PBegin, PCollection<KV<Str
                 .build();
     }
 
-    abstract ReadTomlFile.Builder toBuilder();
     abstract ValueProvider<String> getFilePath();
 
     @Override
     public PCollection<KV<String, String>> expand(PBegin input) {
-        LOG.info("Starting read TOML config file transform.");
-
         PCollection<KV<String, String>> outputCollection = input.getPipeline()
                 .apply("Find file", FileIO.match()
                         .filepattern(getFilePath())
