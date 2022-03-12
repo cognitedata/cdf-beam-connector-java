@@ -21,11 +21,10 @@ import com.squareup.moshi.JsonClass;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.ValueProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.Collection;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -35,7 +34,6 @@ import static com.google.common.base.Preconditions.checkState;
 @JsonClass(generateAdapter = true, generator = "avm")
 public abstract class ProjectConfig implements Serializable {
     private final static String DEFAULT_HOST = "https://api.cognitedata.com";
-    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_ProjectConfig.Builder()
@@ -52,6 +50,7 @@ public abstract class ProjectConfig implements Serializable {
     @Nullable public abstract ValueProvider<String> getClientId();
     @Nullable public abstract ValueProvider<String> getClientSecret();
     @Nullable public abstract ValueProvider<String> getTokenUrl();
+    @Nullable public abstract ValueProvider<Collection<String>> getAuthScopes();
     public abstract ValueProvider<String> getHost();
     public abstract boolean isConfigured();
     @Nullable  public abstract GcpSecretConfig getApiKeyGcpSecretConfig();
@@ -187,6 +186,24 @@ public abstract class ProjectConfig implements Serializable {
         return toBuilder().setTokenUrl(ValueProvider.StaticValueProvider.of(value)).setConfigured(true).build();
     }
 
+    /**
+     * Returns a new {@code ProjectConfig} with the specified auth scopes.
+     *
+     * @param scopes The auth scopes.
+     */
+    public ProjectConfig withAuthScopes(Collection<String> scopes) {
+        return toBuilder().setAuthScopes(ValueProvider.StaticValueProvider.of(scopes)).setConfigured(true).build();
+    }
+
+    /**
+     * Returns a new {@code ProjectConfig} with the specified auth scopes.
+     *
+     * @param scopes The auth scopes.
+     */
+    public ProjectConfig withAuthScopes(ValueProvider<Collection<String>> scopes) {
+        return toBuilder().setAuthScopes(scopes).setConfigured(true).build();
+    }
+
     public void validate() {
         checkState(isConfigured(), "ProjectConfig parameters have not been configured.");
         checkArgument(getHost() != null
@@ -215,6 +232,7 @@ public abstract class ProjectConfig implements Serializable {
                 + "apiKeyGcpSecretConfig=" + getApiKeyGcpSecretConfig() + ", "
                 + "clientId=" + getClientId() + ", "
                 + "clientSecret=" + "*********" + ", "
+                + "authScopes=" + getAuthScopes() + ", "
                 + "clientSecretGcpSecretConfig=" + getClientSecretGcpSecretConfig() + ", "
                 + "tokenUrl=" + getTokenUrl() + ", "
                 + "configured=" + isConfigured()
@@ -223,25 +241,17 @@ public abstract class ProjectConfig implements Serializable {
 
     @AutoValue.Builder
     public abstract static class Builder {
-
         public abstract ProjectConfig build();
 
         abstract Builder setProject(ValueProvider<String> value);
-
         abstract Builder setHost(ValueProvider<String> value);
-
         abstract Builder setApiKey(ValueProvider<String> value);
-
         abstract Builder setClientId(ValueProvider<String> value);
-
         abstract Builder setClientSecret(ValueProvider<String> value);
-
         abstract Builder setTokenUrl(ValueProvider<String> value);
-
+        abstract Builder setAuthScopes(ValueProvider<Collection<String>> value);
         abstract Builder setConfigured(boolean value);
-
         abstract Builder setApiKeyGcpSecretConfig(GcpSecretConfig value);
-
         abstract Builder setClientSecretGcpSecretConfig(GcpSecretConfig value);
     }
 }
