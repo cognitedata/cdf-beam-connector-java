@@ -280,8 +280,7 @@ public abstract class TSPoints {
             PCollection<RequestParameters> requestParametersWithConfig = requestParametersPCollection
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()));
+                            .withProjectConfigParameters(getProjectConfig()));
 
             PCollection<List<TimeseriesPoint>> outputCollection;
 

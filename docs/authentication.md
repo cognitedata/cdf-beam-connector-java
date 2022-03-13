@@ -25,7 +25,8 @@ ProjectConfig projectConfig = ProjectConfig.create()
         .withClientId(<clientId>)
         .withClientSecret(<clientSecret>)
         .withTokenUrl(TokenUrl.generateAzureAdURL(<azureAdTenantId>).toString())
-        .withProject("myCdfProject");
+        .withProject("myCdfProject")
+        .withAuthScopes("https://api.cognitedata.com/.default", "<my-scope>");  // Optional. You can supply custom auth scopes.
 
 // ... and then injected to the I/O transforms
 PCollection<Event> readResults = pipeline

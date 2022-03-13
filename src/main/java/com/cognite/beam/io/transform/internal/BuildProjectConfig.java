@@ -73,8 +73,6 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
 
     @Override
     public PCollection<ProjectConfig> expand(PBegin input) {
-        LOG.debug("Reading project config file from: {}", getProjectConfigFile());
-
         // project config side input. Sourced from file
         PCollectionView<List<ProjectConfig>> projectConfigFileView = input.getPipeline()
                 .apply("Read project config file", ReadProjectConfigFile.builder()

@@ -21,12 +21,10 @@ import com.google.common.collect.ImmutableList;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.tomlj.Toml;
-import org.tomlj.TomlParseError;
-import org.tomlj.TomlParseResult;
-import org.tomlj.TomlTable;
+import org.tomlj.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -36,18 +34,19 @@ import java.util.List;
  * 1. OpenID Connect, client credentials.
  * 2. API keys.
  */
-public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
+public class ParseTomlProjectConfigFn extends DoFn<String, ProjectConfig> {
     private final static String HOST_KEY = "host";
     private final static String CDF_PROJECT_KEY = "cdf_project";
     private final static String API_KEY = "api_key";
     private final static String CLIENT_ID_KEY = "client_id";
     private final static String CLIENT_SECRET_KEY = "client_secret";
     private final static String TOKEN_URL_KEY = "token_url";
+    private final static String AUTH_SCOPES_KEY = "auth_scopes";
 
     private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private final ImmutableList<String> configKeyList = ImmutableList.of(HOST_KEY, CDF_PROJECT_KEY, API_KEY,
-            CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY);
+            CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY, AUTH_SCOPES_KEY);
     private final ImmutableList<String> mandatoryConfigKeyListApiKey = ImmutableList.of(API_KEY);
     private final ImmutableList<String> mandatoryConfigKeyListClientCredentials =
             ImmutableList.of(CLIENT_ID_KEY, CLIENT_SECRET_KEY, TOKEN_URL_KEY, CDF_PROJECT_KEY);
@@ -87,6 +86,15 @@ public class ParseProjectConfigFn extends DoFn<String, ProjectConfig> {
                     .withClientSecret(configTable.getString(CLIENT_SECRET_KEY))
                     .withTokenUrl(configTable.getString(TOKEN_URL_KEY))
                     .withProject(configTable.getString(CDF_PROJECT_KEY));
+            // auth scopes are optional
+            if (keys.contains(AUTH_SCOPES_KEY)) {
+                TomlArray scopesArray = configTable.getArray(AUTH_SCOPES_KEY);
+                List<String> scopes = new ArrayList<>();
+                for (int i = 0; i < scopesArray.size(); i++) {
+                    scopes.add(scopesArray.getString(i));
+                }
+                returnObject = returnObject.withAuthScopes(scopes);
+            }
 
         } else if (keys.containsAll(mandatoryConfigKeyListApiKey)) {
             returnObject = returnObject

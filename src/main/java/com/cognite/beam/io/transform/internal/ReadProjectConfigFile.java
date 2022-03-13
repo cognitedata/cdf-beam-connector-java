@@ -17,7 +17,7 @@
 package com.cognite.beam.io.transform.internal;
 
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.fn.parse.ParseProjectConfigFn;
+import com.cognite.beam.io.fn.parse.ParseTomlProjectConfigFn;
 import com.cognite.beam.io.transform.toml.ReadTomlFile;
 import com.google.auto.value.AutoValue;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -52,7 +52,7 @@ public abstract class ReadProjectConfigFile extends PTransform<PBegin, PCollecti
         PCollection<ProjectConfig> outputCollection = input.getPipeline()
                 .apply("Read Toml file", ReadTomlFile.from(getFilePath()))
                 .apply("Remove key", Values.create())
-                .apply("Parse project config", ParDo.of(new ParseProjectConfigFn()));
+                .apply("Parse project config", ParDo.of(new ParseTomlProjectConfigFn()));
 
         return outputCollection;
     }

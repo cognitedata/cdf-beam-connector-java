@@ -284,8 +284,7 @@ public abstract class FilesMetadata {
             PCollection<List<FileMetadata>> outputCollection = requestParametersPCollection
                     .apply("Apply project config", ApplyProjectConfig.create()
                             .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig())
-                            .withReaderConfig(getReaderConfig()))
+                            .withProjectConfigParameters(getProjectConfig()))
                     .apply("Apply delta timestamp", ApplyDeltaTimestamp.to(ResourceType.FILE_HEADER)
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
