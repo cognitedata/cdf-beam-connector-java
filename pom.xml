@@ -41,8 +41,8 @@
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.37.0</beam.version>
-        <cdf-java-sdk.version>1.13.0</cdf-java-sdk.version>
+        <beam.version>2.39.0</beam.version>
+        <cdf-java-sdk.version>1.16.0</cdf-java-sdk.version>
         <auto.version>1.9</auto.version>
         <auto-service.version>1.0.1</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
@@ -74,7 +74,7 @@
             <dependency>
                 <groupId>com.google.cloud</groupId>
                 <artifactId>libraries-bom</artifactId>
-                <version>24.3.0</version>
+                <version>25.1.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
