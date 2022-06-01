@@ -184,7 +184,7 @@ public abstract class TSPoints {
                             if (getReaderConfig().isStreamingEnabled()) {
                                 // output with timestamp
                                 element.forEach(point -> out.outputWithTimestamp(point,
-                                        org.joda.time.Instant.ofEpochMilli(point.getTimestamp())));
+                                        new org.joda.time.Instant(point.getTimestamp())));
                             } else {
                                 // output without timestamp
                                 element.forEach(point -> out.output(point));

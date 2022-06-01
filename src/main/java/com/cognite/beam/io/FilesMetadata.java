@@ -189,7 +189,7 @@ public abstract class FilesMetadata {
                             if (getReaderConfig().isStreamingEnabled()) {
                                 // output with timestamp
                                 element.forEach(row -> out.outputWithTimestamp(row,
-                                        org.joda.time.Instant.ofEpochMilli(row.getLastUpdatedTime())));
+                                        new org.joda.time.Instant(row.getLastUpdatedTime())));
                             } else {
                                 // output without timestamp
                                 element.forEach(row -> out.output(row));
