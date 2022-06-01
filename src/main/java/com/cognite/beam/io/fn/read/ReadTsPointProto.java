@@ -92,7 +92,7 @@ public class ReadTsPointProto extends IOBaseFn<RequestParameters, List<Timeserie
                             .min()
                             .orElse(1L);
 
-                    outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                    outputReceiver.outputWithTimestamp(results, new org.joda.time.Instant(minTimestampMs));
                 } else {
                     // no timestamping in batch mode--just leads to lots of complications
                     outputReceiver.output(results);

@@ -107,7 +107,7 @@ public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, List<Timese
                 Instant.ofEpochMilli(endRange).toString());
 
         if (readerConfig.isStreamingEnabled()) {
-            watermarkEstimator.setWatermark(org.joda.time.Instant.ofEpochMilli(startRange));
+            watermarkEstimator.setWatermark(new org.joda.time.Instant(startRange));
         }
 
         // Check if this instance can process this item based on the current restriction
@@ -137,7 +137,7 @@ public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, List<Timese
                             .min()
                             .orElse(1L);
 
-                    outputReceiver.outputWithTimestamp(results, org.joda.time.Instant.ofEpochMilli(minTimestampMs));
+                    outputReceiver.outputWithTimestamp(results, new org.joda.time.Instant(minTimestampMs));
                 } else {
                     // no timestamping in batch mode--just leads to lots of complications
                     outputReceiver.output(results);
@@ -159,7 +159,7 @@ public class ReadTsPointProtoSdf extends IOBaseFn<RequestParameters, List<Timese
 
     @GetInitialWatermarkEstimatorState
     public org.joda.time.Instant getInitialWatermarkEstimatorState(@Restriction OffsetRange restriction) {
-        return org.joda.time.Instant.ofEpochMilli(restriction.getFrom());
+        return new org.joda.time.Instant(restriction.getFrom());
     }
 
     @NewWatermarkEstimator

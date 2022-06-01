@@ -106,9 +106,9 @@ public class GenerateReadRequestsUnboundFn extends DoFn<RequestParameters, Reque
 
             if (tracker.tryClaim(endRange - 1)) {
                 LOG.info(localLoggingPrefix + "Building RequestParameters with start = {} and end = {}", startRange, endRange);
-                watermarkEstimator.setWatermark(org.joda.time.Instant.ofEpochMilli(startRange));
+                watermarkEstimator.setWatermark(new org.joda.time.Instant(startRange));
                 out.outputWithTimestamp(buildRequestParameters(query, startRange, endRange, localLoggingPrefix),
-                        org.joda.time.Instant.ofEpochMilli(startRange));
+                        new org.joda.time.Instant(startRange));
                 // Update the start and end range for the next iteration
                 startRange = endRange;
                 endRange = tracker.currentRestriction().getTo();
@@ -134,7 +134,7 @@ public class GenerateReadRequestsUnboundFn extends DoFn<RequestParameters, Reque
 
     @GetInitialWatermarkEstimatorState
     public Instant getInitialWatermarkEstimatorState(@Restriction OffsetRange restriction) {
-        return Instant.ofEpochMilli(restriction.getFrom());
+        return new org.joda.time.Instant(restriction.getFrom());
     }
 
     @NewWatermarkEstimator

@@ -96,7 +96,7 @@ public abstract class ListItemsBaseFn<T> extends IOBaseFn<RequestParameters, T> 
                 if (readerConfig.isStreamingEnabled()) {
                     // output with timestamps in streaming mode--need that for windowing
                     results.forEach(item ->
-                            outputReceiver.outputWithTimestamp(item, org.joda.time.Instant.ofEpochMilli(getTimestamp(item)))
+                            outputReceiver.outputWithTimestamp(item, new org.joda.time.Instant(getTimestamp(item)))
                     );
                 } else {
                     // no timestamping in batch mode--just leads to lots of complications
