@@ -47,15 +47,15 @@ class GroupIntoBatchesTest {
         Coder<Item> itemCoder = ProtoCoder.of(Item.class);
         KvCoder<String, Item> keyValueCoder = KvCoder.of(utf8Coder, itemCoder);
         TestStream<KV<String, Item>> words = TestStream.create(keyValueCoder).addElements(
-                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(1L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(2L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(3L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(4L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("c", Item.newBuilder().setId(10L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("c", Item.newBuilder().setId(11L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("d", Item.newBuilder().setId(100L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("d", Item.newBuilder().setId(101L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("d", Item.newBuilder().setId(102L).build()), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())))
+                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(1L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(2L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(3L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("a", Item.newBuilder().setId(4L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("c", Item.newBuilder().setId(10L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("c", Item.newBuilder().setId(11L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("d", Item.newBuilder().setId(100L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("d", Item.newBuilder().setId(101L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("d", Item.newBuilder().setId(102L).build()), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())))
                 .advanceWatermarkToInfinity();
 
         org.joda.time.Duration windowDuration = org.joda.time.Duration.standardSeconds(10);
@@ -91,17 +91,17 @@ class GroupIntoBatchesTest {
         //Coder<Item> itemCoder = ProtoCoder.of(Item.class);
         KvCoder<String, Long> keyValueCoder = KvCoder.of(utf8Coder, varLongCoder);
         TestStream<KV<String, Long>> words = TestStream.create(keyValueCoder).addElements(
-                TimestampedValue.of(KV.of("a", 1L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("a", 2L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("c", 10L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())))
+                TimestampedValue.of(KV.of("a", 1L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("a", 2L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("c", 10L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())))
                 .advanceProcessingTime(org.joda.time.Duration.standardSeconds(3))
                 .addElements(
-                TimestampedValue.of(KV.of("c", 11L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("d", 100L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("d", 101L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())))
+                TimestampedValue.of(KV.of("c", 11L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("d", 100L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("d", 101L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())))
                 .advanceProcessingTime(org.joda.time.Duration.standardSeconds(1))
                 .addElements(
-                TimestampedValue.of(KV.of("d", 102L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())))
+                TimestampedValue.of(KV.of("d", 102L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())))
                 .advanceWatermarkToInfinity();
 
         org.joda.time.Duration windowDuration = org.joda.time.Duration.standardSeconds(10);
@@ -138,17 +138,17 @@ class GroupIntoBatchesTest {
         //Coder<Item> itemCoder = ProtoCoder.of(Item.class);
         KvCoder<String, Long> keyValueCoder = KvCoder.of(utf8Coder, varLongCoder);
         TestStream<KV<String, Long>> words = TestStream.create(keyValueCoder).addElements(
-                TimestampedValue.of(KV.of("a", 1L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("a", 2L), org.joda.time.Instant.ofEpochMilli(SEC_2_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("c", 10L), org.joda.time.Instant.ofEpochMilli(SEC_2_DURATION.toEpochMilli())))
+                TimestampedValue.of(KV.of("a", 1L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("a", 2L), new org.joda.time.Instant(SEC_2_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("c", 10L), new org.joda.time.Instant(SEC_2_DURATION.toEpochMilli())))
                 .advanceProcessingTime(org.joda.time.Duration.standardSeconds(3))
                 .addElements(
-                        TimestampedValue.of(KV.of("c", 11L), org.joda.time.Instant.ofEpochMilli(SEC_5_DURATION.toEpochMilli())),
-                        TimestampedValue.of(KV.of("d", 100L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                        TimestampedValue.of(KV.of("d", 101L), org.joda.time.Instant.ofEpochMilli(SEC_10_DURATION.toEpochMilli())))
+                        TimestampedValue.of(KV.of("c", 11L), new org.joda.time.Instant(SEC_5_DURATION.toEpochMilli())),
+                        TimestampedValue.of(KV.of("d", 100L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                        TimestampedValue.of(KV.of("d", 101L), new org.joda.time.Instant(SEC_10_DURATION.toEpochMilli())))
                 .advanceProcessingTime(org.joda.time.Duration.standardSeconds(1))
                 .addElements(
-                        TimestampedValue.of(KV.of("d", 102L), org.joda.time.Instant.ofEpochMilli(SEC_10_DURATION.toEpochMilli())))
+                        TimestampedValue.of(KV.of("d", 102L), new org.joda.time.Instant(SEC_10_DURATION.toEpochMilli())))
                 .advanceWatermarkToInfinity();
 
         org.joda.time.Duration windowDuration = org.joda.time.Duration.standardSeconds(5);
@@ -185,17 +185,17 @@ class GroupIntoBatchesTest {
         //Coder<Item> itemCoder = ProtoCoder.of(Item.class);
         KvCoder<String, Long> keyValueCoder = KvCoder.of(utf8Coder, varLongCoder);
         TestStream<KV<String, Long>> words = TestStream.create(keyValueCoder).addElements(
-                TimestampedValue.of(KV.of("a", 1L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("a", 2L), org.joda.time.Instant.ofEpochMilli(SEC_2_DURATION.toEpochMilli())),
-                TimestampedValue.of(KV.of("c", 10L), org.joda.time.Instant.ofEpochMilli(SEC_2_DURATION.toEpochMilli())))
+                TimestampedValue.of(KV.of("a", 1L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("a", 2L), new org.joda.time.Instant(SEC_2_DURATION.toEpochMilli())),
+                TimestampedValue.of(KV.of("c", 10L), new org.joda.time.Instant(SEC_2_DURATION.toEpochMilli())))
                 .advanceProcessingTime(org.joda.time.Duration.standardSeconds(3))
                 .addElements(
-                        TimestampedValue.of(KV.of("c", 11L), org.joda.time.Instant.ofEpochMilli(SEC_5_DURATION.toEpochMilli())),
-                        TimestampedValue.of(KV.of("d", 100L), org.joda.time.Instant.ofEpochMilli(SEC_1_DURATION.toEpochMilli())),
-                        TimestampedValue.of(KV.of("d", 101L), org.joda.time.Instant.ofEpochMilli(SEC_10_DURATION.toEpochMilli())))
+                        TimestampedValue.of(KV.of("c", 11L), new org.joda.time.Instant(SEC_5_DURATION.toEpochMilli())),
+                        TimestampedValue.of(KV.of("d", 100L), new org.joda.time.Instant(SEC_1_DURATION.toEpochMilli())),
+                        TimestampedValue.of(KV.of("d", 101L), new org.joda.time.Instant(SEC_10_DURATION.toEpochMilli())))
                 .advanceProcessingTime(org.joda.time.Duration.standardSeconds(1))
                 .addElements(
-                        TimestampedValue.of(KV.of("d", 102L), org.joda.time.Instant.ofEpochMilli(SEC_10_DURATION.toEpochMilli())))
+                        TimestampedValue.of(KV.of("d", 102L), new org.joda.time.Instant(SEC_10_DURATION.toEpochMilli())))
                 .advanceWatermarkToInfinity();
 
         org.joda.time.Duration windowDuration = org.joda.time.Duration.standardSeconds(15);
