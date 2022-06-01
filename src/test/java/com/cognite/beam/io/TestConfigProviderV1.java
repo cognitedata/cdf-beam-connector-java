@@ -3,9 +3,6 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.client.config.TokenUrl;
 import com.google.common.base.Strings;
-import okhttp3.MediaType;
-import okhttp3.Request;
-import okhttp3.RequestBody;
 import org.apache.beam.sdk.io.FileBasedSink;
 import org.apache.beam.sdk.io.FileSystems;
 import org.apache.beam.sdk.io.fs.ResourceId;
@@ -107,17 +104,6 @@ public class TestConfigProviderV1 {
             fileName = "";
         }
         return fileName;
-    }
-
-    protected static Request buildRequest(String jsonString, String resource) {
-        return new Request.Builder()
-                //.header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .header("api-key", projectConfigApiKey.getApiKey().get())
-                .url(projectConfigApiKey.getHost() + "/api/" + apiVersion + "/projects/" + projectConfigApiKey
-                        .getProject() + "/" + resource)
-                .post(RequestBody.create(jsonString, MediaType.get("application/json; charset=utf-8")))
-                .build();
     }
 
     protected static class TestFilenamePolicy extends FileBasedSink.FilenamePolicy {
