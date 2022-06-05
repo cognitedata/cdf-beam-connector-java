@@ -130,8 +130,6 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
 
     @Override
     public PCollection<Long> expand(PBegin input) {
-        LOG.debug("Starting ReadTimestamp transform.");
-
         // project config side input
         PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                 .apply("Build project config", BuildProjectConfig.create()
