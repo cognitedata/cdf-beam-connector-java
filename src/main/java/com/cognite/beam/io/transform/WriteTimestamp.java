@@ -87,7 +87,6 @@ public abstract class WriteTimestamp extends ConnectorBase<PCollection<Long>, PC
      * @return
      */
     public WriteTimestamp withIdentifier(ValueProvider<String> identifier) {
-        Preconditions.checkNotNull(identifier, "Identifier cannot be null");
         return toBuilder().setIdentifier(identifier).build();
     }
 
@@ -99,17 +98,14 @@ public abstract class WriteTimestamp extends ConnectorBase<PCollection<Long>, PC
      * @return
      */
     public WriteTimestamp withIdentifier(String identifier) {
-        Preconditions.checkNotNull(identifier, "Identifier cannot be null");
         return toBuilder().setIdentifier(ValueProvider.StaticValueProvider.of(identifier)).build();
     }
 
     public WriteTimestamp withProjectConfig(ProjectConfig config) {
-        Preconditions.checkNotNull(config, "Config cannot be null");
         return toBuilder().setProjectConfig(config).build();
     }
 
     public WriteTimestamp withWriterConfig(WriterConfig config) {
-        Preconditions.checkNotNull(config, "Config cannot be null");
         return toBuilder().setWriterConfig(config).build();
     }
 
@@ -120,7 +116,6 @@ public abstract class WriteTimestamp extends ConnectorBase<PCollection<Long>, PC
     }
 
     public WriteTimestamp withProjectConfigFile(ValueProvider<String> file) {
-        Preconditions.checkNotNull(file, "File cannot be null");
         return toBuilder().setProjectConfigFile(file).build();
     }
 
@@ -131,8 +126,6 @@ public abstract class WriteTimestamp extends ConnectorBase<PCollection<Long>, PC
 
     @Override
     public PCollection<RawRow> expand(PCollection<Long> input) {
-        LOG.info("Starting writeTimestamp transform.");
-
         PCollection<RawRow> outputCollection = input
                 .apply("Build row object", MapElements.into(TypeDescriptor.of(RawRow.class))
                         .via((Long timeStamp) -> {
