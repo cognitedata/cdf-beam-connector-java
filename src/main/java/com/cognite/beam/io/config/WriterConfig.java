@@ -17,6 +17,7 @@
 package com.cognite.beam.io.config;
 
 import com.cognite.client.config.UpsertMode;
+import com.cognite.client.dto.ExtractionPipelineRun;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.DefaultCoder;
@@ -39,6 +40,7 @@ public abstract class WriterConfig extends ConfigBase {
 
     public abstract WriterConfig.Builder toBuilder();
     public abstract com.cognite.client.config.UpsertMode getUpsertMode();
+    public abstract ExtractionPipelineRun.Status getExtrationPipelineStatusMode();
 
     /**
      * Set the app identifier. The identifier is encoded in the api calls to the Cognite instance and can be
@@ -101,6 +103,7 @@ public abstract class WriterConfig extends ConfigBase {
     @AutoValue.Builder
     public abstract static class Builder extends ConfigBase.Builder<Builder> {
         abstract WriterConfig.Builder setUpsertMode(com.cognite.client.config.UpsertMode value);
+        abstract WriterConfig.Builder setExtractionPipelineRunStatusMode(ExtractionPipelineRun.Status value);
         abstract WriterConfig build();
     }
 }

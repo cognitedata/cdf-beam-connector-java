@@ -712,6 +712,10 @@ public abstract class Events {
                                     new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            outputCollection
+                    .apply("Count elements", Count.globally());
+
             return outputCollection;
         }
 
