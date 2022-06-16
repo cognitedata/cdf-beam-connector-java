@@ -21,15 +21,14 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Item;
+import com.cognite.beam.io.transform.extractionPipelines.CreateRun;
+import com.cognite.client.dto.*;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertEventFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
-import com.cognite.client.dto.RawRow;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.coders.Coder;
@@ -40,7 +39,6 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
-import com.cognite.client.dto.Event;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.google.auto.value.AutoValue;
 
@@ -713,8 +711,23 @@ public abstract class Events {
                             .withSideInputs(projectConfigView));
 
             // Record successful data pipeline run
-            outputCollection
-                    .apply("Count elements", Count.globally());
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Count elements", Count.globally())
+                        .apply("Build status entry", MapElements.into(TypeDescriptor.of(ExtractionPipelineRun.class))
+                                .via(count ->
+                                        ExtractionPipelineRun.newBuilder()
+                                                .setExternalId(getWriterConfig().getExtractionPipelineExtId())
+                                                .setStatus(getWriterConfig().getExtractionPipelineStatusMode())
+                                                .setMessage(String.format("Number of data objects written to CDF: %d", count))
+                                                .build()
+                                )
+                        )
+                        .apply("Write pipeline run", CreateRun.create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }
