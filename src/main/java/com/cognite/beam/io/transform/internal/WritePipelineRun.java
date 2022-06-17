@@ -21,10 +21,12 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.transform.extractionPipelines.CreateRun;
+import com.cognite.client.dto.Event;
 import com.cognite.client.dto.ExtractionPipelineRun;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.options.ValueProvider;
+import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.values.PCollection;
@@ -101,12 +103,12 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
 
         // Read qualified rows from raw.
         PCollection<ExtractionPipelineRun> outputCollection = input
-                .apply("Count elements", Count.globally())
+                .apply("Count elements", Combine.globally(Count.<T>combineFn()).withoutDefaults())
                 .apply("Build pipeline status entry", MapElements.into(TypeDescriptor.of(ExtractionPipelineRun.class))
                         .via(count ->
                                 ExtractionPipelineRun.newBuilder()
                                         .setExternalId(getWriterConfig().getExtractionPipelineExtId())
-                                        .setStatus(getWriterConfig().getExtractionPipelineStatusMode())
+                                        .setStatus(getWriterConfig().getExtractionPipelineRunStatusMode())
                                         .setMessage(String.format("Number of data objects written to CDF: %d", count))
                                         .build()
                         )

@@ -713,17 +713,7 @@ public abstract class Events {
             // Record successful data pipeline run
             if (null != getWriterConfig().getExtractionPipelineExtId()) {
                 outputCollection
-                        .apply("Count elements", Combine.globally(Count.<Event>combineFn()).withoutDefaults())
-                        .apply("Build status entry", MapElements.into(TypeDescriptor.of(ExtractionPipelineRun.class))
-                                .via(count ->
-                                        ExtractionPipelineRun.newBuilder()
-                                                .setExternalId(getWriterConfig().getExtractionPipelineExtId())
-                                                .setStatus(getWriterConfig().getExtractionPipelineRunStatusMode())
-                                                .setMessage(String.format("Number of data objects written to CDF: %d", count))
-                                                .build()
-                                )
-                        )
-                        .apply("Write pipeline run", CreateRun.create()
+                        .apply("Report pipeline run", WritePipelineRun.<Event>create()
                                 .withProjectConfig(getProjectConfig())
                                 .withProjectConfigFile(getProjectConfigFile())
                                 .withWriterConfig(getWriterConfig()));

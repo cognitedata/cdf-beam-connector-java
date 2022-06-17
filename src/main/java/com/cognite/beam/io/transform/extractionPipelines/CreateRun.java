@@ -52,8 +52,19 @@ public abstract class CreateRun extends ConnectorBase<PCollection<ExtractionPipe
     }
 
     /**
-     * Reads from the given cdf.raw table. The string must follow the format {@code <dbName.tableName>}.
-     * @return
+     * Creates the transform.
+     *
+     * This is the default starting method when creating/instantiating this transform. Subsequently you configure the
+     * transform via the {@code withFooBar()} methods. For example:
+     * <pre>
+     * {@code
+     * CreateRun transform = CreateRun.create()
+     *                         .withProjectConfig(my-project-config)
+     *                         .withWriterConfig(my-writer-config);
+     * }
+     * </pre>
+     *
+     * @return The transform
      */
     public static CreateRun create() {
         return CreateRun.builder().build();
