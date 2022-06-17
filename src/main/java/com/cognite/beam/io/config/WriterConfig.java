@@ -45,7 +45,7 @@ public abstract class WriterConfig extends ConfigBase {
     public abstract com.cognite.client.config.UpsertMode getUpsertMode();
     @Nullable
     public abstract String getExtractionPipelineExtId();
-    public abstract ExtractionPipelineRun.Status getExtractionPipelineStatusMode();
+    public abstract ExtractionPipelineRun.Status getExtractionPipelineRunStatusMode();
 
     /**
      * Set the app identifier. The identifier is encoded in the api calls to the Cognite instance and can be

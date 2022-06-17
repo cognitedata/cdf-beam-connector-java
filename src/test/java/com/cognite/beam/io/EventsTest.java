@@ -2,7 +2,11 @@ package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
+import com.cognite.client.CogniteClient;
+import com.cognite.client.config.TokenUrl;
+import com.cognite.client.dto.DataSet;
 import com.cognite.client.dto.Event;
+import com.cognite.client.dto.ExtractionPipeline;
 import com.cognite.client.dto.Item;
 import com.cognite.client.util.DataGenerator;
 import org.apache.beam.sdk.Pipeline;
@@ -27,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.List;
 
 
 class EventsTest extends TestConfigProviderV1 {
@@ -39,8 +44,45 @@ class EventsTest extends TestConfigProviderV1 {
 
     @Test
     @Tag("remoteCDP")
-    void writeGroupBasicBatch() {
+    void writeReadDeleteEvents() throws Exception {
+        final Instant startInstant = Instant.now();
         final String sessionId = RandomStringUtils.randomAlphanumeric(10);
+        final String loggingPrefix = "UnitTest - writeReadDeleteEvents() -";
+
+        LOG.info(loggingPrefix + "Start test. Creating extraction pipeline.");
+        CogniteClient client = CogniteClient.ofClientCredentials(
+                        TestConfigProviderV1.getClientId(),
+                        TestConfigProviderV1.getClientSecret(),
+                        TokenUrl.generateAzureAdURL(TestConfigProviderV1.getTenantId()))
+                .withProject(TestConfigProviderV1.getProject())
+                .withBaseUrl(TestConfigProviderV1.getHost());
+
+        String extractionPipelineExtId = "extPipeline:beam-unit-test-events";
+        String extractionPipelineName = "beam-events-unit-test";
+        List<DataSet> dataSetUpsertResult = client.datasets().upsert(List.of(
+                DataSet.newBuilder()
+                        .setExternalId(testDataSetExtId)
+                        .setDescription(testDataSetExtId)
+                        .setName(testDataSetExtId)
+                        .build()
+        ));
+        long dataSetId = dataSetUpsertResult.get(0).getId();
+
+        List<ExtractionPipeline> extractionPipelineUpsertResult = client.extractionPipelines().upsert(List.of(
+                ExtractionPipeline.newBuilder()
+                        .setExternalId(extractionPipelineExtId)
+                        .setName(extractionPipelineName)
+                        .setDescription(extractionPipelineName)
+                        .setDataSetId(dataSetId)
+                        .build()
+        ));
+
+
+        LOG.info(loggingPrefix + "Finished creating the extraction pipeline. Duration : {}",
+                java.time.Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
+        LOG.info(loggingPrefix + "Start writing events.");
         Pipeline p = Pipeline.create();
 
         TestStream<Event> events = TestStream.create(ProtoCoder.of(Event.class)).addElements(
@@ -49,7 +91,7 @@ class EventsTest extends TestConfigProviderV1 {
                         .setDescription("Test_event")
                         .setType(DataGenerator.sourceValue)
                         .build(),
-                DataGenerator.generateEvents(9567).toArray(new Event[9567])
+                DataGenerator.generateEvents(9567).toArray(new Event[0])
         )
                 .advanceWatermarkToInfinity();
 
@@ -59,12 +101,17 @@ class EventsTest extends TestConfigProviderV1 {
                         .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
-                                .withSessionIdentifier(sessionId))
+                                .withSessionIdentifier(sessionId)
+                                .withExtractionPipeline(extractionPipelineExtId))
                         );
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
         PipelineResult pipelineResult = p.run();
         pipelineResult.waitUntilFinish();
+
+        LOG.info(loggingPrefix + "Finished writing events. Duration : {}",
+                java.time.Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         MetricQueryResults metrics = pipelineResult
                 .metrics()

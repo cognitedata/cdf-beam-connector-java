@@ -24,6 +24,7 @@ public class TestConfigProviderV1 {
     protected static String rawTableName = "best_table";
     protected static String deltaIdentifier = "unitTest";
     protected static String deltaTable = "timestamp.test";
+    protected static String testDataSetExtId = "dataset:test-data-set-beam-foobar";
 
     public static void init() {
         projectConfigApiKey = ProjectConfig.create()
