@@ -50,7 +50,7 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
     protected final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
     private static <T> WritePipelineRun.Builder<T> builder() {
-        return new AutoValue_WritePipelineRun.Builder()
+        return new AutoValue_WritePipelineRun.Builder<T>()
                 .setProjectConfig(ProjectConfig.create())
                 .setHints(Hints.create())
                 .setWriterConfig(WriterConfig.create().enableMetrics(false))
