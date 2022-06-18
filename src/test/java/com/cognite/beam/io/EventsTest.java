@@ -49,7 +49,8 @@ class EventsTest extends TestConfigProviderV1 {
         final String sessionId = RandomStringUtils.randomAlphanumeric(10);
         final String loggingPrefix = "UnitTest - writeReadDeleteEvents() -";
 
-        LOG.info(loggingPrefix + "Start test. Creating extraction pipeline.");
+        LOG.info("Starting events unit test: writeReadDeleteEvents()");
+        LOG.info("----------------------- Creating extraction pipeline. ----------------------");
         CogniteClient client = CogniteClient.ofClientCredentials(
                         TestConfigProviderV1.getClientId(),
                         TestConfigProviderV1.getClientSecret(),
@@ -113,6 +114,42 @@ class EventsTest extends TestConfigProviderV1 {
                 java.time.Duration.between(startInstant, Instant.now()));
         LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
+        // pause for eventual consistency
+        Thread.sleep(20000);
+
+        LOG.info(loggingPrefix + "Start reading and deleting events.");
+        Pipeline p2 = Pipeline.create();
+
+        PCollection<Event> readEventResults = p2
+                .apply("Read events", CogniteIO.readEvents()
+                        .withProjectConfig(projectConfigClientCredentials)
+                        .withReaderConfig(ReaderConfig.create()
+                                .withAppIdentifier("Beam SDK unit test")
+                                .withSessionIdentifier(sessionId))
+                        .withRequestParameters(RequestParameters.create()
+                                .withFilterParameter("source", DataGenerator.sourceValue)));
+
+        PCollection<Item> deleteResults =
+                readEventResults.apply("Map into items", MapElements
+                                .into(TypeDescriptor.of(Item.class))
+                                .via((Event input) ->
+                                        Item.newBuilder()
+                                                .setId(input.getId())
+                                                .build()
+                                ))
+                        .apply("Delete items", CogniteIO.deleteEvents()
+                                .withProjectConfig(projectConfigClientCredentials)
+                                .withWriterConfig(WriterConfig.create()
+                                        .withAppIdentifier("Beam SDK unit test")
+                                        .withSessionIdentifier(sessionId))
+                        );
+
+        p2.run().waitUntilFinish();
+
+        LOG.info(loggingPrefix + "Finished reading and deleting events. Duration : {}",
+                java.time.Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
+
         MetricQueryResults metrics = pipelineResult
                 .metrics()
                 .queryMetrics(MetricsFilter.builder()
@@ -127,74 +164,45 @@ class EventsTest extends TestConfigProviderV1 {
         }
     }
 
+
     @Test
     @Tag("remoteCDP")
-    void readAndDeleteEvents() {
+    void writeReadEventsStreaming() throws Exception {
+        final Instant startInstant = Instant.now();
         final String sessionId = RandomStringUtils.randomAlphanumeric(10);
-        Pipeline p2 = Pipeline.create();
+        final String loggingPrefix = "UnitTest - writeReadDeleteEvents() -";
 
-        PCollection<Event> readResults = p2
-                .apply("Read events", CogniteIO.readEvents()
-                        .withProjectConfig(projectConfigClientCredentials)
-                        .withReaderConfig(ReaderConfig.create()
-                                .withAppIdentifier("Beam SDK unit test")
-                                .withSessionIdentifier(sessionId))
-                        .withRequestParameters(RequestParameters.create()
-                                .withFilterParameter("source", DataGenerator.sourceValue)))
-               // .apply("Filter events", Filter
-               //         .by(event -> event.getExternalId().getValue().equalsIgnoreCase("1_2017-12-14 13:49:36vdUr2")))
-                 ;
+        LOG.info(loggingPrefix + "Start writing events.");
+        Pipeline pipeline = Pipeline.create();
 
-        PCollection<Item> deleteResults =
-                readResults.apply("Map into items", MapElements
-                .into(TypeDescriptor.of(Item.class))
-                .via((Event input) ->
-                        Item.newBuilder()
-                                .setId(input.getId())
-                                .build()
-                ))
-                .apply("Delete items", CogniteIO.deleteEvents()
+        TestStream<Event> events = TestStream.create(ProtoCoder.of(Event.class)).addElements(
+                        Event.newBuilder()
+                                .setExternalId("extId_A")
+                                .setDescription("Test_event")
+                                .setType(DataGenerator.sourceValue)
+                                .build(),
+                        DataGenerator.generateEvents(9567).toArray(new Event[0])
+                )
+                .advanceWatermarkToInfinity();
+
+        PCollection<Event> results = pipeline.apply(events)
+                .apply("Add windowing", Window.into(FixedWindows.of(Duration.standardSeconds(10))))
+                .apply("write events", CogniteIO.writeEvents()
                         .withProjectConfig(projectConfigClientCredentials)
                         .withWriterConfig(WriterConfig.create()
                                 .withAppIdentifier("Beam SDK unit test")
                                 .withSessionIdentifier(sessionId))
                 );
+        pipeline.run().waitUntilFinish();
+        LOG.info(loggingPrefix + "Finished writing events. Duration : {}",
+                java.time.Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
-        readResults.apply("Event to string", MapElements.into(TypeDescriptors.strings())
-                .via(Event::toString))
-                .apply("Write event output", TextIO.write().to("./UnitTest_event_deleteItems_event_output")
-                        .withSuffix(".txt")
-                        .withoutSharding());
+        Thread.sleep(15000);
 
-        deleteResults.apply("Item to string", ParDo.of(new ItemToStringFn()))
-                .apply("Write delete output", TextIO.write().to("./UnitTest_event_deleteItems_output")
-                        .withSuffix(".txt")
-                        .withoutSharding());
-
-        PipelineResult pipelineResult = p2.run();
-        pipelineResult.waitUntilFinish();
-
-        MetricQueryResults metrics = pipelineResult
-                        .metrics()
-                        .queryMetrics(MetricsFilter.builder()
-                                .addNameFilter(MetricNameFilter.inNamespace("cognite"))
-                                .build());
-
-        for (MetricResult<Long> counter: metrics.getCounters()) {
-            System.out.println(counter.getName() + ":" + counter.getAttempted());
-        }
-        for (MetricResult<DistributionResult> distribution : metrics.getDistributions()) {
-            System.out.println(distribution.getName() + ":" + distribution.getAttempted().getMean());
-        }
-    }
-
-    @Test
-    @Tag("remoteCDP")
-    void readEventsStreaming() {
-        final String sessionId = RandomStringUtils.randomAlphanumeric(10);
-        Pipeline pipeline = Pipeline.create();
-
-        PCollection<Event> readResults = pipeline
+        LOG.info(loggingPrefix + "Start reading events.");
+        Pipeline p = Pipeline.create();
+        PCollection<Event> readResults = p
                 .apply("Read events", CogniteIO.readEvents()
                         .withProjectConfig(projectConfigClientCredentials)
                         .withReaderConfig(ReaderConfig.create()
@@ -220,7 +228,10 @@ class EventsTest extends TestConfigProviderV1 {
                         .withWindowedWrites());
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
-        pipeline.run().waitUntilFinish();
+        p.run().waitUntilFinish();
+        LOG.info(loggingPrefix + "Finished reading events. Duration : {}",
+                java.time.Duration.between(startInstant, Instant.now()));
+        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
     }
 
     /**
