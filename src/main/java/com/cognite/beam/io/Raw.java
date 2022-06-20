@@ -21,6 +21,8 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
+import com.cognite.client.dto.FileMetadata;
+import com.cognite.client.dto.Item;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.dto.RawTable;
 import com.cognite.client.config.ResourceType;
@@ -502,6 +504,15 @@ public class Raw {
                             new UpsertRawRowFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<RawRow>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
+
             return outputCollection;
         }
 
@@ -553,10 +564,6 @@ public class Raw {
 
         @Override
         public PCollection<RawRow> expand(PCollection<RawRow> input) {
-            LOG.info("Starting Cognite reader.");
-
-            LOG.debug("Building write raw row composite transform.");
-
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<RawRow> eventCoder = ProtoCoder.of(RawRow.class);
             KvCoder<String, RawRow> keyValueCoder = KvCoder.of(utf8Coder, eventCoder);
@@ -581,6 +588,16 @@ public class Raw {
                     .apply("Delete rows", ParDo.of(
                             new DeleteRawRowFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<RawRow>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
 
             return outputCollection;
         }

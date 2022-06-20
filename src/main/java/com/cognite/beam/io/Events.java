@@ -21,15 +21,14 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
-import com.cognite.client.dto.Aggregate;
-import com.cognite.client.dto.Item;
+import com.cognite.beam.io.transform.extractionPipelines.CreateRun;
+import com.cognite.client.dto.*;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.write.UpsertEventFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
-import com.cognite.client.dto.RawRow;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.StringValue;
 import org.apache.beam.sdk.coders.Coder;
@@ -40,7 +39,6 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
-import com.cognite.client.dto.Event;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.google.auto.value.AutoValue;
 
@@ -712,6 +710,15 @@ public abstract class Events {
                                     new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Event>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
+
             return outputCollection;
         }
 
@@ -787,6 +794,16 @@ public abstract class Events {
                     .apply("Delete items", ParDo.of(
                             new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.EVENT, projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Item>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
 
             return outputCollection;
         }

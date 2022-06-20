@@ -80,8 +80,6 @@ public abstract class RecordDeltaTimestamp
 
     @Override
     public PCollection<RawRow> expand(PCollection<Long> input) {
-        LOG.info("Starting RecordDeltaTimestamp transform.");
-
         PCollection<RawRow> result;
 
         if (getReaderConfig().isDeltaEnabled()) {

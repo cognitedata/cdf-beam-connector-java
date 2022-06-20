@@ -24,6 +24,7 @@ import com.cognite.beam.io.fn.read.*;
 import com.cognite.beam.io.fn.write.SynchronizeAssetHierarchyFn;
 import com.cognite.client.config.ResourceType;
 import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.Event;
 import com.cognite.client.dto.Item;
 import com.cognite.beam.io.fn.*;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
@@ -644,6 +645,15 @@ public abstract class Assets {
                     .apply("Write assets", ParDo.of(new UpsertAssetFn(getHints(), getWriterConfig(),
                             projectConfigView)).withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Asset>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
+
             return outputCollection;
         }
 
@@ -738,6 +748,15 @@ public abstract class Assets {
                             getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView)
                     );
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Asset>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
 
@@ -959,6 +978,16 @@ public abstract class Assets {
                     .apply("Delete items", ParDo.of(
                             new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.ASSET, projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Item>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
 
             return outputCollection;
         }

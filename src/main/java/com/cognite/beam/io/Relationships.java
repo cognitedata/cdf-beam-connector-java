@@ -22,6 +22,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.ListRelationshipsFn;
 import com.cognite.beam.io.fn.read.RetrieveRelationshipsFn;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
 import com.cognite.client.config.ResourceType;
@@ -370,6 +371,15 @@ public abstract class Relationships {
                             new UpsertRelationshipFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Relationship>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
+
             return outputCollection;
         }
 
@@ -429,9 +439,6 @@ public abstract class Relationships {
 
         @Override
         public PCollection<Item> expand(PCollection<Item> input) {
-            LOG.info("Starting Cognite writer.");
-            LOG.debug("Building delete relationships composite transform.");
-
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
@@ -448,6 +455,16 @@ public abstract class Relationships {
                     .apply("Delete items", ParDo.of(
                             new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.RELATIONSHIP, projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Item>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
 
             return outputCollection;
         }

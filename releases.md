@@ -22,7 +22,6 @@ Changes are grouped as follows:
 ### Short term
 
 - OOTB incremental read support for time series.
-- Geo-location attribute and resource type.
 
 ## [0.9.37-SNAPSHOT]
 

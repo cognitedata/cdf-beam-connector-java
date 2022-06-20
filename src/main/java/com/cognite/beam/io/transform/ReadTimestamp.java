@@ -24,10 +24,8 @@ import com.cognite.beam.io.transform.internal.BuildProjectConfig;
 import com.cognite.client.dto.RawRow;
 import com.cognite.beam.io.fn.read.ReadRawRow;
 import com.cognite.beam.io.RequestParameters;
-import com.cognite.beam.io.transform.internal.ApplyProjectConfig;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
-import com.google.protobuf.Int64Value;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -41,7 +39,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Utility transform for writing a Unix style timestamp (ms since epoch) to Raw.
+ * Utility transform for reading a Unix style timestamp (ms since epoch) from Raw.
  */
 @AutoValue
 public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Long>> {
@@ -132,8 +130,6 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
 
     @Override
     public PCollection<Long> expand(PBegin input) {
-        LOG.debug("Starting ReadTimestamp transform.");
-
         // project config side input
         PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                 .apply("Build project config", BuildProjectConfig.create()

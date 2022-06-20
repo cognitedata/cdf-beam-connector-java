@@ -17,6 +17,7 @@
 package com.cognite.beam.io;
 
 import com.cognite.beam.io.config.*;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.TimeseriesPoint;
 import com.cognite.client.dto.TimeseriesPointPost;
 import com.cognite.client.config.ResourceType;
@@ -503,6 +504,15 @@ public abstract class TSPoints {
                     .apply("Write data points", ParDo.of(
                             new UpsertTsPointsProtoFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<TimeseriesPointPost>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }
