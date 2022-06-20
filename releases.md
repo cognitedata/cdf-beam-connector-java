@@ -23,7 +23,7 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
-## [0.9.37-SNAPSHOT]
+## [0.9.37] 2022-06-20
 
 ### Added
 
@@ -31,6 +31,7 @@ Changes are grouped as follows:
   - Geo-location attribute on the `files` resource type is supported.
   - `Sequences` upsert support including modified column schema. The `upsert` functionality includes both modified `sequences headers`/`SequenceMetadata` and `sequences rows`/`SequenceBody`. For more information, please refer to the documentation: [https://github.com/cognitedata/cdf-sdk-java/blob/main/docs/sequence.md#update-sequences](https://github.com/cognitedata/cdf-sdk-java/blob/main/docs/sequence.md#update-sequences) and [https://github.com/cognitedata/cdf-sdk-java/blob/main/docs/sequence.md#insert-rows](https://github.com/cognitedata/cdf-sdk-java/blob/main/docs/sequence.md#insert-rows)
 - Beam v2.39.0
+- Support for `extraction pipelines`
 
 ## [0.9.36] 2022-03-13
 
