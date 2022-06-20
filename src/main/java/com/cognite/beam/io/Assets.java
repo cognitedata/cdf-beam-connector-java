@@ -979,6 +979,16 @@ public abstract class Assets {
                             new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.ASSET, projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Item>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
+
             return outputCollection;
         }
 

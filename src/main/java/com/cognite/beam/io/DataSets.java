@@ -342,6 +342,15 @@ public abstract class DataSets {
                             new UpsertDataSetFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<DataSet>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
+
             return outputCollection;
         }
 

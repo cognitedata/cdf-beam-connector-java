@@ -53,7 +53,8 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
                 .setProjectConfig(ProjectConfig.create())
                 .setHints(Hints.create())
                 .setWriterConfig(WriterConfig.create().enableMetrics(false))
-                .setProjectConfigFile(ValueProvider.StaticValueProvider.of("."));
+                .setProjectConfigFile(ValueProvider.StaticValueProvider.of("."))
+                .setWriterOperationDescription("upserted");
     }
 
     /**
@@ -93,8 +94,21 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
         return toBuilder().setProjectConfigFile(file).build();
     }
 
+    /**
+     * Set the writer operation description. This will be included in the status message submitted in the extraction
+     * pipeline run. Examples of descriptions would be "upserted", "written", "deleted".
+     *
+     * The default description is {@code upsert}.
+     * @param operation The operation name.
+     * @return The transform with the configuration set.
+     */
+    public WritePipelineRun<T> withWriterOperationDescription(String operation) {
+        return toBuilder().setWriterOperationDescription(operation).build();
+    }
+
     abstract WritePipelineRun.Builder<T> toBuilder();
     abstract WriterConfig getWriterConfig();
+    abstract String getWriterOperationDescription();
 
     @Override
     public PCollection<ExtractionPipelineRun> expand(PCollection<T> input) {
@@ -108,7 +122,9 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
                                 ExtractionPipelineRun.newBuilder()
                                         .setExternalId(getWriterConfig().getExtractionPipelineExtId())
                                         .setStatus(getWriterConfig().getExtractionPipelineRunStatusMode())
-                                        .setMessage(String.format("Number of data objects upserted to CDF: %d", count))
+                                        .setMessage(String.format("Number of data objects %s to CDF: %d",
+                                                getWriterOperationDescription(),
+                                                count))
                                         .build()
                         )
                 )
@@ -123,6 +139,7 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
     @AutoValue.Builder
     static abstract class Builder<T> extends ConnectorBase.Builder<Builder<T>> {
         abstract Builder<T> setWriterConfig(WriterConfig value);
+        abstract Builder<T> setWriterOperationDescription(String value);
 
         public abstract WritePipelineRun<T> build();
     }

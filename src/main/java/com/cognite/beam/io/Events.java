@@ -795,6 +795,16 @@ public abstract class Events {
                             new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.EVENT, projectConfigView))
                             .withSideInputs(projectConfigView));
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Item>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
+
             return outputCollection;
         }
 

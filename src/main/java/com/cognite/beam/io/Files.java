@@ -805,9 +805,6 @@ public abstract class Files {
 
         @Override
         public PCollection<Item> expand(PCollection<Item> input) {
-            LOG.info("Starting Cognite writer.");
-            LOG.debug("Building delete files composite transform.");
-
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
@@ -824,6 +821,16 @@ public abstract class Files {
                     .apply("Delete items", ParDo.of(
                             new DeleteItemsFn(getHints(), getWriterConfig(), ResourceType.FILE, projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Item>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig())
+                                .withWriterOperationDescription("deleted"));
+            }
 
             return outputCollection;
         }
