@@ -22,6 +22,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
 import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.SequenceMetadata;
 import com.cognite.client.config.ResourceType;
@@ -510,9 +511,6 @@ public abstract class Sequences {
 
         @Override
         public PCollection<SequenceMetadata> expand(PCollection<SequenceMetadata> input) {
-            LOG.info("Starting Cognite writer.");
-
-            LOG.debug("Building upsert sequences metadata composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<SequenceMetadata> seqMetadataCoder = ProtoCoder.of(SequenceMetadata.class);
             KvCoder<String, SequenceMetadata> keyValueCoder = KvCoder.of(utf8Coder, seqMetadataCoder);
@@ -546,6 +544,15 @@ public abstract class Sequences {
                     .apply("Upsert sequences", ParDo.of(
                             new UpsertSeqHeaderFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<SequenceMetadata>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }

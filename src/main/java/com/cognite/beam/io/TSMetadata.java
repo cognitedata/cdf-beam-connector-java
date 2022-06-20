@@ -22,6 +22,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
 import com.cognite.client.dto.Aggregate;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.config.ResourceType;
 import com.cognite.beam.io.fn.delete.DeleteItemsFn;
@@ -522,9 +523,6 @@ public abstract class TSMetadata {
 
         @Override
         public PCollection<TimeseriesMetadata> expand(PCollection<TimeseriesMetadata> input) {
-            LOG.info("Starting Cognite writer.");
-
-            LOG.debug("Building upsert time series metadata composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<TimeseriesMetadata> tsMetadataCoder = ProtoCoder.of(TimeseriesMetadata.class);
             KvCoder<String, TimeseriesMetadata> keyValueCoder = KvCoder.of(utf8Coder, tsMetadataCoder);
@@ -558,6 +556,15 @@ public abstract class TSMetadata {
                     .apply("Upsert items", ParDo.of(
                             new UpsertTsHeaderFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<TimeseriesMetadata>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }

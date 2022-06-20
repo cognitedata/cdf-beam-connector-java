@@ -718,6 +718,15 @@ public abstract class Files {
             PCollection<FileMetadata> outputCollection = upsertedFilesCollection
                     .apply("Filter file metadata", Values.create());
 
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<FileMetadata>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
+
             // Remove the temporary files, if enabled.
             // Must "wait on" the file upsert to finish because of possible bundle re-tries.
             PCollection<String> tempFilesUriCollection = upsertedFilesCollection

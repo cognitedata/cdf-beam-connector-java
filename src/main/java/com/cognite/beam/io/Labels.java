@@ -21,6 +21,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.ListLabelsFn;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Label;
 import com.cognite.client.config.ResourceType;
@@ -259,6 +260,15 @@ public abstract class Labels {
                     .apply("Upsert items", ParDo.of(
                             new UpsertLabelFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Label>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }

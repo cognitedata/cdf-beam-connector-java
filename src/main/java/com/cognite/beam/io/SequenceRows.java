@@ -21,6 +21,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.ListSequencesRowsFn;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.SequenceBody;
 import com.cognite.beam.io.fn.delete.DeleteSequenceRowsFn;
 import com.cognite.beam.io.fn.write.UpsertSeqBodyFn;
@@ -264,8 +265,6 @@ public abstract class SequenceRows {
 
         @Override
         public PCollection<SequenceBody> expand(PCollection<SequenceBody> input) {
-            LOG.debug("Building upsert sequences rows composite transform.");
-
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<SequenceBody> seqBodyCoder = ProtoCoder.of(SequenceBody.class);
             KvCoder<String, SequenceBody> keyValueCoder = KvCoder.of(utf8Coder, seqBodyCoder);
@@ -299,6 +298,15 @@ public abstract class SequenceRows {
                     .apply("Upsert Rows", ParDo.of(
                             new UpsertSeqBodyFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<SequenceBody>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }

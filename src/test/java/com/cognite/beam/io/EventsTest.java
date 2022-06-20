@@ -47,7 +47,6 @@ class EventsTest extends TestConfigProviderV1 {
     void writeReadDeleteEvents() throws Exception {
         final Instant startInstant = Instant.now();
         final String sessionId = RandomStringUtils.randomAlphanumeric(10);
-        final String loggingPrefix = "UnitTest - writeReadDeleteEvents() -";
 
         LOG.info("Starting events unit test: writeReadDeleteEvents()");
         LOG.info("----------------------- Creating extraction pipeline. ----------------------");
@@ -79,11 +78,10 @@ class EventsTest extends TestConfigProviderV1 {
         ));
 
 
-        LOG.info(loggingPrefix + "Finished creating the extraction pipeline. Duration : {}",
+        LOG.info("------------ Finished creating the extraction pipeline. Duration : {} -------------",
                 java.time.Duration.between(startInstant, Instant.now()));
-        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
-        LOG.info(loggingPrefix + "Start writing events.");
+        LOG.info("----------------------- Start writing events. -----------------------");
         Pipeline p = Pipeline.create();
 
         TestStream<Event> events = TestStream.create(ProtoCoder.of(Event.class)).addElements(
@@ -110,14 +108,13 @@ class EventsTest extends TestConfigProviderV1 {
         PipelineResult pipelineResult = p.run();
         pipelineResult.waitUntilFinish();
 
-        LOG.info(loggingPrefix + "Finished writing events. Duration : {}",
+        LOG.info("-------------- Finished writing events. Duration : {} -------------------",
                 java.time.Duration.between(startInstant, Instant.now()));
-        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         // pause for eventual consistency
         Thread.sleep(20000);
 
-        LOG.info(loggingPrefix + "Start reading and deleting events.");
+        LOG.info("----------------------- Start reading and deleting events. -----------------------");
         Pipeline p2 = Pipeline.create();
 
         PCollection<Event> readEventResults = p2
@@ -146,9 +143,8 @@ class EventsTest extends TestConfigProviderV1 {
 
         p2.run().waitUntilFinish();
 
-        LOG.info(loggingPrefix + "Finished reading and deleting events. Duration : {}",
+        LOG.info("------------- Finished reading and deleting events. Duration : {} ------------------",
                 java.time.Duration.between(startInstant, Instant.now()));
-        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         MetricQueryResults metrics = pipelineResult
                 .metrics()
@@ -170,9 +166,9 @@ class EventsTest extends TestConfigProviderV1 {
     void writeReadEventsStreaming() throws Exception {
         final Instant startInstant = Instant.now();
         final String sessionId = RandomStringUtils.randomAlphanumeric(10);
-        final String loggingPrefix = "UnitTest - writeReadDeleteEvents() -";
 
-        LOG.info(loggingPrefix + "Start writing events.");
+        LOG.info("Starting events unit test: writeReadEventsStreaming()");
+        LOG.info("----------------------- Start writing events. -----------------------");
         Pipeline pipeline = Pipeline.create();
 
         TestStream<Event> events = TestStream.create(ProtoCoder.of(Event.class)).addElements(
@@ -194,13 +190,12 @@ class EventsTest extends TestConfigProviderV1 {
                                 .withSessionIdentifier(sessionId))
                 );
         pipeline.run().waitUntilFinish();
-        LOG.info(loggingPrefix + "Finished writing events. Duration : {}",
+        LOG.info("------------- Finished writing events. Duration : {} ------------------",
                 java.time.Duration.between(startInstant, Instant.now()));
-        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
 
         Thread.sleep(15000);
 
-        LOG.info(loggingPrefix + "Start reading events.");
+        LOG.info("----------------------- Start reading events. -----------------------");
         Pipeline p = Pipeline.create();
         PCollection<Event> readResults = p
                 .apply("Read events", CogniteIO.readEvents()
@@ -229,9 +224,8 @@ class EventsTest extends TestConfigProviderV1 {
 
         //PAssert.that(results).containsInAnyOrder("a"); // Not compatible with Junit5
         p.run().waitUntilFinish();
-        LOG.info(loggingPrefix + "Finished reading events. Duration : {}",
+        LOG.info("------------- Finished reading events. Duration : {} -----------------",
                 java.time.Duration.between(startInstant, Instant.now()));
-        LOG.info(loggingPrefix + "----------------------------------------------------------------------");
     }
 
     /**

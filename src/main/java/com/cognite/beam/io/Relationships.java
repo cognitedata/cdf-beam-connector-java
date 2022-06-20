@@ -22,6 +22,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.ListRelationshipsFn;
 import com.cognite.beam.io.fn.read.RetrieveRelationshipsFn;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
 import com.cognite.client.config.ResourceType;
@@ -369,6 +370,15 @@ public abstract class Relationships {
                     .apply("Upsert items", ParDo.of(
                             new UpsertRelationshipFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<Relationship>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }

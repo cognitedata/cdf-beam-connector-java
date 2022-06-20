@@ -21,7 +21,6 @@ import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.transform.extractionPipelines.CreateRun;
-import com.cognite.client.dto.Event;
 import com.cognite.client.dto.ExtractionPipelineRun;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
@@ -109,7 +108,7 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
                                 ExtractionPipelineRun.newBuilder()
                                         .setExternalId(getWriterConfig().getExtractionPipelineExtId())
                                         .setStatus(getWriterConfig().getExtractionPipelineRunStatusMode())
-                                        .setMessage(String.format("Number of data objects written to CDF: %d", count))
+                                        .setMessage(String.format("Number of data objects upserted to CDF: %d", count))
                                         .build()
                         )
                 )

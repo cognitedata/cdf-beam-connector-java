@@ -21,6 +21,7 @@ import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.*;
+import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.RawRow;
 import com.cognite.client.dto.RawTable;
 import com.cognite.client.config.ResourceType;
@@ -501,6 +502,15 @@ public class Raw {
                     .apply("Write rows", ParDo.of(
                             new UpsertRawRowFn(getHints(), getWriterConfig(), projectConfigView))
                             .withSideInputs(projectConfigView));
+
+            // Record successful data pipeline run
+            if (null != getWriterConfig().getExtractionPipelineExtId()) {
+                outputCollection
+                        .apply("Report pipeline run", WritePipelineRun.<RawRow>create()
+                                .withProjectConfig(getProjectConfig())
+                                .withProjectConfigFile(getProjectConfigFile())
+                                .withWriterConfig(getWriterConfig()));
+            }
 
             return outputCollection;
         }
