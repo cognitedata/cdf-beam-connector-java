@@ -64,7 +64,7 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
      * transform via the {@code withFooBar()} methods. For example:
      * <pre>
      * {@code
-     * CreateRun transform = CreateRun.create()
+     * WritePipelineRun transform = WritePipelineRun.create()
      *                         .withProjectConfig(my-project-config)
      *                         .withWriterConfig(my-writer-config);
      * }
