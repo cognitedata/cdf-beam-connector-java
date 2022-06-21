@@ -19,3 +19,4 @@ and follows the structure of the SDK, which again follows the structure of the [
 
 - [Client configuration. How to setup authentication.](authentication.md)
 - [Reading and writing data](readAndWriteData.md)
+- [Extraction pipelines](extractionPipelines.md)
