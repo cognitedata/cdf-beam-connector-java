@@ -28,6 +28,7 @@ import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.Count;
 import org.apache.beam.sdk.transforms.MapElements;
+import org.apache.beam.sdk.transforms.windowing.GlobalWindow;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.TypeDescriptor;
 import org.slf4j.Logger;
@@ -113,10 +114,27 @@ public abstract class WritePipelineRun<T> extends ConnectorBase<PCollection<T>, 
     @Override
     public PCollection<ExtractionPipelineRun> expand(PCollection<T> input) {
 
+        /*
+        Set up the combine function (the count aggregate function). The default function uses
+        "withoutDefaults()" in order to be compatible with any windowing strategy--this ensures support for streaming
+        pipelines. Unfortunately, it also means that only windows producing a non-zero count will trigger an output.
+
+        If we have a global window (the typical case for a batch pipeline) we can add a default output in case of a
+        zero-count. This ensures that batch pipelines will always report a run even if zero elements are written to
+        CDF.
+         */
+        PCollection<Long> elementCount = input
+                .apply("Count elements", Combine.globally(Count.<T>combineFn()).withoutDefaults());
+
+        if (input.getWindowingStrategy().getWindowFn().getWindowTypeDescriptor().getRawType() == GlobalWindow.class) {
+            LOG.info("Identified global window. Will add a default count of 0 in case no elements are written to CDF.");
+            elementCount = input
+                    .apply("Count elements", Combine.globally(Count.<T>combineFn()));
+        }
+
 
         // Read qualified rows from raw.
-        PCollection<ExtractionPipelineRun> outputCollection = input
-                .apply("Count elements", Combine.globally(Count.<T>combineFn()).withoutDefaults())
+        PCollection<ExtractionPipelineRun> outputCollection = elementCount
                 .apply("Build pipeline status entry", MapElements.into(TypeDescriptor.of(ExtractionPipelineRun.class))
                         .via(count ->
                                 ExtractionPipelineRun.newBuilder()
