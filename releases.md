@@ -23,7 +23,7 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
-## [0.9.38-SNAPSHOT]
+## [0.9.38] 2022-07-06
 
 ### Added
 
