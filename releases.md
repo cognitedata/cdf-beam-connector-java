@@ -23,6 +23,16 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.38-SNAPSHOT]
+
+### Added
+
+- Beam SDK 2.40.0
+
+### Fixed
+
+- Writers' automatic reporting of `extraction pipeline run` will also generate a `run` when zero elements are written to CDF.
+
 ## [0.9.37] 2022-06-20
 
 ### Added
