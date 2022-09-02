@@ -23,6 +23,13 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.39-SNAPSHOT]
+
+### Added
+
+- Java SDK 1.17.0
+- Beam SDK 2.41.0
+
 ## [0.9.38] 2022-07-06
 
 ### Added
