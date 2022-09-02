@@ -68,7 +68,8 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
                         .withClientConfig(ClientConfig.create()
                                 .withMaxRetries(hints.getMaxRetries().get())
                                 .withAppIdentifier(configBase.getAppIdentifier())
-                                .withSessionIdentifier(configBase.getSessionIdentifier()));
+                                .withSessionIdentifier(configBase.getSessionIdentifier())
+                                .withAsyncApiJobTimeout(hints.getAsyncApiJobTimeout()));
                 // set custom auth scopes if they are configured in the ProjectConfig object.
                 if (null != projectConfig.getAuthScopes() && projectConfig.getAuthScopes().isAccessible()) {
                     client = client.withScopes(projectConfig.getAuthScopes().get());
