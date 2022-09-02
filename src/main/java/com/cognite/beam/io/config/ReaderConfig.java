@@ -242,7 +242,7 @@ public abstract class ReaderConfig extends ConfigBase {
     }
 
     /**
-     * Sets the target polling interval when watching for new new items. The default value is 10 seconds.
+     * Sets the target polling interval when watching for new items. The default value is 10 seconds.
      *
      * This value is only used when the reader is operating in streaming mode.
      *

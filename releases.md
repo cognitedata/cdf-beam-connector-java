@@ -29,6 +29,7 @@ Changes are grouped as follows:
 
 - Java SDK 1.17.0
 - Beam SDK 2.41.0
+- Configurable timeout of the async API endpoints (contextualization endpoints like `entity matching` and `engineering diagrams`). You configure the timeout via `Hints.withAsyncApiJobTimeout(Duration timeout)`. The default timeout is 20 minutes.
 
 ## [0.9.38] 2022-07-06
 

@@ -19,6 +19,7 @@ package com.cognite.beam.io.config;
 import java.io.Serializable;
 import java.time.Duration;
 
+import com.cognite.client.config.ClientConfig;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -28,7 +29,7 @@ import com.google.auto.value.AutoValue;
 import static com.google.common.base.Preconditions.*;
 
 /**
- * Context object for carrying various hints to guide the execution of various
+ * Context object for carrying hints to guide the execution of various
  * connector operations.
  * <p>
  * Offering hints is optional, and only intended for advanced users with specific requirements. The
@@ -72,7 +73,7 @@ public abstract class Hints implements Serializable {
     private static final int MIN_CONTEXT_MAX_BATCH_SIZE = 1;
     private static final int MAX_CONTEXT_MAX_BATCH_SIZE = 20000;
 
-    // Hints for the write TS batch optimization
+    // Hints for write TS batch optimization
     private static final UpdateFrequency DEFAULT_WRITE_TS_POINTS_UPDATE_FREQUENCY = UpdateFrequency.SECOND;
 
     // File binary batching
@@ -83,6 +84,11 @@ public abstract class Hints implements Serializable {
     private static final int DEFAULT_WRITE_FILE_BATCH_SIZE = 8;
     private static final int MIN_WRITE_FILE_BATCH_SIZE = 1;
     private static final int MAX_WRITE_FILE_BATCH_SIZE = 10;
+
+    // Timeouts for async api jobs (i.e. the context api)
+    private static final Duration MIN_ASYNC_API_JOB_TIMEOUT = Duration.ofSeconds(90);
+    private static final Duration DEFAULT_ASYNC_API_JOB_TIMEOUT = Duration.ofMinutes(20);
+    private static final Duration MAX_ASYNC_API_JOB_TIMEOUT = Duration.ofHours(24);
 
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_Hints.Builder()
@@ -96,6 +102,7 @@ public abstract class Hints implements Serializable {
                 .setContextMaxBatchSize(DEFAULT_CONTEXT_MAX_BATCH_SIZE)
                 .setReadFileBinaryBatchSize(DEFAULT_READ_FILE_BINARY_BATCH_SIZE)
                 .setWriteFileBatchSize(DEFAULT_WRITE_FILE_BATCH_SIZE)
+                .setAsyncApiJobTimeout(DEFAULT_ASYNC_API_JOB_TIMEOUT)
                 ;
     }
 
@@ -113,6 +120,7 @@ public abstract class Hints implements Serializable {
     public abstract UpdateFrequency getWriteTsPointsUpdateFrequency();
     public abstract int getReadFileBinaryBatchSize();
     public abstract int getWriteFileBatchSize();
+    public abstract Duration getAsyncApiJobTimeout();
 
     abstract Builder toBuilder();
 
@@ -308,6 +316,24 @@ public abstract class Hints implements Serializable {
         return toBuilder().setWriteTsPointsUpdateFrequency(value).build();
     }
 
+    /**
+     * Sets the timeout for waiting for async api jobs to finish. Async api jobs includes the CDF context api endpoints
+     * like entity matching and engineering diagram parsing.
+     *
+     * The default timeout is 20 minutes.
+     *
+     * @param timeout The async timeout expressed as {@link Duration}.
+     * @return the {@link ClientConfig} with the setting applied.
+     */
+    public Hints withAsyncApiJobTimeout(Duration timeout) {
+        checkArgument(timeout.compareTo(MIN_ASYNC_API_JOB_TIMEOUT) >= 0
+                        && timeout.compareTo(MAX_ASYNC_API_JOB_TIMEOUT) <= 0,
+                String.format("Async job timeout must be between %s and %s", MIN_ASYNC_API_JOB_TIMEOUT,
+                        MAX_ASYNC_API_JOB_TIMEOUT));
+
+        return toBuilder().setAsyncApiJobTimeout(timeout).build();
+    }
+
     public void validate() {
         checkState(getReadShards() != null && getReadShards().isAccessible()
                         && getReadShards().get() >= MIN_READ_SHARDS && getReadShards().get() <= MAX_READ_SHARDS,
@@ -338,6 +364,7 @@ public abstract class Hints implements Serializable {
         abstract Builder setWriteTsPointsUpdateFrequency(UpdateFrequency value);
         abstract Builder setReadFileBinaryBatchSize(int value);
         abstract Builder setWriteFileBatchSize(int value);
+        abstract Builder setAsyncApiJobTimeout(Duration value);
 
         abstract Hints autoBuild();
         Hints build() {
