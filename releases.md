@@ -23,6 +23,12 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.40-SNAPSHOT]
+
+### Added
+
+- Factory methods `ProjectConfig.ofClientCredentials()` to align with style conventions in the Java SDK.
+
 ## [0.9.39] 2022-09-02
 
 ### Added

@@ -17,6 +17,7 @@
 package com.cognite.beam.io.config;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.squareup.moshi.JsonClass;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
@@ -24,8 +25,10 @@ import org.apache.beam.sdk.options.ValueProvider;
 
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -35,6 +38,7 @@ import static com.google.common.base.Preconditions.checkState;
 @JsonClass(generateAdapter = true, generator = "avm")
 public abstract class ProjectConfig implements Serializable {
     private final static String DEFAULT_HOST = "https://api.cognitedata.com";
+    private final static String DEFAULT_BASE_URL = "https://api.cognitedata.com";
 
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_ProjectConfig.Builder()
@@ -44,6 +48,59 @@ public abstract class ProjectConfig implements Serializable {
 
     public static ProjectConfig create() {
         return ProjectConfig.builder().build();
+    }
+
+    /**
+     * Returns a {@link ProjectConfig} using client credentials for authentication.
+     *
+     * Client credentials is the preferred authentication pattern for services /
+     * machine to machine communication for Openid Connect (and Oauth) compatible identity providers.
+     *
+     * @param clientId The client id to use for authentication.
+     * @param clientSecret The client secret to use for authentication.
+     * @param tokenUrl The URL to call for obtaining the access token.
+     * @param scopes The list of scopes to be used for authentication
+     * @return the project config with default configuration.
+     */
+    public static ProjectConfig ofClientCredentials(String clientId,
+                                                    String clientSecret,
+                                                    URL tokenUrl,
+                                                    Collection<String> scopes) {
+        Preconditions.checkArgument(null != clientId && !clientId.isEmpty(),
+                "The clientId cannot be empty.");
+        Preconditions.checkArgument(null != clientSecret && !clientSecret.isEmpty(),
+                "The secret cannot be empty.");
+
+        return ProjectConfig.builder()
+                .setClientId(ValueProvider.StaticValueProvider.of(clientId))
+                .setClientSecret(ValueProvider.StaticValueProvider.of(clientSecret))
+                .setTokenUrl(ValueProvider.StaticValueProvider.of(tokenUrl.toString()))
+                .setAuthScopes(ValueProvider.StaticValueProvider.of(scopes))
+                .build();
+
+    }
+
+    /**
+     * Returns a {@link ProjectConfig} using client credentials for authentication.
+     *
+     * Client credentials is the preferred authentication pattern for services /
+     * machine to machine communication for Openid Connect (and Oauth) compatible identity providers.
+     *
+     * @param clientId The client id to use for authentication.
+     * @param clientSecret The client secret to use for authentication.
+     * @param tokenUrl The URL to call for obtaining the access token.
+     * @return the project config with default configuration.
+     */
+    public static ProjectConfig ofClientCredentials(String clientId,
+                                                    String clientSecret,
+                                                    URL tokenUrl) {
+        Preconditions.checkArgument(null != clientId && !clientId.isEmpty(),
+                "The clientId cannot be empty.");
+        Preconditions.checkArgument(null != clientSecret && !clientSecret.isEmpty(),
+                "The secret cannot be empty.");
+
+        return ProjectConfig.ofClientCredentials(
+                clientId, clientSecret, tokenUrl, List.of(DEFAULT_BASE_URL + "/.default"));
     }
 
     @Nullable public abstract ValueProvider<String> getProject();
@@ -74,6 +131,16 @@ public abstract class ProjectConfig implements Serializable {
      * @param value The Cognite Data Fusion host.
      */
     public ProjectConfig withHost(String value) {
+        return withHost(ValueProvider.StaticValueProvider.of(value));
+    }
+
+    /**
+     * Returns a new {@code ProjectConfig} that represents the specified base URL / host. This method replaces
+     * {@link #withHost(String)}
+     *
+     * @param value The Cognite Data Fusion base URL.
+     */
+    public ProjectConfig withBaseUrl(String value) {
         return withHost(ValueProvider.StaticValueProvider.of(value));
     }
 
