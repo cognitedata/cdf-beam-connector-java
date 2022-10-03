@@ -105,18 +105,24 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                             // if the project config is set via parameter, it should overwrite the file based config.
 
                             if (null != getProjectConfigParameters().getClientId()
-                                        && null != getProjectConfigParameters().getTokenUrl()
-                                        && null != getProjectConfigParameters().getClientSecret()) {
+                                    && !getProjectConfigParameters().getClientId().get().isBlank()
+                                    && null != getProjectConfigParameters().getTokenUrl()
+                                    && !getProjectConfigParameters().getTokenUrl().get().isBlank()
+                                    && null != getProjectConfigParameters().getClientSecret()
+                                    && !getProjectConfigParameters().getClientSecret().get().isBlank()) {
                                 LOG.info(loggingPrefix + "Client credentials specified via parameters");
                                 output = getProjectConfigParameters();
                             } else if (null != getProjectConfigParameters().getClientId()
+                                    && !getProjectConfigParameters().getClientId().get().isBlank()
                                     && null != getProjectConfigParameters().getTokenUrl()
+                                    && !getProjectConfigParameters().getTokenUrl().get().isBlank()
                                     && null != getProjectConfigParameters().getClientSecretGcpSecretConfig()) {
                                 LOG.info(loggingPrefix + "Client credentials specified via GCP Secret Manager");
                                 output = getProjectConfigParameters()
                                         .withClientSecret(getGcpSecret(getProjectConfigParameters().getClientSecretGcpSecretConfig(),
                                                 loggingPrefix));
-                            } else if (null != getProjectConfigParameters().getApiKey()) {
+                            } else if (null != getProjectConfigParameters().getApiKey()
+                                    && !getProjectConfigParameters().getApiKey().get().isBlank()) {
                                 LOG.info(loggingPrefix + "Api key specified via parameters");
                                 output = getProjectConfigParameters();
                             } else if (null != getProjectConfigParameters().getApiKeyGcpSecretConfig()) {
@@ -124,6 +130,12 @@ public abstract class BuildProjectConfig extends PTransform<PBegin, PCollection<
                                 output = getProjectConfigParameters()
                                         .withApiKey(getGcpSecret(getProjectConfigParameters().getApiKeyGcpSecretConfig(),
                                                 loggingPrefix));
+                            } else {
+                                String message =
+                                        String.format(loggingPrefix + "Unable to build a valid project config from the ProjectConfig parameter: %s",
+                                                getProjectConfigParameters().toString());
+                                LOG.error(message);
+                                throw new Exception(message);
                             }
                         }
 
