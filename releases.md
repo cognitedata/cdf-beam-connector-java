@@ -29,6 +29,10 @@ Changes are grouped as follows:
 
 - Factory methods `ProjectConfig.ofClientCredentials()` to align with style conventions in the Java SDK.
 
+### Changed
+
+- Add checks for blank/empty strings in `ProjectConfig`. A blank string will be treated as if it is not present / null.
+
 ## [0.9.39] 2022-09-02
 
 ### Added
