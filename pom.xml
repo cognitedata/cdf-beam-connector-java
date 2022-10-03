@@ -124,11 +124,6 @@
             <version>${beam.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.ryanharter.auto.value</groupId>
-            <artifactId>auto-value-moshi-runtime</artifactId>
-            <version>${moshi-plugin.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.version}</version>
@@ -210,27 +205,6 @@
                             <artifactId>auto-service</artifactId>
                             <version>${auto-service.version}</version>
                         </path>
-                        <path>
-                            <groupId>com.ryanharter.auto.value</groupId>
-                            <artifactId>auto-value-moshi-extension</artifactId>
-                            <version>${moshi-plugin.version}</version>
-                        </path>
-                        <dependency>
-                            <groupId>com.squareup</groupId>
-                            <artifactId>javapoet</artifactId>
-                            <version>1.12.0</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>com.squareup.moshi</groupId>
-                            <artifactId>moshi</artifactId>
-                            <version>1.9.2</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>io.sweers.autotransient</groupId>
-                            <artifactId>autotransient</artifactId>
-                            <version>1.0.0</version>
-                        </dependency>
-
                     </annotationProcessorPaths>
                 </configuration>
                 <executions>
