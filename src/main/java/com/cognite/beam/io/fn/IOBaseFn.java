@@ -59,17 +59,19 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
     protected CogniteClient getClient(ProjectConfig projectConfig, ConfigBase configBase) throws Exception {
         if (null == client) {
             // Client is not configured. Either because this class has been serialized or it is the first method call
+            // Instantiate the client config first
+            ClientConfig clientConfig = ClientConfig.create()
+                    .withMaxRetries(hints.getMaxRetries().get())
+                    .withAppIdentifier(configBase.getAppIdentifier())
+                    .withSessionIdentifier(configBase.getSessionIdentifier())
+                    .withAsyncApiJobTimeout(hints.getAsyncApiJobTimeout());
 
             if (configHasClientCredentials(projectConfig)) {
                 // client credentials take precedence over api key
                 client = CogniteClient.ofClientCredentials(projectConfig.getClientId().get(),
                         projectConfig.getClientSecret().get(), new URL(projectConfig.getTokenUrl().get()))
                         .withBaseUrl(projectConfig.getHost().get())
-                        .withClientConfig(ClientConfig.create()
-                                .withMaxRetries(hints.getMaxRetries().get())
-                                .withAppIdentifier(configBase.getAppIdentifier())
-                                .withSessionIdentifier(configBase.getSessionIdentifier())
-                                .withAsyncApiJobTimeout(hints.getAsyncApiJobTimeout()));
+                        .withClientConfig(clientConfig);
                 // set custom auth scopes if they are configured in the ProjectConfig object.
                 if (null != projectConfig.getAuthScopes() && projectConfig.getAuthScopes().isAccessible()) {
                     client = client.withScopes(projectConfig.getAuthScopes().get());
@@ -77,10 +79,7 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
             } else if (configHasApiKey(projectConfig)) {
                 client = CogniteClient.ofKey(projectConfig.getApiKey().get())
                         .withBaseUrl(projectConfig.getHost().get())
-                        .withClientConfig(ClientConfig.create()
-                                .withMaxRetries(hints.getMaxRetries().get())
-                                .withAppIdentifier(configBase.getAppIdentifier())
-                                .withSessionIdentifier(configBase.getSessionIdentifier()));
+                        .withClientConfig(clientConfig);
             } else {
                 throw new Exception("Neither client credentials nor API key cannot be accessed. Please check that it is configured.");
             }
@@ -99,8 +98,11 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
      */
     private boolean configHasClientCredentials(ProjectConfig projectConfig) {
         return (null != projectConfig.getClientId() && projectConfig.getClientId().isAccessible()
+                && !projectConfig.getClientId().get().isBlank()
                 && null != projectConfig.getClientSecret() && projectConfig.getClientSecret().isAccessible()
+                && !projectConfig.getClientSecret().get().isBlank()
                 && null != projectConfig.getTokenUrl() && projectConfig.getTokenUrl().isAccessible()
+                && !projectConfig.getTokenUrl().get().isBlank()
         );
     }
 
@@ -108,6 +110,7 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
     Returns true if the project config contains an accessible api key.
      */
     private boolean configHasApiKey(ProjectConfig projectConfig) {
-        return (null != projectConfig.getApiKey() && projectConfig.getApiKey().isAccessible());
+        return (null != projectConfig.getApiKey() && projectConfig.getApiKey().isAccessible()
+                && !projectConfig.getApiKey().get().isBlank());
     }
 }
