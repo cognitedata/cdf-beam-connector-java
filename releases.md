@@ -23,6 +23,12 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.41-SNAPSHOT]
+
+### Fixed
+
+- Check for empty strings in auth/`ProjectConfig` when instantiation the `CogniteClient`.
+
 ## [0.9.40] 2022-10-03
 
 ### Added
