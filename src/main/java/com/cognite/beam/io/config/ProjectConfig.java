@@ -18,7 +18,6 @@ package com.cognite.beam.io.config;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
-import com.squareup.moshi.JsonClass;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.ValueProvider;
@@ -35,7 +34,6 @@ import static com.google.common.base.Preconditions.checkState;
 
 @AutoValue
 @DefaultCoder(SerializableCoder.class)
-@JsonClass(generateAdapter = true, generator = "avm")
 public abstract class ProjectConfig implements Serializable {
     private final static String DEFAULT_HOST = "https://api.cognitedata.com";
     private final static String DEFAULT_BASE_URL = "https://api.cognitedata.com";

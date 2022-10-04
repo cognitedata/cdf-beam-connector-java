@@ -14,6 +14,7 @@ import org.apache.beam.sdk.transforms.windowing.PaneInfo;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 public class TestConfigProviderV1 {
     private final static String apiVersion = "v1";
@@ -37,7 +38,9 @@ public class TestConfigProviderV1 {
                     .withProject(getProject())
                     .withClientId(getClientId())
                     .withClientSecret(getClientSecret())
-                    .withTokenUrl(TokenUrl.generateAzureAdURL(getTenantId()).toString());
+                    .withTokenUrl(TokenUrl.generateAzureAdURL(getTenantId()).toString())
+                    //.withAuthScopes(List.of("https://api.cognitedata.com/.default"))
+            ;
         }  catch (Exception e) {
             throw new RuntimeException(e);
         }
