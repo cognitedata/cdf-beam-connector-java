@@ -5,6 +5,7 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.client.CogniteClient;
 import com.cognite.client.Request;
+import com.cognite.client.config.TokenUrl;
 import com.cognite.client.dto.*;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -485,7 +486,11 @@ class ContextTest extends TestConfigProviderV1 {
                 ))
                 .withRootParameter("featureType", featureType);
 
-        CogniteClient client = CogniteClient.ofKey(getApiKey())
+        CogniteClient client = CogniteClient.ofClientCredentials(
+                getClientId(),
+                getClientSecret(),
+                TokenUrl.generateAzureAdURL(getTenantId()))
+                .withProject(getProject())
                 .withBaseUrl(getHost());
         List<EntityMatchModel> models = client.contextualization().entityMatching()
                 .create(ImmutableList.of(entityMatchFitRequest));
@@ -502,7 +507,11 @@ class ContextTest extends TestConfigProviderV1 {
                 .setId(modelId)
                 .build();
 
-        CogniteClient client = CogniteClient.ofKey(getApiKey())
+        CogniteClient client = CogniteClient.ofClientCredentials(
+                        getClientId(),
+                        getClientSecret(),
+                        TokenUrl.generateAzureAdURL(getTenantId()))
+                .withProject(getProject())
                 .withBaseUrl(getHost());
         List<Item> deleteResults = client.contextualization()
                 .entityMatching()
