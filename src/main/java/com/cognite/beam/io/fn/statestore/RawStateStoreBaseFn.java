@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.cognite.beam.io.fn;
+package com.cognite.beam.io.fn.statestore;
 
 import com.cognite.beam.io.config.ConfigBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
+import com.cognite.beam.io.fn.IOBaseFn;
 import com.cognite.client.statestore.RawStateStore;
 import com.cognite.client.statestore.StateStore;
 import com.google.common.base.Preconditions;
