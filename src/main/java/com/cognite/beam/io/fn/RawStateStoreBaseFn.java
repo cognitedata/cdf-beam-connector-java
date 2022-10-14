@@ -16,20 +16,14 @@
 
 package com.cognite.beam.io.fn;
 
-import com.cognite.beam.io.RequestParameters;
 import com.cognite.beam.io.config.ConfigBase;
 import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
-import com.cognite.beam.io.config.ReaderConfig;
-import com.cognite.client.CogniteClient;
 import com.cognite.client.statestore.RawStateStore;
+import com.cognite.client.statestore.StateStore;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.commons.lang3.RandomStringUtils;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -66,11 +60,10 @@ public abstract class RawStateStoreBaseFn<T, R> extends IOBaseFn<T, R> {
     }
 
     @ProcessElement
-    public void processElement(@Element RequestParameters requestParameters,
-                               OutputReceiver<T> outputReceiver,
+    public void processElement(@Element T element,
+                               OutputReceiver<R> outputReceiver,
                                ProcessContext context) throws Exception {
         final String batchLogPrefix = "Batch: " + RandomStringUtils.randomAlphanumeric(6) + " - ";
-        final Instant batchStartInstant = Instant.now();
 
         // Identify the project config to use
         ProjectConfig projectConfig;
@@ -82,44 +75,14 @@ public abstract class RawStateStoreBaseFn<T, R> extends IOBaseFn<T, R> {
             throw new Exception(message);
         }
 
-        // If firstN is enabled, then set a max num of results to fetch
-        LOG.debug(batchLogPrefix + "Checking config for firstN count: {}", readerConfig.getFirstNCount());
-        if (readerConfig.getFirstNCount() > 0) {
-            LOG.info(batchLogPrefix + "FirstN count specified at {}. Will limit the number of results objects.",
-                    readerConfig.getFirstNCount());
-            maxNumResults = readerConfig.getFirstNCount();
-        }
-
-        // Read the items
+        // Perform the state store processing step
         try {
-            Iterator<List<T>> resultsIterator = listItems(getClient(projectConfig, readerConfig),
-                    requestParameters,
-                    requestParameters.getPartitions().toArray(new String[requestParameters.getPartitions().size()]));
-            Instant pageStartInstant = Instant.now();
-            long totalNoItems = 0;
-            while (resultsIterator.hasNext() && totalNoItems < maxNumResults) {
-                List<T> results = resultsIterator.next();
-                if (readerConfig.isMetricsEnabled()) {
-                    apiBatchSize.update(results.size());
-                    apiLatency.update(Duration.between(pageStartInstant, Instant.now()).toMillis());
-                }
-                if (readerConfig.isStreamingEnabled()) {
-                    // output with timestamps in streaming mode--need that for windowing
-                    results.forEach(item ->
-                            outputReceiver.outputWithTimestamp(item, new org.joda.time.Instant(getTimestamp(item)))
-                    );
-                } else {
-                    // no timestamping in batch mode--just leads to lots of complications
-                    results.forEach(item -> outputReceiver.output(item));
-                }
+            R result = apply(getRawStateStore(projectConfig, configBase, dbName, tableName), element);
+            outputReceiver.output(result);
 
-                totalNoItems += results.size();
-                pageStartInstant = Instant.now();
-            }
-
-            LOG.info(batchLogPrefix + "Retrieved {} items in {}}.",
-                    totalNoItems,
-                    Duration.between(batchStartInstant, Instant.now()).toString());
+            LOG.debug(batchLogPrefix + "Input {} with result{}.",
+                    element,
+                    result);
         } catch (Exception e) {
             LOG.error(batchLogPrefix + "Error when reading from Cognite Data Fusion: {}",
                     e.toString());
@@ -127,29 +90,36 @@ public abstract class RawStateStoreBaseFn<T, R> extends IOBaseFn<T, R> {
         }
     }
 
-    protected RawStateStore getRawStateStore() {
+    /**
+     * Returns the {@link RawStateStore}. Will instantiate a new store and cache it.
+     *
+     * @param projectConfig the {@link ProjectConfig} to configure auth credentials.
+     * @param configBase Carries the app and session identifiers.
+     * @param dbName The CDF.Raw db hosting the state store.
+     * @param tableName The CDF.Raw table hosting the state store.
+     * @return The state store.
+     * @throws Exception
+     */
+    protected RawStateStore getRawStateStore(ProjectConfig projectConfig,
+                                             ConfigBase configBase,
+                                             String dbName,
+                                             String tableName) throws Exception {
+        if (null == stateStore) {
+            // State store is not configured. Either because this class has been serialized or it is the first method call
+            stateStore = RawStateStore.of(getClient(projectConfig, configBase), dbName, tableName);
+            stateStore.load();
+        }
 
+        return stateStore;
     }
 
     /**
-     * Reads / lists items from Cognite Data Fusion.
+     * Process the input.
      *
-     * @param client The {@link CogniteClient} to use for writing the items.
-     * @param requestParameters The request with optional filter parameters.
-     * @param partitions The partitions to read.
-     * @return An {@link Iterator} for paging through the results.
+     * @param stateStore The {@link StateStore} to use for reading and writing the items.
+     * @param input The input to process.
+     * @return R The result of the processing.
      * @throws Exception
      */
-    protected abstract Iterator<List<T>> listItems(CogniteClient client,
-                                                   RequestParameters requestParameters,
-                                                   String... partitions) throws Exception;
-
-    /**
-     * Gets the timestamp associated with a data item. This timestamp will be used in streaming mode as the
-     * basis for time windows. It would normally be the object's create or updated timestamp.
-     *
-     * @param item The item to get the timestamp for.
-     * @return The timestamp.
-     */
-    protected abstract long getTimestamp(T item);
+    protected abstract R apply(StateStore stateStore, T input) throws Exception;
 }
