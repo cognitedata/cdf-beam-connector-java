@@ -105,7 +105,7 @@ public abstract class Hints implements Serializable {
                 .setReadFileBinaryBatchSize(DEFAULT_READ_FILE_BINARY_BATCH_SIZE)
                 .setWriteFileBatchSize(DEFAULT_WRITE_FILE_BATCH_SIZE)
                 .setAsyncApiJobTimeout(DEFAULT_ASYNC_API_JOB_TIMEOUT)
-                ;
+                .setClientFeatureFlag(CLIENT_FEATURE_FLAG);
     }
 
     public static Hints create() {
