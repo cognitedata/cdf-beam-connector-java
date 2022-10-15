@@ -23,17 +23,18 @@ import com.cognite.client.statestore.StateStore;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Function for reading the high watermark state from a RAW state store. It takes the state key as element
- * input and outputs a {@code KV<String, Long>} with the key and corresponding high watermark.
- *
- * If there is no high watermark for the given key, the output value will be {@code null}.
+ * Function for setting the high watermark state to a RAW state store. It takes a {@code KV<String, Long>} representing
+ * the key and high watermark value as input and outputs the same element after it has been committed to the
+ * state store.
  */
-public abstract class RawStateStoreGetHighFn extends RawStateStoreBaseFn<String, KV<String, Long>> {
+public abstract class RawStateStoreSetHighFn extends
+        RawStateStoreBaseFn<Iterable<KV<String, Long>>, Iterable<KV<String, Long>>> {
 
-    public RawStateStoreGetHighFn(Hints hints,
+    public RawStateStoreSetHighFn(Hints hints,
                                   ConfigBase configBase,
                                   String dbName,
                                   String tableName,
@@ -44,11 +45,19 @@ public abstract class RawStateStoreGetHighFn extends RawStateStoreBaseFn<String,
     /**
      * {@inheritDoc}
      */
-    protected KV<String, Long> apply(StateStore stateStore, String input) throws Exception {
-        Long value = null;
-        if (stateStore.getHigh(input).isPresent()) {
-            value = stateStore.getHigh(input).getAsLong();
+    protected Iterable<KV<String, Long>> apply(StateStore stateStore, Iterable<KV<String, Long>> input) throws Exception {
+        List<KV<String, Long>> output = new ArrayList<>();
+        for (KV<String, Long> element : input) {
+            if (null == element.getKey() || null == element.getValue()) {
+                LOG.warn("Invalid input to the state store. Key and/or value is null {}. Will skip this input.",
+                        element.toString());
+            } else {
+                stateStore.setHigh(element.getKey(), element.getValue());
+                output.add(element);
+            }
         }
-        return KV.of(input, value);
+        stateStore.commit();
+
+        return output;
     }
 }
