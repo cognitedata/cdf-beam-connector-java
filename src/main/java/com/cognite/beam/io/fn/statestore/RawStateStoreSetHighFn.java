@@ -32,7 +32,7 @@ import java.util.List;
  * state store.
  */
 public abstract class RawStateStoreSetHighFn extends
-        RawStateStoreBaseFn<Iterable<KV<String, Long>>, Iterable<KV<String, Long>>> {
+        RawStateStoreBaseFn<Iterable<KV<String, Long>>, List<KV<String, Long>>> {
 
     public RawStateStoreSetHighFn(Hints hints,
                                   ConfigBase configBase,
@@ -45,7 +45,7 @@ public abstract class RawStateStoreSetHighFn extends
     /**
      * {@inheritDoc}
      */
-    protected Iterable<KV<String, Long>> apply(StateStore stateStore, Iterable<KV<String, Long>> input) throws Exception {
+    protected List<KV<String, Long>> apply(StateStore stateStore, Iterable<KV<String, Long>> input) throws Exception {
         List<KV<String, Long>> output = new ArrayList<>();
         for (KV<String, Long> element : input) {
             if (null == element.getKey() || null == element.getValue()) {

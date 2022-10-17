@@ -23,6 +23,7 @@ import com.cognite.client.statestore.StateStore;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollectionView;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,7 +33,8 @@ import java.util.List;
  *
  * Expand high will only set a new value it the supplied value is higher than the current state for the key.
  */
-public abstract class RawStateStoreExpandHighFn extends RawStateStoreBaseFn<KV<String, Long>, KV<String, Long>> {
+public abstract class RawStateStoreExpandHighFn extends
+        RawStateStoreBaseFn<Iterable<KV<String, Long>>, List<KV<String, Long>>> {
 
     public RawStateStoreExpandHighFn(Hints hints,
                                      ConfigBase configBase,
@@ -45,15 +47,19 @@ public abstract class RawStateStoreExpandHighFn extends RawStateStoreBaseFn<KV<S
     /**
      * {@inheritDoc}
      */
-    protected KV<String, Long> apply(StateStore stateStore, KV<String, Long> input) throws Exception {
-        if (null == input.getKey() || null == input.getValue()) {
-            LOG.warn("Invalid input to the state store. Key and/or value is null {}. Will skip this input.",
-                    input.toString());
-            return input;
+    protected List<KV<String, Long>> apply(StateStore stateStore, Iterable<KV<String, Long>> input) throws Exception {
+        List<KV<String, Long>> output = new ArrayList<>();
+        for (KV<String, Long> element : input) {
+            if (null == element.getKey() || null == element.getValue()) {
+                LOG.warn("Invalid input to the state store. Key and/or value is null {}. Will skip this input.",
+                        element.toString());
+            } else {
+                stateStore.expandHigh(element.getKey(), element.getValue());
+                output.add(element);
+            }
         }
-        stateStore.expandHigh(input.getKey(), input.getValue());
         stateStore.commit();
 
-        return input;
+        return output;
     }
 }

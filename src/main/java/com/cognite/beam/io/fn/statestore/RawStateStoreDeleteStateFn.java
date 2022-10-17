@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * Function for deleting a state from the state store. It takes the state key to delete as input and .
  */
-public abstract class RawStateStoreDeleteStateFn extends RawStateStoreBaseFn<Iterable<String>, Iterable<String>> {
+public abstract class RawStateStoreDeleteStateFn extends RawStateStoreBaseFn<Iterable<String>, List<String>> {
 
     public RawStateStoreDeleteStateFn(Hints hints,
                                       ConfigBase configBase,
@@ -42,7 +42,7 @@ public abstract class RawStateStoreDeleteStateFn extends RawStateStoreBaseFn<Ite
     /**
      * {@inheritDoc}
      */
-    protected Iterable<String> apply(StateStore stateStore, Iterable<String> input) throws Exception {
+    protected List<String> apply(StateStore stateStore, Iterable<String> input) throws Exception {
         List<String> output = new ArrayList<>();
         for (String element : input) {
             if (null == element || element.isBlank()) {

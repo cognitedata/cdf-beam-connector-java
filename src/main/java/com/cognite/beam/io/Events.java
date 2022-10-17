@@ -108,7 +108,6 @@ public abstract class Events {
 
         @Override
         public PCollection<Event> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read events composite transform.");
 
             PCollection<Event> outputCollection = input.getPipeline()
@@ -246,12 +245,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAllDirect withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAllDirect withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -359,12 +360,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Events.ReadAllById withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Events.ReadAllById withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -443,12 +446,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAggregate withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAggregate withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -461,7 +466,6 @@ public abstract class Events {
 
         @Override
         public PCollection<Aggregate> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read events composite transform.");
 
             PCollection<Aggregate> outputCollection = input.getPipeline()
@@ -516,12 +520,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAllAggregate withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAllAggregate withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -593,12 +599,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Write withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Write withProjectConfigFile(ValueProvider<String> file) {
             return toBuilder().setProjectConfigFile(file).build();
         }
@@ -685,12 +693,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public WriteDirect withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public WriteDirect withProjectConfigFile(ValueProvider<String> file) {
             return toBuilder().setProjectConfigFile(file).build();
         }
@@ -764,12 +774,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Delete withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Delete withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
