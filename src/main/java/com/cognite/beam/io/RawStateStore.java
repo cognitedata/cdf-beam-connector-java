@@ -80,36 +80,11 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public Read withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public Read withRequestParameters(RequestParameters params) {
-            Preconditions.checkNotNull(params, "Parameters cannot be null.");
             return toBuilder().setRequestParameters(params).build();
-        }
-
-        public Read withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        @Deprecated
-        public Read withProjectConfigFile(String file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
-            Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
-            return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
-        }
-
-        @Deprecated
-        public Read withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
-            return toBuilder().setProjectConfigFile(file).build();
-        }
-
-        public Read withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
@@ -161,18 +136,7 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public ReadAll withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
-        }
-
-        public ReadAll withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        public ReadAll withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
@@ -236,18 +200,7 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public ReadAllDirect withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
-        }
-
-        public ReadAllDirect withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        public ReadAllDirect withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
@@ -342,18 +295,7 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public RawStateStore.ReadAllById withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
-        }
-
-        public RawStateStore.ReadAllById withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        public RawStateStore.ReadAllById withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
@@ -414,23 +356,11 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public ReadAggregate withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public ReadAggregate withRequestParameters(RequestParameters params) {
-            Preconditions.checkNotNull(params, "Parameters cannot be null.");
             return toBuilder().setRequestParameters(params).build();
-        }
-
-        public ReadAggregate withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        public ReadAggregate withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
@@ -484,18 +414,7 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public ReadAllAggregate withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
-        }
-
-        public ReadAllAggregate withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        public ReadAllAggregate withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
@@ -557,14 +476,6 @@ public abstract class RawStateStore {
 
         public Write withProjectConfig(ProjectConfig config) {
             return toBuilder().setProjectConfig(config).build();
-        }
-
-        public Write withHints(Hints hints) {
-            return toBuilder().setHints(hints).build();
-        }
-
-        public Write withWriterConfig(WriterConfig config) {
-            return toBuilder().setWriterConfig(config).build();
         }
 
         @Override
@@ -645,10 +556,6 @@ public abstract class RawStateStore {
             return toBuilder().setProjectConfig(config).build();
         }
 
-        public WriteDirect withHints(Hints hints) {
-            return toBuilder().setHints(hints).build();
-        }
-
         public WriteDirect withWriterConfig(WriterConfig config) {
             return toBuilder().setWriterConfig(config).build();
         }
@@ -706,18 +613,7 @@ public abstract class RawStateStore {
         public abstract String getTableName();
 
         public DeleteState withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
-        }
-
-        public DeleteState withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
-            return toBuilder().setHints(hints).build();
-        }
-
-        public DeleteState withWriterConfig(WriterConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
-            return toBuilder().setWriterConfig(config).build();
         }
 
         public DeleteState withDbName(String dbName) {
