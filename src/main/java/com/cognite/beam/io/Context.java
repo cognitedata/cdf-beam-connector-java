@@ -163,12 +163,14 @@ public abstract class Context {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public MatchEntities<T> withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public MatchEntities<T> withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -225,8 +227,6 @@ public abstract class Context {
          */
         @Override
         public PCollection<KV<T, List<EntityMatch>>> expand(PCollection<T> input) {
-            LOG.info("Building match entities composite transform.");
-
             // validate required config parameters
             Preconditions.checkState(getId() != null || getExternalId() != null,
                     "No matching model specified. You must configure a matching model using [.withId(<id>)] "
@@ -416,12 +416,14 @@ public abstract class Context {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public MatchStructEntities withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public MatchStructEntities withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -464,8 +466,6 @@ public abstract class Context {
 
         @Override
         public PCollection<KV<Struct, List<EntityMatch>>> expand(PCollection<Struct> input) {
-            LOG.info("Building match struct entities composite transform.");
-
             // validate required config parameters
                 Preconditions.checkState(getId() != null || getExternalId() != null,
                         "No matching model specified. You must configure a matching model using [.withId(<id>)] "
@@ -578,12 +578,14 @@ public abstract class Context {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public CreateInteractiveDiagram withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public CreateInteractiveDiagram withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();

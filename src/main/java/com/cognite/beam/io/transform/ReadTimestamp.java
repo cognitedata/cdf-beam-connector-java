@@ -112,12 +112,14 @@ public abstract class ReadTimestamp extends ConnectorBase<PBegin, PCollection<Lo
         return toBuilder().setReaderConfig(config).build();
     }
 
+    @Deprecated
     public ReadTimestamp withProjectConfigFile(String file) {
         Preconditions.checkNotNull(file, "File cannot be null");
         Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
         return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
     }
 
+    @Deprecated
     public ReadTimestamp withProjectConfigFile(ValueProvider<String> file) {
         Preconditions.checkNotNull(file, "File cannot be null");
         return toBuilder().setProjectConfigFile(file).build();
