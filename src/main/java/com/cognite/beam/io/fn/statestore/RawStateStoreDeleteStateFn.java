@@ -27,7 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Function for deleting a state from the state store. It takes the state key to delete as input and .
+ * Function for deleting a state from the state store. It takes the state key to delete as input and outputs the
+ * same key after the delete has been committed.
  */
 public abstract class RawStateStoreDeleteStateFn extends RawStateStoreBaseFn<Iterable<String>, List<String>> {
 

@@ -105,8 +105,8 @@ public abstract class RawStateStore {
         @AutoValue.Builder public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setRequestParameters(RequestParameters value);
             public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
 
             public abstract Read build();
         }
@@ -169,8 +169,8 @@ public abstract class RawStateStore {
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
             public abstract ReadAll build();
         }
     }
@@ -265,8 +265,8 @@ public abstract class RawStateStore {
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
             public abstract ReadAllDirect build();
         }
     }
@@ -322,10 +322,10 @@ public abstract class RawStateStore {
 
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<RawStateStore.ReadAllById.Builder> {
-            public abstract RawStateStore.ReadAllById.Builder setReaderConfig(ReaderConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
-            public abstract RawStateStore.ReadAllById build();
+            public abstract Builder setReaderConfig(ReaderConfig value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
+            public abstract ReadAllById build();
         }
     }
 
@@ -382,8 +382,8 @@ public abstract class RawStateStore {
         @AutoValue.Builder public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setRequestParameters(RequestParameters value);
             public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
 
             public abstract ReadAggregate build();
         }
@@ -444,8 +444,8 @@ public abstract class RawStateStore {
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setReaderConfig(ReaderConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
             public abstract ReadAllAggregate build();
         }
     }
@@ -516,8 +516,8 @@ public abstract class RawStateStore {
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setWriterConfig(WriterConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
 
             public abstract Write build();
         }
@@ -582,24 +582,20 @@ public abstract class RawStateStore {
         @AutoValue.Builder
         public abstract static class Builder extends ConnectorBase.Builder<Builder> {
             public abstract Builder setWriterConfig(WriterConfig value);
-            public abstract DeleteState.Builder setDbName(String value);
-            public abstract DeleteState.Builder setTableName(String value);
+            public abstract Builder setDbName(String value);
+            public abstract Builder setTableName(String value);
 
             public abstract WriteDirect build();
         }
     }
 
     /**
-     * Transform that will delete {@link Event} objects from Cognite Data Fusion.
-     * <p>
-     * The input to this transform is a collection of {@link Item} objects that identifies (via
-     * id or externalId) which {@link Event} objects to delete.
+     * Transform that will delete a state from the Raw state store. It takes the state key to delete as input and
+     * outputs the same key after the delete has been committed.
      */
     @AutoValue
     public abstract static class DeleteState
             extends ConnectorBase<PCollection<Item>, PCollection<Item>> {
-
-
         public static Builder builder() {
             return new AutoValue_RawStateStore_DeleteState.Builder()
                     .setProjectConfig(ProjectConfig.create())
@@ -614,6 +610,10 @@ public abstract class RawStateStore {
 
         public DeleteState withProjectConfig(ProjectConfig config) {
             return toBuilder().setProjectConfig(config).build();
+        }
+
+        public DeleteState withWriterConfig(WriterConfig config) {
+            return toBuilder().setWriterConfig(config).build();
         }
 
         public DeleteState withDbName(String dbName) {
