@@ -16,18 +16,16 @@
 
 package com.cognite.beam.io;
 
-import com.cognite.beam.io.config.Hints;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.fn.delete.DeleteItemsFn;
 import com.cognite.beam.io.fn.read.AddPartitionsFn;
 import com.cognite.beam.io.fn.read.ListEventsFn;
 import com.cognite.beam.io.fn.read.ReadAggregatesFn;
 import com.cognite.beam.io.fn.read.RetrieveEventsFn;
 import com.cognite.beam.io.fn.request.GenerateReadRequestsUnboundFn;
 import com.cognite.beam.io.fn.statestore.RawStateStoreDeleteStateFn;
-import com.cognite.beam.io.fn.write.UpsertEventFn;
+import com.cognite.beam.io.fn.statestore.RawStateStoreExpandHighFn;
 import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
@@ -40,8 +38,8 @@ import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.coders.VarLongCoder;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
-import org.apache.beam.sdk.options.ValueProvider;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
@@ -458,9 +456,9 @@ public abstract class RawStateStore {
      * exists, it will be updated with the new input.
      */
     @AutoValue
-    public abstract static class Write
-            extends ConnectorBase<PCollection<Event>, PCollection<Event>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 4000;
+    public abstract static class ExpandHigh
+            extends ConnectorBase<PCollection<KV<String, Long>>, PCollection<KV<String, Long>>> {
+        private static final int MAX_WRITE_BATCH_SIZE = 1000;
 
         public static Builder builder() {
             return new AutoValue_RawStateStore_Write.Builder()
@@ -474,37 +472,22 @@ public abstract class RawStateStore {
         public abstract String getDbName();
         public abstract String getTableName();
 
-        public Write withProjectConfig(ProjectConfig config) {
+        public ExpandHigh withProjectConfig(ProjectConfig config) {
             return toBuilder().setProjectConfig(config).build();
         }
 
         @Override
-        public PCollection<Event> expand(PCollection<Event> input) {
+        public PCollection<KV<String, Long>> expand(PCollection<KV<String, Long>> input) {
             Coder<String> utf8Coder = StringUtf8Coder.of();
-            Coder<Event> eventCoder = ProtoCoder.of(Event.class);
-            KvCoder<String, Event> keyValueCoder = KvCoder.of(utf8Coder, eventCoder);
+            Coder<Long> longCoder = VarLongCoder.of();
+            KvCoder<String, Long> keyValueCoder = KvCoder.of(utf8Coder, longCoder);
 
             // main input
-            PCollection<Event> outputCollection = input
-                    .apply("Check id", MapElements.into(TypeDescriptor.of(Event.class))
-                            .via((Event inputItem) -> {
-                                if (inputItem.hasExternalId() || inputItem.hasId()) {
-                                    return inputItem;
-                                } else {
-                                    return inputItem.toBuilder()
-                                            .setExternalId(UUID.randomUUID().toString())
-                                            .build();
-
-                                }
-                    }))
-                    .apply("Shard items", WithKeys.of((Event inputItem) ->
-                            String.valueOf(ThreadLocalRandom.current().nextInt(getHints().getWriteShards()))
-                    )).setCoder(keyValueCoder)
-                    .apply("Batch items", GroupIntoBatches.<String, Event>of(keyValueCoder)
+            PCollection<KV<String, Long>> outputCollection = input
+                    .apply("Batch items", GroupIntoBatches.<String, Long>of(keyValueCoder)
                             .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
-                    .apply("Remove key", Values.<Iterable<Event>>create())
-                    .apply("Write events", CogniteIO.writeDirectEvents()
+                    .apply("Expand high", CogniteIO.writeDirectEvents()
                             .withProjectConfig(getProjectConfig())
                             .withProjectConfigFile(getProjectConfigFile())
                             .withWriterConfig(getWriterConfig())
@@ -519,26 +502,20 @@ public abstract class RawStateStore {
             public abstract Builder setDbName(String value);
             public abstract Builder setTableName(String value);
 
-            public abstract Write build();
+            public abstract ExpandHigh build();
         }
     }
 
     /**
-     * Writes {@code events} directly to the Cognite API, bypassing the regular validation and optimization steps. This
-     * writer is designed for advanced use with very large data volumes (100+ million items). Most use cases should
-     * use the regular {@link RawStateStore.Write} writer which will perform shuffling and batching to optimize
-     * the write performance.
+     * Expands the high watermark state to a RAW state store. It takes a {@code KV<String, Long>} representing
+     * the key and high watermark value as input and outputs the same element after it has been committed to the
+     * state store.
      *
-     * This writer will push each input {@link Iterable<Event>} as a single batch. If the input
-     * violates any constraints, the write will fail. Also, the performance of the writer depends heavily on the
-     * input being batched as optimally as possible.
-     *
-     * If your source system offers data pre-batched, you may get additional performance from this writer as
-     * it bypasses the regular shuffle and batch steps.
+     * Expand high will only set a new value it the supplied value is higher than the current state for the key.
      */
     @AutoValue
-    public abstract static class WriteDirect
-            extends ConnectorBase<PCollection<Iterable<Event>>, PCollection<Event>> {
+    public abstract static class ExpandHighDirect
+            extends ConnectorBase<PCollection<Iterable<KV<String, Long>>>, PCollection<KV<String, Long>>> {
 
         public static Builder builder() {
             return new AutoValue_RawStateStore_WriteDirect.Builder()
@@ -552,16 +529,16 @@ public abstract class RawStateStore {
         public abstract String getDbName();
         public abstract String getTableName();
 
-        public WriteDirect withProjectConfig(ProjectConfig config) {
+        public ExpandHighDirect withProjectConfig(ProjectConfig config) {
             return toBuilder().setProjectConfig(config).build();
         }
 
-        public WriteDirect withWriterConfig(WriterConfig config) {
+        public ExpandHighDirect withWriterConfig(WriterConfig config) {
             return toBuilder().setWriterConfig(config).build();
         }
 
         @Override
-        public PCollection<Event> expand(PCollection<Iterable<Event>> input) {
+        public PCollection<KV<String, Long>> expand(PCollection<Iterable<KV<String, Long>>> input) {
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
@@ -570,10 +547,23 @@ public abstract class RawStateStore {
                     .apply("To list view", View.<ProjectConfig>asList());
 
             // main input
-            PCollection<Event> outputCollection = input
-                    .apply("Upsert events", ParDo.of(
-                                    new UpsertEventFn(getHints(), getWriterConfig(), projectConfigView))
-                            .withSideInputs(projectConfigView));
+            PCollection<KV<String, Long>> outputCollection = input
+                    .apply("Expand high direct", ParDo.of(
+                                    new RawStateStoreExpandHighFn(getHints(),
+                                            getWriterConfig(),
+                                            getDbName(),
+                                            getTableName(),
+                                            projectConfigView) {
+                                    })
+                            .withSideInputs(projectConfigView))
+                    .apply("Unwrap", ParDo.of(new DoFn<List<KV<String, Long>>, KV<String, Long>>() {
+                        @ProcessElement
+                        public void processElement(@Element List<KV<String, Long>> element,
+                                                   OutputReceiver<KV<String, Long>> out) {
+                            // output without timestamp
+                            element.forEach(row -> out.output(row));
+                        }
+                    }));
 
 
             return outputCollection;
@@ -585,7 +575,7 @@ public abstract class RawStateStore {
             public abstract Builder setDbName(String value);
             public abstract Builder setTableName(String value);
 
-            public abstract WriteDirect build();
+            public abstract ExpandHighDirect build();
         }
     }
 

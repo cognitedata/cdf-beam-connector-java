@@ -679,6 +679,10 @@ public class CogniteIO {
         return Context.MatchEntities.<T>create();
     }
 
+    public static RawStateStore.ExpandHighDirect expandHighDirectRawStateStore() {
+        return RawStateStore.ExpandHighDirect.builder().build();
+    }
+
     public static class Experimental {
 
         /**
