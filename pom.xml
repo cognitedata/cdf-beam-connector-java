@@ -41,13 +41,13 @@
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <beam.version>2.41.0</beam.version>
-        <cdf-java-sdk.version>1.17.0</cdf-java-sdk.version>
+        <beam.version>2.42.0</beam.version>
+        <cdf-java-sdk.version>1.18.0</cdf-java-sdk.version>
         <auto.version>1.9</auto.version>
         <auto-service.version>1.0.1</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
-        <junit.version>5.8.2</junit.version>
-        <logback-classic.version>1.2.11</logback-classic.version>
+        <junit.version>5.9.0</junit.version>
+        <logback-classic.version>1.4.3</logback-classic.version>
 
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
