@@ -31,6 +31,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.*;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
+import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
 
@@ -388,12 +389,41 @@ public abstract class RawStateStore {
 
         @Override
         public PCollection<KV<String, Long>> expand(PCollection<KV<String, Long>> input) {
+            Schema keyValueSchema = Schema.builder()
+                    .addStringField("key")
+                    .addInt64Field("value")
+                    .build();
+
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<StateTuple> protoCoder = ProtoCoder.of(StateTuple.class);
+            Coder<Row> rowCoder = RowCoder.of(keyValueSchema);
             KvCoder<String, StateTuple> keyValueCoder = KvCoder.of(utf8Coder, protoCoder);
+            KvCoder<String, Row> keyRowCoder = KvCoder.of(utf8Coder, rowCoder);
+
+
 
             // main input
             PCollection<KV<String, Long>> outputCollection = input
+                    .apply("Wrap KV", MapElements.into(TypeDescriptors.rows())
+                            .via(kv -> Row.withSchema(keyValueSchema)
+                                    .withFieldValue("key", kv.getKey())
+                                    .withFieldValue("value", kv.getValue())
+                                    .build()))
+                    .apply("Shard items", WithKeys.of(inputItem -> "single-key"))
+                    .apply("Batch items", GroupIntoBatches.<String, Row>of(keyRowCoder)
+                            .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
+                            .withMaxLatency(getHints().getWriteMaxBatchLatency()))
+                    .apply("Remove key", Values.<Iterable<Row>>create())
+                    .apply("Unwrap KV", MapElements.into(TypeDescriptors.iterables(
+                                    TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.longs())))
+                            .via(rows -> {
+                                List<KV<String, Long>> kvList = new ArrayList<>();
+                                for (Row element : rows) {
+                                    kvList.add(KV.of(element.getString("key"), element.getInt64("value")));
+                                }
+                                return kvList;
+                            }))
+                    /*
                     .apply("Wrap KV", MapElements.into(TypeDescriptor.of(StateTuple.class))
                             .via(kv -> StateTuple.newBuilder()
                                     .setKey(kv.getKey())
@@ -414,6 +444,8 @@ public abstract class RawStateStore {
                                 }
                                 return kvList;
                             }))
+
+                     */
                     .apply("Expand high", CogniteIO.expandHighDirectRawStateStore()
                             .withProjectConfig(getProjectConfig())
                             .withWriterConfig(getWriterConfig())
