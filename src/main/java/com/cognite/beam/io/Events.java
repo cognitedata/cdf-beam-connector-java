@@ -74,39 +74,35 @@ public abstract class Events {
         public abstract Read.Builder toBuilder();
 
         public Read withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public Read withRequestParameters(RequestParameters params) {
-            Preconditions.checkNotNull(params, "Parameters cannot be null.");
             return toBuilder().setRequestParameters(params).build();
         }
 
         public Read withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Read withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public Read withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
         public PCollection<Event> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read events composite transform.");
 
             PCollection<Event> outputCollection = input.getPipeline()
@@ -151,28 +147,26 @@ public abstract class Events {
         public abstract ReadAll.Builder toBuilder();
 
         public ReadAll withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public ReadAll withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public ReadAll withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
@@ -233,28 +227,26 @@ public abstract class Events {
         public abstract ReadAllDirect.Builder toBuilder();
 
         public ReadAllDirect withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public ReadAllDirect withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAllDirect withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAllDirect withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public ReadAllDirect withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
@@ -346,28 +338,26 @@ public abstract class Events {
         public abstract Events.ReadAllById.Builder toBuilder();
 
         public Events.ReadAllById withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public Events.ReadAllById withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Events.ReadAllById withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Events.ReadAllById withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public Events.ReadAllById withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
@@ -425,39 +415,36 @@ public abstract class Events {
         public abstract ReadAggregate.Builder toBuilder();
 
         public ReadAggregate withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public ReadAggregate withRequestParameters(RequestParameters params) {
-            Preconditions.checkNotNull(params, "Parameters cannot be null.");
             return toBuilder().setRequestParameters(params).build();
         }
 
         public ReadAggregate withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAggregate withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAggregate withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public ReadAggregate withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
         @Override
         public PCollection<Aggregate> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read events composite transform.");
 
             PCollection<Aggregate> outputCollection = input.getPipeline()
@@ -503,28 +490,26 @@ public abstract class Events {
         public abstract ReadAllAggregate.Builder toBuilder();
 
         public ReadAllAggregate withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public ReadAllAggregate withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAllAggregate withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAllAggregate withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public ReadAllAggregate withReaderConfig(ReaderConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setReaderConfig(config).build();
         }
 
@@ -589,12 +574,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Write withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Write withProjectConfigFile(ValueProvider<String> file) {
             return toBuilder().setProjectConfigFile(file).build();
         }
@@ -681,12 +668,14 @@ public abstract class Events {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public WriteDirect withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public WriteDirect withProjectConfigFile(ValueProvider<String> file) {
             return toBuilder().setProjectConfigFile(file).build();
         }
@@ -751,28 +740,26 @@ public abstract class Events {
         public abstract Delete.Builder toBuilder();
 
         public Delete withProjectConfig(ProjectConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setProjectConfig(config).build();
         }
 
         public Delete withHints(Hints hints) {
-            Preconditions.checkNotNull(hints, "Hints cannot be null");
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Delete withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Delete withProjectConfigFile(ValueProvider<String> file) {
-            Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
         }
 
         public Delete withWriterConfig(WriterConfig config) {
-            Preconditions.checkNotNull(config, "Config cannot be null");
             return toBuilder().setWriterConfig(config).build();
         }
 

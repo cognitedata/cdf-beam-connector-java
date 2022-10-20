@@ -74,12 +74,14 @@ public abstract class FilesBinary {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public FilesBinary.ReadAllById withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public FilesBinary.ReadAllById withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();

@@ -39,11 +39,13 @@ public abstract class ConnectorBase<InputT extends PInput,OutputT extends POutpu
 
     public abstract ProjectConfig getProjectConfig();
     public abstract Hints getHints();
+    @Deprecated
     public abstract ValueProvider<String> getProjectConfigFile();
 
     public static abstract class Builder<B extends Builder<B>> {
         public abstract B setProjectConfig(ProjectConfig value);
         public abstract B setHints(Hints value);
+        @Deprecated
         public abstract B setProjectConfigFile(ValueProvider<String> value);
     }
 }

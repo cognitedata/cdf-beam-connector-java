@@ -82,10 +82,12 @@ public abstract class TSPoints {
             return toBuilder().setReaderConfig(config).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(ValueProvider<String> filePath) {
             return toBuilder().setProjectConfigFile(filePath).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(String filePath) {
             Preconditions.checkNotNull(filePath, "File path cannot be null");
             Preconditions.checkArgument(!filePath.isEmpty(), "File path cannot be empty");
@@ -150,10 +152,12 @@ public abstract class TSPoints {
             return toBuilder().setReaderConfig(config).build();
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(ValueProvider<String> filePath) {
             return toBuilder().setProjectConfigFile(filePath).build();
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(String filePath) {
             Preconditions.checkNotNull(filePath, "File path cannot be null");
             Preconditions.checkArgument(!filePath.isEmpty(), "File path cannot be empty");
@@ -232,10 +236,12 @@ public abstract class TSPoints {
             return toBuilder().setReaderConfig(config).build();
         }
 
+        @Deprecated
         public ReadAllDirect withProjectConfigFile(ValueProvider<String> filePath) {
             return toBuilder().setProjectConfigFile(filePath).build();
         }
 
+        @Deprecated
         public ReadAllDirect withProjectConfigFile(String filePath) {
             Preconditions.checkNotNull(filePath, "File path cannot be null");
             Preconditions.checkArgument(!filePath.isEmpty(), "File path cannot be empty");

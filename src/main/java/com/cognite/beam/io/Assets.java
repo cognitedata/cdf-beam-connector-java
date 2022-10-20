@@ -92,11 +92,13 @@ public abstract class Assets {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(ValueProvider<String> filePath) {
             Preconditions.checkNotNull(filePath, "File path cannot be null");
             return toBuilder().setProjectConfigFile(filePath).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(String filePath) {
             Preconditions.checkNotNull(filePath, "File path cannot be null");
             Preconditions.checkArgument(!filePath.isEmpty(), "File path cannot be empty");

@@ -81,12 +81,14 @@ public abstract class Labels {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Read withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -146,12 +148,14 @@ public abstract class Labels {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -216,12 +220,14 @@ public abstract class Labels {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Write withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Write withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();

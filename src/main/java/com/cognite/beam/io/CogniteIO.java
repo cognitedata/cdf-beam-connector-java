@@ -679,6 +679,76 @@ public class CogniteIO {
         return Context.MatchEntities.<T>create();
     }
 
+    /**
+     * Creates an uninitialized RawStateStore.GetHigh. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.GetHigh getHighRawStateStorage() {
+        return RawStateStore.GetHigh.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized RawStateStore.GetHighAll. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.GetHighAll getHighAllRawStateStorage() {
+        return RawStateStore.GetHighAll.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized RawStateStore.SetHigh. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.SetHigh setHighRawStateStorage() {
+        return RawStateStore.SetHigh.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized RawStateStore.ExpandHighDirect. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.SetHighDirect setHighDirectRawStateStore() {
+        return RawStateStore.SetHighDirect.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized RawStateStore.ExpandHigh. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.ExpandHigh expandHighRawStateStorage() {
+        return RawStateStore.ExpandHigh.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized RawStateStore.ExpandHighDirect. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.ExpandHighDirect expandHighDirectRawStateStore() {
+        return RawStateStore.ExpandHighDirect.builder().build();
+    }
+
+    /**
+     * Creates an uninitialized RawStateStore.DeleteState. Before use you must supply a
+     * {@link com.cognite.beam.io.config.ProjectConfig} object + dbName and tableName for the backing state store.
+     *
+     * @return
+     */
+    public static RawStateStore.DeleteState deleteStateRawStateStore() {
+        return RawStateStore.DeleteState.builder().build();
+    }
+
     public static class Experimental {
 
         /**

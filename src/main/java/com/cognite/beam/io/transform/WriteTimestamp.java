@@ -109,12 +109,14 @@ public abstract class WriteTimestamp extends ConnectorBase<PCollection<Long>, PC
         return toBuilder().setWriterConfig(config).build();
     }
 
+    @Deprecated
     public WriteTimestamp withProjectConfigFile(String file) {
         Preconditions.checkNotNull(file, "File cannot be null");
         Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
         return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
     }
 
+    @Deprecated
     public WriteTimestamp withProjectConfigFile(ValueProvider<String> file) {
         return toBuilder().setProjectConfigFile(file).build();
     }

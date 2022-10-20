@@ -56,6 +56,7 @@ public abstract class ApplyProjectConfig extends PTransform<PCollection<RequestP
     abstract ValueProvider<String> getProjectConfigFile();
     abstract ProjectConfig getProjectConfigParameters();
 
+    @Deprecated
     public ApplyProjectConfig withProjectConfigFile(ValueProvider<String> filePath) {
         Preconditions.checkNotNull(filePath, "File path cannot be null");
         return toBuilder().setProjectConfigFile(filePath).build();

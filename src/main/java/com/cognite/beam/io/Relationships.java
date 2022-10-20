@@ -22,7 +22,6 @@ import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
 import com.cognite.beam.io.fn.read.ListRelationshipsFn;
 import com.cognite.beam.io.fn.read.RetrieveRelationshipsFn;
-import com.cognite.client.dto.FileMetadata;
 import com.cognite.client.dto.Item;
 import com.cognite.client.dto.Relationship;
 import com.cognite.client.config.ResourceType;
@@ -85,12 +84,14 @@ public abstract class Relationships {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Read withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Read withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -103,7 +104,6 @@ public abstract class Relationships {
 
         @Override
         public PCollection<Relationship> expand(PBegin input) {
-            LOG.info("Starting Cognite reader.");
             LOG.debug("Building read relationships composite transform.");
 
             PCollection<Relationship> outputCollection = input.getPipeline()
@@ -157,12 +157,14 @@ public abstract class Relationships {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public ReadAll withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -175,8 +177,6 @@ public abstract class Relationships {
 
         @Override
         public PCollection<Relationship> expand(PCollection<RequestParameters> input) {
-            LOG.debug("Building read all relationships composite transform.");
-
             // project config side input
             PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
                     .apply("Build project config", BuildProjectConfig.create()
@@ -249,12 +249,14 @@ public abstract class Relationships {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Relationships.ReadAllById withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Relationships.ReadAllById withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -326,12 +328,14 @@ public abstract class Relationships {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Write withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Write withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
@@ -344,8 +348,6 @@ public abstract class Relationships {
 
         @Override
         public PCollection<Relationship> expand(PCollection<Relationship> input) {
-            LOG.info("Starting Cognite writer.");
-
             LOG.debug("Building upsert relationships composite transform.");
             Coder<String> utf8Coder = StringUtf8Coder.of();
             Coder<Relationship> relationshipCoder = ProtoCoder.of(Relationship.class);
@@ -421,12 +423,14 @@ public abstract class Relationships {
             return toBuilder().setHints(hints).build();
         }
 
+        @Deprecated
         public Delete withProjectConfigFile(String file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             Preconditions.checkArgument(!file.isEmpty(), "File cannot be an empty string.");
             return this.withProjectConfigFile(ValueProvider.StaticValueProvider.of(file));
         }
 
+        @Deprecated
         public Delete withProjectConfigFile(ValueProvider<String> file) {
             Preconditions.checkNotNull(file, "File cannot be null");
             return toBuilder().setProjectConfigFile(file).build();
