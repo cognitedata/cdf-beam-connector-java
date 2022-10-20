@@ -6,7 +6,7 @@
 
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.42-SNAPSHOT</version>
+    <version>0.9.42</version>
     <licenses>
         <license>
             <name>Apache 2</name>
