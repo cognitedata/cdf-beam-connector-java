@@ -64,7 +64,8 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
                     .withMaxRetries(hints.getMaxRetries().get())
                     .withAppIdentifier(configBase.getAppIdentifier())
                     .withSessionIdentifier(configBase.getSessionIdentifier())
-                    .withAsyncApiJobTimeout(hints.getAsyncApiJobTimeout());
+                    .withAsyncApiJobTimeout(hints.getAsyncApiJobTimeout())
+                    .withExperimental(hints.getClientFeatureFlag());
 
             if (configHasClientCredentials(projectConfig)) {
                 // client credentials take precedence over api key

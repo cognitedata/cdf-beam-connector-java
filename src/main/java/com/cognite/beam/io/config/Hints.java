@@ -16,17 +16,17 @@
 
 package com.cognite.beam.io.config;
 
-import java.io.Serializable;
-import java.time.Duration;
-
 import com.cognite.client.config.ClientConfig;
+import com.google.auto.value.AutoValue;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.beam.sdk.options.ValueProvider;
 
-import com.google.auto.value.AutoValue;
+import java.io.Serializable;
+import java.time.Duration;
 
-import static com.google.common.base.Preconditions.*;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Context object for carrying hints to guide the execution of various
@@ -90,6 +90,8 @@ public abstract class Hints implements Serializable {
     private static final Duration DEFAULT_ASYNC_API_JOB_TIMEOUT = Duration.ofMinutes(20);
     private static final Duration MAX_ASYNC_API_JOB_TIMEOUT = Duration.ofHours(24);
 
+    private static final ClientConfig.FeatureFlag CLIENT_FEATURE_FLAG = ClientConfig.FeatureFlag.create();
+
     private static Builder builder() {
         return new com.cognite.beam.io.config.AutoValue_Hints.Builder()
                 .setReadShards(DEFAULT_READ_SHARDS)
@@ -103,7 +105,7 @@ public abstract class Hints implements Serializable {
                 .setReadFileBinaryBatchSize(DEFAULT_READ_FILE_BINARY_BATCH_SIZE)
                 .setWriteFileBatchSize(DEFAULT_WRITE_FILE_BATCH_SIZE)
                 .setAsyncApiJobTimeout(DEFAULT_ASYNC_API_JOB_TIMEOUT)
-                ;
+                .setClientFeatureFlag(CLIENT_FEATURE_FLAG);
     }
 
     public static Hints create() {
@@ -111,16 +113,28 @@ public abstract class Hints implements Serializable {
     }
 
     public abstract ValueProvider<Integer> getReadShards();
+
     public abstract int getReadShardsPerWorker();
+
     public abstract int getWriteShards();
+
     public abstract int getWriteRawMaxBatchSize();
+
     public abstract int getContextMaxBatchSize();
+
     public abstract Duration getWriteMaxBatchLatency();
+
     public abstract ValueProvider<Integer> getMaxRetries();
+
     public abstract UpdateFrequency getWriteTsPointsUpdateFrequency();
+
     public abstract int getReadFileBinaryBatchSize();
+
     public abstract int getWriteFileBatchSize();
+
     public abstract Duration getAsyncApiJobTimeout();
+
+    public abstract ClientConfig.FeatureFlag getClientFeatureFlag();
 
     abstract Builder toBuilder();
 
@@ -196,6 +210,7 @@ public abstract class Hints implements Serializable {
      * setting regulates the maximum duration the batcher will wait before writing the batch.
      *
      * This setting is mostly relevant for low-latency scenarios. The default value is set to 5 seconds.
+     *
      * @param value
      * @return
      */
@@ -216,6 +231,7 @@ public abstract class Hints implements Serializable {
      * the total workloads between workers.
      *
      * The default batch size is set to 2000 items.
+     *
      * @param value
      * @return
      */
@@ -234,6 +250,7 @@ public abstract class Hints implements Serializable {
      * In some cases you may have to adjust this batch size if you see signs of api saturation.
      *
      * The default batch size is set to 8 items.
+     *
      * @param value
      * @return
      */
@@ -252,6 +269,7 @@ public abstract class Hints implements Serializable {
      * In some cases you may have to adjust this batch size if you see signs of api saturation.
      *
      * The default batch size is set to 8 items.
+     *
      * @param value
      * @return
      */
@@ -268,6 +286,7 @@ public abstract class Hints implements Serializable {
      * Sets the max batch size when executing contextualization operations.
      *
      * The default batch size is set to 1000 items.
+     *
      * @param value
      * @return
      */
@@ -323,7 +342,7 @@ public abstract class Hints implements Serializable {
      * The default timeout is 20 minutes.
      *
      * @param timeout The async timeout expressed as {@link Duration}.
-     * @return the {@link ClientConfig} with the setting applied.
+     * @return the {@link Hints} with the setting applied.
      */
     public Hints withAsyncApiJobTimeout(Duration timeout) {
         checkArgument(timeout.compareTo(MIN_ASYNC_API_JOB_TIMEOUT) >= 0
@@ -332,6 +351,17 @@ public abstract class Hints implements Serializable {
                         MAX_ASYNC_API_JOB_TIMEOUT));
 
         return toBuilder().setAsyncApiJobTimeout(timeout).build();
+    }
+
+    /**
+     * Sets the feature flags for CogniteClient
+     * The default flags is no flags
+     *
+     * @param flags The flags {@link ClientConfig.FeatureFlag}.
+     * @return the {@link Hints} with the setting applied
+     */
+    public Hints withClientFeatureFlags(ClientConfig.FeatureFlag flags) {
+        return toBuilder().setClientFeatureFlag(flags).build();
     }
 
     public void validate() {
@@ -353,20 +383,34 @@ public abstract class Hints implements Serializable {
                         MIN_WRITE_MAX_LATENCY.toString(), MAX_WRITE_MAX_LATENCY.toString()));
     }
 
-    @AutoValue.Builder public abstract static class Builder {
+    @AutoValue.Builder
+    public abstract static class Builder {
         abstract Builder setReadShards(ValueProvider<Integer> value);
+
         abstract Builder setReadShardsPerWorker(int value);
+
         abstract Builder setWriteShards(int value);
+
         abstract Builder setWriteRawMaxBatchSize(int value);
+
         abstract Builder setContextMaxBatchSize(int value);
+
         abstract Builder setMaxRetries(ValueProvider<Integer> value);
+
         abstract Builder setWriteMaxBatchLatency(Duration value);
+
         abstract Builder setWriteTsPointsUpdateFrequency(UpdateFrequency value);
+
         abstract Builder setReadFileBinaryBatchSize(int value);
+
         abstract Builder setWriteFileBatchSize(int value);
+
         abstract Builder setAsyncApiJobTimeout(Duration value);
 
+        abstract Builder setClientFeatureFlag(ClientConfig.FeatureFlag value);
+
         abstract Hints autoBuild();
+
         Hints build() {
             // Can only check the non-ValueType fields at build time.
             Hints hints = autoBuild();
