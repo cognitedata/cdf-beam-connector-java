@@ -23,6 +23,17 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.42] 2022-10-20
+
+### Added
+
+- Support for `RawStateStore` for reading and setting state. This will be the new pattern for handling state dependent actions such as delta loading.
+- Java SDK 1.18.0
+- Beam SDK 2.42.0
+
+### Deprecated
+- `ProjectConfig` via files. We recommend using a startup "driver" / container for the initial configuration of the job, including setting the `ProjectConfig` as opposed to having the Beam Job read project credentials directly from file. An example: [https://github.com/cognitedata/cdf-sdk-java-examples/tree/main/10-beam-pipeline](https://github.com/cognitedata/cdf-sdk-java-examples/tree/main/10-beam-pipeline)
+
 ## [0.9.41] 2022-10-04
 
 ### Fixed
