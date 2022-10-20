@@ -19,18 +19,15 @@ package com.cognite.beam.io;
 import com.cognite.beam.io.config.ProjectConfig;
 import com.cognite.beam.io.config.ReaderConfig;
 import com.cognite.beam.io.config.WriterConfig;
-import com.cognite.beam.io.dto.StateTuple;
 import com.cognite.beam.io.fn.statestore.RawStateStoreDeleteStateFn;
 import com.cognite.beam.io.fn.statestore.RawStateStoreExpandHighFn;
 import com.cognite.beam.io.fn.statestore.RawStateStoreGetHighFn;
 import com.cognite.beam.io.fn.statestore.RawStateStoreSetHighFn;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.cognite.beam.io.transform.internal.*;
-import com.cognite.client.dto.Item;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.coders.*;
-import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.transforms.*;
 import org.apache.beam.sdk.values.*;
@@ -72,6 +69,10 @@ public abstract class RawStateStore {
             return toBuilder().setProjectConfig(config).build();
         }
 
+        public GetHigh withReaderConfig(ReaderConfig config) {
+            return toBuilder().setReaderConfig(config).build();
+        }
+
         public GetHigh withDbName(String dbName) {
             return toBuilder().setDbName(dbName).build();
         }
@@ -89,23 +90,13 @@ public abstract class RawStateStore {
             Preconditions.checkState(null != getKey() && !getKey().isBlank(),
                     "You must specify the key to get the high watermark/state for.");
 
-            // project config side input
-            PCollectionView<List<ProjectConfig>> projectConfigView = input.getPipeline()
-                    .apply("Build project config", BuildProjectConfig.create()
-                            .withProjectConfigFile(getProjectConfigFile())
-                            .withProjectConfigParameters(getProjectConfig()))
-                    .apply("To list view", View.<ProjectConfig>asList());
-
             PCollection<KV<String, Long>> outputCollection = input
                     .apply("Generate query", Create.of(getKey()))
-                    .apply("Read high watermark", ParDo.of(
-                                    new RawStateStoreGetHighFn(getHints(),
-                                            getReaderConfig(),
-                                            getDbName(),
-                                            getTableName(),
-                                            projectConfigView) {
-                                    })
-                            .withSideInputs(projectConfigView));
+                    .apply("Read high watermark", CogniteIO.getHighAllRawStateStorage()
+                            .withProjectConfig(getProjectConfig())
+                            .withReaderConfig(getReaderConfig())
+                            .withDbName(getDbName())
+                            .withTableName(getTableName()));
 
             return outputCollection;
         }
@@ -152,6 +143,10 @@ public abstract class RawStateStore {
 
         public GetHighAll withTableName(String tableName) {
             return toBuilder().setTableName(tableName).build();
+        }
+
+        public GetHighAll withReaderConfig(ReaderConfig readerConfig) {
+            return toBuilder().setReaderConfig(readerConfig).build();
         }
 
         @Override
@@ -213,6 +208,10 @@ public abstract class RawStateStore {
             return toBuilder().setProjectConfig(config).build();
         }
 
+        public SetHigh withWriterConfig(WriterConfig config) {
+            return toBuilder().setWriterConfig(config).build();
+        }
+
         public SetHigh withDbName(String dbName) {
             return toBuilder().setDbName(dbName).build();
         }
@@ -223,29 +222,34 @@ public abstract class RawStateStore {
 
         @Override
         public PCollection<KV<String, Long>> expand(PCollection<KV<String, Long>> input) {
+            Schema keyValueSchema = Schema.builder()
+                    .addStringField("key")
+                    .addInt64Field("value")
+                    .build();
+
             Coder<String> utf8Coder = StringUtf8Coder.of();
-            Coder<StateTuple> protoCoder = ProtoCoder.of(StateTuple.class);
-            KvCoder<String, StateTuple> keyValueCoder = KvCoder.of(utf8Coder, protoCoder);
+            Coder<Row> rowCoder = RowCoder.of(keyValueSchema);
+            KvCoder<String, Row> keyRowCoder = KvCoder.of(utf8Coder, rowCoder);
 
             // main input
             PCollection<KV<String, Long>> outputCollection = input
-                    .apply("Wrap KV", MapElements.into(TypeDescriptor.of(StateTuple.class))
-                            .via(kv -> StateTuple.newBuilder()
-                                    .setKey(kv.getKey())
-                                    .setValue(kv.getValue())
+                    .apply("Wrap KV", MapElements.into(TypeDescriptors.rows())
+                            .via(kv -> Row.withSchema(keyValueSchema)
+                                    .withFieldValue("key", kv.getKey())
+                                    .withFieldValue("value", kv.getValue())
                                     .build()))
-                    .apply("Shard items", WithKeys.of((StateTuple inputItem) -> "single-key"))
-                    .setCoder(keyValueCoder)
-                    .apply("Batch items", GroupIntoBatches.<String, StateTuple>of(keyValueCoder)
+                    .setRowSchema(keyValueSchema)
+                    .apply("Shard items", WithKeys.of(inputItem -> "single-key")).setCoder(keyRowCoder)
+                    .apply("Batch items", GroupIntoBatches.<String, Row>of(keyRowCoder)
                             .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
-                    .apply("Remove key", Values.<Iterable<StateTuple>>create())
+                    .apply("Remove key", Values.<Iterable<Row>>create())
                     .apply("Unwrap KV", MapElements.into(TypeDescriptors.iterables(
                                     TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.longs())))
-                            .via(stateTuples -> {
+                            .via(rows -> {
                                 List<KV<String, Long>> kvList = new ArrayList<>();
-                                for (StateTuple tuple : stateTuples) {
-                                    kvList.add(KV.of(tuple.getKey(), tuple.getValue()));
+                                for (Row element : rows) {
+                                    kvList.add(KV.of(element.getString("key"), element.getInt64("value")));
                                 }
                                 return kvList;
                             }))
@@ -379,6 +383,10 @@ public abstract class RawStateStore {
             return toBuilder().setProjectConfig(config).build();
         }
 
+        public ExpandHigh withWriterConfig(WriterConfig writerConfig) {
+            return toBuilder().setWriterConfig(writerConfig).build();
+        }
+
         public ExpandHigh withDbName(String dbName) {
             return toBuilder().setDbName(dbName).build();
         }
@@ -395,12 +403,8 @@ public abstract class RawStateStore {
                     .build();
 
             Coder<String> utf8Coder = StringUtf8Coder.of();
-            Coder<StateTuple> protoCoder = ProtoCoder.of(StateTuple.class);
             Coder<Row> rowCoder = RowCoder.of(keyValueSchema);
-            KvCoder<String, StateTuple> keyValueCoder = KvCoder.of(utf8Coder, protoCoder);
             KvCoder<String, Row> keyRowCoder = KvCoder.of(utf8Coder, rowCoder);
-
-
 
             // main input
             PCollection<KV<String, Long>> outputCollection = input
@@ -409,7 +413,8 @@ public abstract class RawStateStore {
                                     .withFieldValue("key", kv.getKey())
                                     .withFieldValue("value", kv.getValue())
                                     .build()))
-                    .apply("Shard items", WithKeys.of(inputItem -> "single-key"))
+                    .setRowSchema(keyValueSchema)
+                    .apply("Shard items", WithKeys.of(inputItem -> "single-key")).setCoder(keyRowCoder)
                     .apply("Batch items", GroupIntoBatches.<String, Row>of(keyRowCoder)
                             .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
                             .withMaxLatency(getHints().getWriteMaxBatchLatency()))
@@ -423,29 +428,6 @@ public abstract class RawStateStore {
                                 }
                                 return kvList;
                             }))
-                    /*
-                    .apply("Wrap KV", MapElements.into(TypeDescriptor.of(StateTuple.class))
-                            .via(kv -> StateTuple.newBuilder()
-                                    .setKey(kv.getKey())
-                                    .setValue(kv.getValue())
-                                    .build()))
-                    .apply("Shard items", WithKeys.of((StateTuple inputItem) -> "single-key"))
-                            .setCoder(keyValueCoder)
-                    .apply("Batch items", GroupIntoBatches.<String, StateTuple>of(keyValueCoder)
-                            .withMaxBatchSize(MAX_WRITE_BATCH_SIZE)
-                            .withMaxLatency(getHints().getWriteMaxBatchLatency()))
-                    .apply("Remove key", Values.<Iterable<StateTuple>>create())
-                    .apply("Unwrap KV", MapElements.into(TypeDescriptors.iterables(
-                            TypeDescriptors.kvs(TypeDescriptors.strings(), TypeDescriptors.longs())))
-                            .via(stateTuples -> {
-                                List<KV<String, Long>> kvList = new ArrayList<>();
-                                for (StateTuple tuple : stateTuples) {
-                                    kvList.add(KV.of(tuple.getKey(), tuple.getValue()));
-                                }
-                                return kvList;
-                            }))
-
-                     */
                     .apply("Expand high", CogniteIO.expandHighDirectRawStateStore()
                             .withProjectConfig(getProjectConfig())
                             .withWriterConfig(getWriterConfig())

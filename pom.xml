@@ -53,8 +53,6 @@
         <!-- protobuf paths -->
         <protobuf.input.directory>${project.basedir}/src/main/proto</protobuf.input.directory>
         <protobuf.output.directory>${project.build.directory}/generated-sources/proto</protobuf.output.directory>
-        <protobuf.version>3.21.7</protobuf.version>
-        <protoc-jar-maven-plugin.version>3.11.4</protoc-jar-maven-plugin.version>
 
         <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
         <maven-exec-plugin.version>3.0.0</maven-exec-plugin.version>
@@ -131,11 +129,6 @@
             <version>${beam.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>${protobuf.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit.version}</version>
@@ -159,30 +152,6 @@
             </extension>
         </extensions>
         <plugins>
-            <plugin>
-                <groupId>com.github.os72</groupId>
-                <artifactId>protoc-jar-maven-plugin</artifactId>
-                <version>${protoc-jar-maven-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <configuration>
-                            <protocVersion>${protobuf.version}</protocVersion>
-                            <includeMavenTypes>direct</includeMavenTypes>
-                            <includeDirectories>
-                                <include>src/main/proto</include>
-                            </includeDirectories>
-                            <inputDirectories>
-                                <include>src/main/proto</include>
-                            </inputDirectories>
-                            <outputDirectory>${protobuf.output.directory}</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -211,7 +180,7 @@
                     <useIncrementalCompilation>false</useIncrementalCompilation>
                     <compilerArgs>
                         <arg>-Xlint:all</arg>
-                        <arg>${compiler.error.flag}</arg>
+                        <!--arg>${compiler.error.flag}</arg-->
                         <!-- Override options warnings to support cross-compilation -->
                         <arg>-Xlint:-options</arg>
                         <!-- Temporary lint overrides, to be removed over time. -->

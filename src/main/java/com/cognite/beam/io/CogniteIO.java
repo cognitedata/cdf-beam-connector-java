@@ -685,7 +685,7 @@ public class CogniteIO {
      *
      * @return
      */
-    public static RawStateStore.GetHigh readHighRawStateStorage() {
+    public static RawStateStore.GetHigh getHighRawStateStorage() {
         return RawStateStore.GetHigh.builder().build();
     }
 
@@ -695,7 +695,7 @@ public class CogniteIO {
      *
      * @return
      */
-    public static RawStateStore.GetHighAll GetHighAllRawStateStorage() {
+    public static RawStateStore.GetHighAll getHighAllRawStateStorage() {
         return RawStateStore.GetHighAll.builder().build();
     }
 
