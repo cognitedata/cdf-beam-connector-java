@@ -23,6 +23,16 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.43-SNAPSHOT]
+
+### Added
+
+- Beam SDK 2.44.0
+
+### Fixed
+
+- Assets delete was not recursive. Fixed.
+
 ## [0.9.42] 2022-10-20
 
 ### Added
