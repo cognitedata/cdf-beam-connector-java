@@ -43,7 +43,7 @@
         
         <beam.version>2.44.0</beam.version>
         <cdf-java-sdk.version>1.18.0</cdf-java-sdk.version>
-        <auto.version>1.9</auto.version>
+        <auto.version>1.10.1</auto.version>
         <auto-service.version>1.0.1</auto-service.version>
         <tomlj.version>1.0.0</tomlj.version>
         <javatuples.version>1.2</javatuples.version>
