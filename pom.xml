@@ -41,7 +41,7 @@
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
-        <beam.version>2.45.0</beam.version>
+        <beam.version>2.46.0</beam.version>
         <cdf-java-sdk.version>1.18.0</cdf-java-sdk.version>
         <auto.version>1.10.1</auto.version>
         <auto-service.version>1.0.1</auto-service.version>
