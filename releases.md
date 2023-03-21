@@ -23,6 +23,12 @@ Changes are grouped as follows:
 
 - OOTB incremental read support for time series.
 
+## [0.9.44-SNAPSHOT]
+
+### Fixed
+
+- MAX_WRITE_BATCH_SIZE set to 900 instead of 4000, to avoid overloading Cognite API(429 Errors). 
+
 ## [0.9.43-SNAPSHOT]
 
 ### Added
