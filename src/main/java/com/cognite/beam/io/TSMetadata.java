@@ -487,7 +487,7 @@ public abstract class TSMetadata {
     @AutoValue
     public abstract static class Write
             extends ConnectorBase<PCollection<TimeseriesMetadata>, PCollection<TimeseriesMetadata>> {
-        private static final int MAX_WRITE_BATCH_SIZE = 4000;
+        private static final int MAX_WRITE_BATCH_SIZE = 900;
 
         public static TSMetadata.Write.Builder builder() {
             return new com.cognite.beam.io.AutoValue_TSMetadata_Write.Builder()
