@@ -48,7 +48,7 @@
         <tomlj.version>1.1.0</tomlj.version>
         <javatuples.version>1.2</javatuples.version>
         <junit.version>5.9.3</junit.version>
-        <logback-classic.version>1.4.6</logback-classic.version>
+        <logback-classic.version>1.4.7</logback-classic.version>
 
         <!-- protobuf paths -->
         <protobuf.input.directory>${project.basedir}/src/main/proto</protobuf.input.directory>
