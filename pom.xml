@@ -47,7 +47,7 @@
         <auto-service.version>1.0.1</auto-service.version>
         <tomlj.version>1.1.0</tomlj.version>
         <javatuples.version>1.2</javatuples.version>
-        <junit.version>5.9.2</junit.version>
+        <junit.version>5.9.3</junit.version>
         <logback-classic.version>1.4.6</logback-classic.version>
 
         <!-- protobuf paths -->
