@@ -60,7 +60,7 @@
         <compiler.default.pkginfo.flag>-Xpkginfo:always</compiler.default.pkginfo.flag>
         <compiler.default.exclude>nothing</compiler.default.exclude>
 
-        <build-helper-maven-plugin.version>3.3.0</build-helper-maven-plugin.version>
+        <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
         <maven-antrun-plugin.version>3.0.0</maven-antrun-plugin.version>
         <maven-dependency-plugin.version>3.1.2</maven-dependency-plugin.version>
         <maven-shade-plugin.version>3.3.0</maven-shade-plugin.version>
