@@ -127,13 +127,13 @@ public class CreateInteractiveDiagramsFn extends IOBaseFn<Iterable<Item>, Diagra
         try {
             List<Struct> matchToList = context.sideInput(entitiesView);
             List<DiagramResponse> resultsItems = getClient(projectConfig, readerConfig)
-                    .experimental()
+                    .contextualization()
                     .engineeringDiagrams()
                     .detectAnnotations(elementList, matchToList, searchField, partialMatch, minTokens, false);
 
             if (convertFile) {
                 resultsItems = getClient(projectConfig, readerConfig)
-                        .experimental()
+                        .contextualization()
                         .engineeringDiagrams()
                         .convert(resultsItems, grayscale);
             }

@@ -69,8 +69,11 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
 
             if (configHasClientCredentials(projectConfig)) {
                 // client credentials take precedence over api key
-                client = CogniteClient.ofClientCredentials(projectConfig.getClientId().get(),
-                        projectConfig.getClientSecret().get(), new URL(projectConfig.getTokenUrl().get()))
+                client = CogniteClient.ofClientCredentials(
+                        projectConfig.getProject().get(),
+                        projectConfig.getClientId().get(),
+                        projectConfig.getClientSecret().get(),
+                                new URL(projectConfig.getTokenUrl().get()))
                         .withBaseUrl(projectConfig.getHost().get())
                         .withClientConfig(clientConfig);
                 // set custom auth scopes if they are configured in the ProjectConfig object.
@@ -78,7 +81,9 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
                     client = client.withScopes(projectConfig.getAuthScopes().get());
                 }
             } else if (configHasApiKey(projectConfig)) {
-                client = CogniteClient.ofKey(projectConfig.getApiKey().get())
+                client = CogniteClient.ofKey(
+                        projectConfig.getProject().get(),
+                        projectConfig.getApiKey().get())
                         .withBaseUrl(projectConfig.getHost().get())
                         .withClientConfig(clientConfig);
             } else {
