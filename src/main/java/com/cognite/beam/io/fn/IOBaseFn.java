@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.beam.sdk.metrics.Distribution;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,11 +82,7 @@ public abstract class IOBaseFn<T, R> extends DoFn<T, R> {
                     client = client.withScopes(projectConfig.getAuthScopes().get());
                 }
             } else if (configHasApiKey(projectConfig)) {
-                client = CogniteClient.ofKey(
-                        projectConfig.getProject().get(),
-                        projectConfig.getApiKey().get())
-                        .withBaseUrl(projectConfig.getHost().get())
-                        .withClientConfig(clientConfig);
+                throw new NotImplementedException("APIKEY based authentication has been removed. Use OIDC-based credentials.");
             } else {
                 throw new Exception("Neither client credentials nor API key cannot be accessed. Please check that it is configured.");
             }

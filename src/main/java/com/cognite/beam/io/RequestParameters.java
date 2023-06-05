@@ -274,7 +274,7 @@ public abstract class RequestParameters implements Serializable {
     @Deprecated
     public RequestParameters withItemExternalId(String externalId) {
         return toBuilder()
-                .setRequest(getRequest().withRootParameter("externalId", externalId))
+                .setRequest(getRequest().withItemExternalIds(externalId))
                 .build();
     }
 
@@ -290,7 +290,7 @@ public abstract class RequestParameters implements Serializable {
     @Deprecated
     public RequestParameters withItemInternalId(long internalId) {
         return toBuilder()
-                .setRequest(getRequest().withRootParameter("id", internalId))
+                .setRequest(getRequest().withItemInternalIds(internalId))
                 .build();
     }
 
