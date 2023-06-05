@@ -42,6 +42,7 @@ class RawStateStoreTest extends TestConfigProviderV1 {
         final Instant startInstant = Instant.now();
 
         CogniteClient client = CogniteClient.ofClientCredentials(
+                        TestConfigProviderV1.getProject(),
                         TestConfigProviderV1.getClientId(),
                         TestConfigProviderV1.getClientSecret(),
                         TokenUrl.generateAzureAdURL(TestConfigProviderV1.getTenantId()))

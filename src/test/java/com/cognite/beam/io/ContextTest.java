@@ -487,6 +487,7 @@ class ContextTest extends TestConfigProviderV1 {
                 .withRootParameter("featureType", featureType);
 
         CogniteClient client = CogniteClient.ofClientCredentials(
+                getProject(),
                 getClientId(),
                 getClientSecret(),
                 TokenUrl.generateAzureAdURL(getTenantId()))
@@ -508,6 +509,7 @@ class ContextTest extends TestConfigProviderV1 {
                 .build();
 
         CogniteClient client = CogniteClient.ofClientCredentials(
+                        getProject(),
                         getClientId(),
                         getClientSecret(),
                         TokenUrl.generateAzureAdURL(getTenantId()))

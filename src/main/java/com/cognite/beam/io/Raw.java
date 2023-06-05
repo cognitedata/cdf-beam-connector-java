@@ -34,7 +34,6 @@ import com.cognite.beam.io.transform.BreakFusion;
 import com.cognite.beam.io.transform.GroupIntoBatches;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
-import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.KvCoder;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
@@ -45,6 +44,7 @@ import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PCollectionView;
 import org.apache.beam.sdk.values.TypeDescriptors;
+import org.apache.http.annotation.Experimental;
 
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -174,7 +174,7 @@ public class Raw {
         }
     }
 
-    @Experimental(Experimental.Kind.SOURCE_SINK)
+    @Experimental
     @AutoValue
     public abstract static class ReadAllRow
             extends ConnectorBase<PCollection<RequestParameters>, PCollection<RawRow>> {
@@ -255,7 +255,7 @@ public class Raw {
         }
     }
 
-    @Experimental(Experimental.Kind.SOURCE_SINK)
+    @Experimental
     @AutoValue
     public abstract static class ReadAllRowDirect
             extends ConnectorBase<PCollection<RequestParameters>, PCollection<List<RawRow>>> {

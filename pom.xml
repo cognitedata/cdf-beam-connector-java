@@ -6,7 +6,7 @@
 
     <groupId>com.cognite</groupId>
     <artifactId>beam-connector-java</artifactId>
-    <version>0.9.45</version>
+    <version>0.9.46-SNAPSHOT</version>
     <licenses>
         <license>
             <name>Apache 2</name>
@@ -41,8 +41,8 @@
         <maven.compiler.release>11</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
-        <beam.version>2.47.0</beam.version>
-        <cdf-java-sdk.version>1.19.1</cdf-java-sdk.version>
+        <beam.version>2.48.0</beam.version>
+        <cdf-java-sdk.version>2.1.0</cdf-java-sdk.version>
         <auto.version>1.10.1</auto.version>
         <auto-service.version>1.1.0</auto-service.version>
         <tomlj.version>1.1.0</tomlj.version>

@@ -51,6 +51,7 @@ class EventsTest extends TestConfigProviderV1 {
         LOG.info("Starting events unit test: writeReadDeleteEvents()");
         LOG.info("----------------------- Creating extraction pipeline. ----------------------");
         CogniteClient client = CogniteClient.ofClientCredentials(
+                        TestConfigProviderV1.getProject(),
                         TestConfigProviderV1.getClientId(),
                         TestConfigProviderV1.getClientSecret(),
                         TokenUrl.generateAzureAdURL(TestConfigProviderV1.getTenantId()))
