@@ -25,7 +25,7 @@ PCollection<Asset> mainInput = p.apply("Read cdf assets", CogniteIO.readAssets()
                        )
            );
 ```
-    
+
 #### Installing the sdk
 
 ```xml
