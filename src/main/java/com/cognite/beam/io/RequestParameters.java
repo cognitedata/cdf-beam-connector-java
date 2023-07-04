@@ -222,6 +222,7 @@ public abstract class RequestParameters implements Serializable {
 
     /**
      * Adds a new parameter to the filter node.
+     * See the request samples of the <a href="https://docs.cognite.com/api/v1/">official documentation</a> for valid filters.
      *
      * @param key
      * @param value
